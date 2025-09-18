@@ -386,4 +386,8 @@ Bob: +combat/cover 2
 - Team-based storytelling opportunities
 - Surrender system for character development and narrative resolution
 
-This combat system provides both tactical depth and narrative flexibility, allowing for engaging combat scenes while maintaining the Chronicles of Darkness atmosphere and mechanical accuracy. The team system enables organized group combat, training scenarios, and complex tactical situations, while the surrender mechanics provide honorable exits and diplomatic resolutions to conflicts. 
+### Future Support
+- Create a method for allowing random combats for MUSHes that have MUD-like capabilities or "solo play"
+- Allow for integration of rewards for certain combats
+
+A lot of this needs to have continued development to be effective on a MUSH environment. Additionally, it might be better to work using the EvMenu rather than relying on players to type their input into their client. That said, it is functional for what it is, and could be used to provide combat scenarios between players and player/staff-created NPCs.

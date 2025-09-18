@@ -189,5 +189,3 @@ def check_storyteller_permission(caller):
 - `+stwho` - See online storytellers and staff
 - `+storyteller/check` - Check your own status
 - `+storyteller/info` - Learn about the system
-
-This system successfully bridges the gap between regular players and staff, enabling trusted community members to create rich storytelling experiences while maintaining proper oversight and security.

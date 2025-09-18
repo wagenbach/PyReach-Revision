@@ -283,5 +283,3 @@ VAMPIRE_TEMPLATE = {
 
 register_template(VAMPIRE_TEMPLATE)
 ```
-
-This Python-based system provides a solid foundation that's more maintainable, performant, and developer-friendly than JSON while maintaining all the flexibility and modularity of the original design. 

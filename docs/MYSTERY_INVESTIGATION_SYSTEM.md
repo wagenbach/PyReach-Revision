@@ -278,7 +278,7 @@ The Mystery Investigation System allows storytellers and staff to create dynamic
 4. **Be Persistent**: Some clues require multiple attempts or specific conditions
 5. **Think Creatively**: Staff can reward unusual but logical investigation approaches
 
-## Integration with Existing Systems
+## Possible Integrations with Existing Systems
 
 ### Experience Points
 - Discovering clues can award investigation experience
@@ -299,5 +299,3 @@ The Mystery Investigation System allows storytellers and staff to create dynamic
 - Investigation-related merits provide bonuses
 - Contacts and allies can provide clue information
 - Occult and academic merits unlock specialized knowledge
-
-This system transforms investigations from staff-dependent scenes into dynamic, player-driven experiences while maintaining story control and narrative coherence.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Storyteller system allows trusted players to run stories and manage game content without needing full staff permissions. Storytellers have access to specialized tools for creating engaging roleplay experiences while maintaining game balance and staff oversight.
+The Storyteller system allows players to run stories (PRPs) and manage game content without needing full staff permissions. Storytellers have access to specialized tools for creating engaging roleplay experiences while maintaining game balance and staff oversight.
 
 ## What is a Storyteller?
 
@@ -206,5 +206,3 @@ if check_storyteller_permission(character):
 
 ### Community Suggestions
 The storyteller system evolves based on community feedback and needs. Storytellers and players are encouraged to suggest improvements and new features.
-
-This system empowers trusted players to create rich, engaging content while maintaining game balance and staff oversight, ultimately enhancing the roleplay experience for everyone.

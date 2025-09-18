@@ -184,5 +184,3 @@ A comprehensive mystery investigation system that transforms investigations from
 ### Modified Files
 - `exordium/commands/investigation.py` - Enhanced with mystery system integration
 - `exordium/commands/default_cmdsets.py` - Added new commands to character cmdset
-
-This system transforms the investigation experience from passive, staff-dependent scenes into active, player-driven narratives while maintaining story control and providing rich, discoverable content.

@@ -5,7 +5,7 @@ The merit system implements the full Chronicles of Darkness merit database with 
 
 ## Merit Categories
 
-### Mental Merits
+### Mental Merit examples
 Cognitive advantages and intellectual capabilities:
 - **Area of Expertise**: Specialized knowledge providing enhanced bonuses
 - **Common Sense**: Storyteller guidance on courses of action
@@ -14,7 +14,7 @@ Cognitive advantages and intellectual capabilities:
 - **Fast Reflexes**: Initiative bonuses
 - **Professional Training**: Extensive professional expertise
 
-### Physical Merits
+### Physical Merit examples
 Physical advantages and capabilities:
 - **Ambidextrous**: No off-hand penalties
 - **Fleet of Foot**: Enhanced movement speed
@@ -22,7 +22,7 @@ Physical advantages and capabilities:
 - **Iron Stamina**: Fatigue resistance
 - **Quick Draw**: Lightning-fast weapon readiness
 
-### Social Merits
+### Social Merit examples
 Social connections and advantages:
 - **Allies**: Organizational connections
 - **Contacts**: Information sources
@@ -31,7 +31,7 @@ Social connections and advantages:
 - **Status**: Organizational standing
 - **Striking Looks**: Appearance advantages
 
-### Fighting/Style Merits
+### Fighting/Style Merit examples
 Combat techniques and martial arts:
 - **Defensive Combat**: Enhanced defense calculations
 - **Fighting Finesse**: Dexterity-based weapon combat
@@ -39,7 +39,7 @@ Combat techniques and martial arts:
 - **Street Fighting**: Dirty fighting techniques
 - **Armed Defense**: Weapon defensive techniques
 
-### Supernatural Merits
+### Supernatural Merit examples
 Psychic and supernatural abilities:
 - **Aura Reading**: Perceive emotional auras
 - **Telepathy**: Read thoughts and send messages
@@ -245,5 +245,3 @@ character.db.stats["merits"] = {
 - Social maneuvering merit effects
 - Investigation system merit bonuses
 - Automated merit effect application
-
-This merit system provides a comprehensive, balanced, and user-friendly implementation of Chronicles of Darkness character advancement, maintaining authentic game mechanics while providing excellent usability through Evennia's command interface. 

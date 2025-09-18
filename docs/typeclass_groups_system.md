@@ -1,6 +1,6 @@
 ## Overview
 
-Groups are stored as Evennia TypeClass objects rather than Django models. Benefits:
+Groups in PyReach are stored as Evennia TypeClass objects rather than Django models. Benefits:
 
 - Better integration with Evennia's object system
 - Automatic attribute persistence
@@ -266,5 +266,3 @@ assign_character_to_group(character, group, auto_assigned=True) -> bool
 remove_character_from_group(character, group) -> bool
 sync_character_group_attributes(character) -> list
 ```
-
-This new TypeClass-based system provides a solid foundation for group management while maintaining backward compatibility with existing functionality. 

@@ -216,5 +216,3 @@ places/add Ancient Oak=A massive oak tree twisted into impossible shapes
 3. **Consistent naming**: Use descriptive area names and clear room hierarchies
 4. **Plan your layout**: Think about room positions before setting coordinates
 5. **Document areas**: Add descriptions when creating new areas
-
-Organizes your game world with consistent room codes and visualization tools for builders and players.

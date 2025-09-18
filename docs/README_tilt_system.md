@@ -230,5 +230,3 @@ Locations need environmental tilt support (handled automatically by combat track
 - Works with existing condition system
 - Compatible with health/damage system
 - Integrates with team-based combat
-
-This system provides rich tactical depth while maintaining the Chronicles of Darkness atmosphere and mechanics. 

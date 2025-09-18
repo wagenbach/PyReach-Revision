@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Chronicles of Darkness system now features fully integrated equipment and combat systems based on the official **Hurt Locker** supplement. Characters must actually own, wield, and wear their combat gear, with authentic Chronicles of Darkness mechanics.
+Fully integrated equipment and combat systems based on the official **Hurt Locker** supplement and core CoD material. Characters must actually own, wield, and wear their combat gear. All of this gear has mechanics pulled from the literature.
 
 ## Equipment Types
 
@@ -212,5 +212,3 @@ Protective gear with authentic Chronicles of Darkness mechanics.
 - **Autofire Rules**: Burst fire and suppression mechanics
 - **Explosive Damage**: Blast radius and force calculations
 - **Equipment-based Maneuvers**: Special actions based on gear
-
-Authentic Chronicles of Darkness combat with official Hurt Locker equipment statistics and mechanics. 
