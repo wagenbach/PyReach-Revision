@@ -1,9 +1,4 @@
 # Storyteller System Integration Summary
-
-## What We Added
-
-A comprehensive Storyteller flag system that allows trusted players to use staff-level storytelling tools without full administrative permissions.
-
 ## Key Components
 
 ### 1. Permission System Updates (`world/utils/permission_utils.py`)
