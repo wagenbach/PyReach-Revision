@@ -4,7 +4,7 @@
 
 PyReach is a full-featured MUD/MUSH system built on the Evennia framework, designed specifically for Chronicles of Darkness (CoFD) gameplay (also known as new World of Darkness, nWoD, with an eye towards the 2nd edition framework). It provides storytellers and players with an immersive, automated environment for supernatural roleplaying with extensive character management, character generation, investigation systems, and admin tools for staff and player-empowered storytellers.
 
-## 🎮 Core Features
+## Core Features
 
 ### **Character Management System**
 - **Complete Chronicles of Darkness Integration**: Full support for all major CoFD game lines
@@ -85,7 +85,7 @@ PyReach supports all major Chronicles of Darkness game lines with fully implemen
 ### **Setup & Migration**
 - **[TinyMUX Setup](https://github.com/soma-satoro/PyReach/blob/main/docs/TINYMUX_SETUP.md)** - Migration guide from TinyMUX systems (this works *sort of*, but needs a lot more work to get things going properly)
 
-## 🛠️ Technical Features
+## Technical Features
 
 - **Built on Evennia**: Leverages the powerful Evennia MUD framework
 - **Django Integration**: Full web interface with admin tools
@@ -94,7 +94,7 @@ PyReach supports all major Chronicles of Darkness game lines with fully implemen
 - **Database Persistence**: Robust data storage with automatic backups
 - **Multi-Protocol Support**: Telnet, SSH, and web client compatibility
 
-## 🚀 Getting Started
+## Getting Started
 
 1. **Installation**: Set up Evennia and clone the PyReach repository
 2. **Configuration**: Configure your game settings and database
@@ -102,10 +102,10 @@ PyReach supports all major Chronicles of Darkness game lines with fully implemen
 4. **World Building**: Use area management tools to create your game world
 5. **Player Onboarding**: Set up character creation and approval workflows
 
-## 🤝 Contributing
+## Contributing
 
 PyReach is actively developed and welcomes contributions. Whether you're adding new templates, fixing bugs, or enhancing existing systems, your contributions help make the platform better for everyone.
 
-## 📄 License
+## License
 
 This project is built for the Chronicles of Darkness community and follows appropriate licensing for derivative works based on the World of Darkness intellectual property.
