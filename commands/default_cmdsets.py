@@ -32,8 +32,8 @@ from .integrity import CmdIntegrity
 from .equipment import CmdEquipment
 from .groups import CmdGroups, CmdRoster
 from .npc import CmdNPC
-from .CmdPool import CmdPool  
-from .CmdHealth import CmdHealth
+from .DiesIraeCode.CmdPool import CmdPool  
+from .DiesIraeCode.CmdHealth import CmdHealth
 from .template_admin import CmdTemplate
 from .admin_commands import CmdMigrate
 from .building import (CmdAreaManage, CmdRoomSetup, CmdPlaces, CmdRoomInfo, CmdMap)
@@ -41,19 +41,19 @@ from .admin_area_init import CmdInitAreaManager
 from .mystery_admin import CmdMysteryAdmin, CmdClueObject
 from .storyteller_admin import CmdStoryteller, CmdStorytellerWho
 from .jobs.jobs_commands import CmdJobs
-from .CmdAlias import CmdAlias
-from .CmdAlts import CmdAlts
-from .CmdEmit import CmdEmit
-from .CmdPose import CmdPose
-from .CmdLanguage import CmdLanguage
-from .CmdSay import CmdSay
-from .CmdShortDesc import CmdShortDesc
-from .CmdStaff import CmdStaff
-from .CmdTableTalk import CmdTableTalk
-from .CmdTxt import CmdText
-from .CmdWatch import CmdWatch
-from .CmdWeather import CmdWeather
-from .CmdWho import CmdWho, CmdCensus
+from .DiesIraeCode.CmdAlias import CmdAlias
+from .DiesIraeCode.CmdAlts import CmdAlts
+from .DiesIraeCode.CmdEmit import CmdEmit
+from .DiesIraeCode.CmdPose import CmdPose
+from .DiesIraeCode.CmdLanguage import CmdLanguage
+from .DiesIraeCode.CmdSay import CmdSay
+from .DiesIraeCode.CmdShortDesc import CmdShortDesc
+from .DiesIraeCode.CmdStaff import CmdStaff
+from .DiesIraeCode.CmdTableTalk import CmdTableTalk
+from .DiesIraeCode.CmdTxt import CmdText
+from .DiesIraeCode.CmdWatch import CmdWatch
+from .DiesIraeCode.CmdWeather import CmdWeather
+from .DiesIraeCode.CmdWho import CmdWho, CmdCensus
 from .lookup import CmdLookup
 
 # Uncomment the line below to use custom help command with forced 80-character width
