@@ -1,7 +1,3 @@
-# TypeClass-Based Groups System
-
-This document describes the new TypeClass-based groups system that replaces the previous Django model approach. The new system provides better integration with Evennia's architecture while maintaining all existing functionality.
-
 ## Overview
 
 Groups are stored as Evennia TypeClass objects rather than Django models. Benefits:
