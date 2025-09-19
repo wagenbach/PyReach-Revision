@@ -59,11 +59,8 @@ class CmdExperience(Command):
 
     def func(self):
         """Execute the command."""
-        if not self.caller.db.experience_handler:
-            from world.experience import ExperienceHandler
-            self.caller.db.experience_handler = ExperienceHandler(self.caller)
-
-        exp_handler = self.caller.db.experience_handler
+        # Use the character's experience property which uses lazy loading
+        exp_handler = self.caller.experience
 
         if not self.switch:
             self.show_experience(exp_handler)
@@ -89,7 +86,14 @@ class CmdExperience(Command):
         output = []
         output.append("|wExperience Summary|n")
         output.append("-" * 40)
-        output.append(f"Beats: |c{exp_handler.beats}|n")
+        
+        # Show whole beats and total beats including fractional
+        fractional_beats = self.caller.attributes.get('fractional_beats', default=0.0)
+        if fractional_beats > 0:
+            output.append(f"Beats: |c{exp_handler.beats}|n + |c{fractional_beats:.1f}|n fractional = |c{exp_handler.total_beats:.1f}|n total")
+        else:
+            output.append(f"Beats: |c{exp_handler.beats}|n")
+            
         output.append(f"Experience Points: |y{exp_handler.experience}|n")
         output.append(f"(5 beats = 1 experience point)")
         self.caller.msg("\n".join(output))

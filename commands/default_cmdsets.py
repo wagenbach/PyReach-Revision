@@ -55,6 +55,8 @@ from .DiesIraeCode.CmdWatch import CmdWatch
 from .DiesIraeCode.CmdWeather import CmdWeather
 from .DiesIraeCode.CmdWho import CmdWho, CmdCensus
 from .lookup import CmdLookup
+from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
+from .test_xp_integration import CmdTestXP
 
 # Uncomment the line below to use custom help command with forced 80-character width
 # from .help_custom import CmdHelp
@@ -108,6 +110,14 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdWho())
         self.add(CmdCensus())
         self.add(CmdLookup())
+        
+        # Voting and recommendations
+        self.add(CmdVote())
+        self.add(CmdRecommend())
+        self.add(CmdVoteAdmin())
+        
+        # Testing (remove after verification)
+        self.add(CmdTestXP())
         
         # Social and investigation
         self.add(CmdSocial())

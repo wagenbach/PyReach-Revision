@@ -14,8 +14,28 @@ class ExperienceHandler:
     
     def _load_experience(self):
         """Load experience data from the object's attributes"""
-        self._beats = self.obj.attributes.get('beats', default=0)
-        self._experience = self.obj.attributes.get('experience', default=0)
+        # Check for legacy data in db.stats first
+        legacy_beats = 0
+        legacy_experience = 0
+        
+        if hasattr(self.obj, 'db') and self.obj.db.stats:
+            other_stats = self.obj.db.stats.get('other', {})
+            if 'beats' in other_stats or 'experience' in other_stats:
+                legacy_beats = other_stats.get('beats', 0)
+                legacy_experience = other_stats.get('experience', 0)
+                
+                # Migrate legacy data to attributes
+                if legacy_beats > 0 or legacy_experience > 0:
+                    self.obj.attributes.add('beats', legacy_beats)
+                    self.obj.attributes.add('experience', legacy_experience)
+                    
+                    # Clear legacy data
+                    other_stats.pop('beats', None)
+                    other_stats.pop('experience', None)
+        
+        # Load from attributes (including migrated data)
+        self._beats = self.obj.attributes.get('beats', default=legacy_beats)
+        self._experience = self.obj.attributes.get('experience', default=legacy_experience)
     
     def _save_experience(self):
         """Save experience data to the object's attributes"""
@@ -58,6 +78,30 @@ class ExperienceHandler:
     def experience(self):
         """Get current experience"""
         return self._experience
+    
+    @property
+    def total_beats(self):
+        """Get total beats including fractional beats"""
+        fractional_beats = self.obj.attributes.get('fractional_beats', default=0.0)
+        return self._beats + fractional_beats
+    
+    def add_fractional_beat(self, amount):
+        """Add fractional beats to the character"""
+        fractional_beats = self.obj.attributes.get('fractional_beats', default=0.0)
+        fractional_beats += amount
+        
+        # Convert to whole beats when >= 1.0
+        whole_beats = int(fractional_beats)
+        fractional_beats = fractional_beats - whole_beats
+        
+        # Save fractional beats
+        self.obj.attributes.add('fractional_beats', fractional_beats)
+        
+        # Add whole beats if any
+        if whole_beats > 0:
+            self.add_beat(whole_beats)
+        
+        return whole_beats, fractional_beats
 
 # Experience costs for different improvements
 EXPERIENCE_COSTS = {
