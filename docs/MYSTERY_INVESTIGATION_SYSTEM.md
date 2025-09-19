@@ -40,7 +40,7 @@ The Mystery Investigation System allows storytellers and staff to create dynamic
 ### Discovery Conditions
 
 ```
-+mystery/conditions 1/clue_1 = {"skill_roll": {"skill": "investigation", "difficulty": 3}}
++mystery/conditions 1/clue_1 = {"skill_roll": {"skill": "investigation", "attribute": "wits", "difficulty": 3}}
 +mystery/conditions 1/clue_2 = {"attribute_minimum": {"attribute": "wits", "minimum": 3}}
 +mystery/conditions 1/clue_3 = {"merit_required": {"merit": "contacts"}}
 ```
@@ -129,7 +129,7 @@ The Mystery Investigation System allows storytellers and staff to create dynamic
 
 4. **Add Discovery Conditions**
 ```
-+mystery/conditions 1/clue_1 = {"skill_roll": {"skill": "investigation", "difficulty": 2}}
++mystery/conditions 1/clue_1 = {"skill_roll": {"skill": "investigation", "attribute": "wits", "difficulty": 2}}
 +mystery/conditions 1/clue_2 = {"merit_required": {"merit": "occult"}}
 +mystery/conditions 1/clue_3 = {"attribute_minimum": {"attribute": "empathy", "minimum": 2}}
 ```

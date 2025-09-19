@@ -148,10 +148,10 @@ class MissingPersonTemplate(MysteryTemplate):
         self.set_prerequisite(4, [2, 3])  # Motive needs witness and digital evidence
         
         # Set discovery conditions
-        self.set_condition(0, {"skill_roll": {"skill": "investigation", "difficulty": 2}})
+        self.set_condition(0, {"skill_roll": {"skill": "investigation", "attribute": "wits", "difficulty": 2}})
         self.set_condition(2, {"attribute_minimum": {"attribute": "manipulation", "minimum": 2}})
         self.set_condition(3, {"merit_required": {"merit": "contacts"}})
-        self.set_condition(4, {"skill_roll": {"skill": "investigation", "difficulty": 4}})
+        self.set_condition(4, {"skill_roll": {"skill": "investigation", "attribute": "wits", "difficulty": 4}})
         
         # Add revelation
         self.add_revelation(

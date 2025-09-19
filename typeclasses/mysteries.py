@@ -342,7 +342,10 @@ class MysteryManager:
     @staticmethod
     def create_mystery(title, description, created_by, category="general", difficulty=1):
         """Create a new mystery."""
-        mystery = Mystery.create(title)
+        mystery, errors = Mystery.create(title)
+        if errors:
+            logger.log_err(f"Error creating mystery '{title}': {errors}")
+            return None
         mystery.db.title = title
         mystery.db.description = description
         mystery.db.created_by = created_by
@@ -353,8 +356,8 @@ class MysteryManager:
     @staticmethod
     def get_active_mysteries():
         """Get all active mysteries."""
-        mysteries = Mystery.objects.filter_family("Mystery")
-        return [m for m in mysteries if m.db.status == "active"]
+        mysteries = Mystery.objects.filter_family()
+        return [m for m in mysteries if m.db.status == "active" and m.db.title]
     
     @staticmethod
     def get_character_mysteries(character):

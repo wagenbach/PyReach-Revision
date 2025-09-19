@@ -2,6 +2,7 @@
 Base command classes and mixins for shared functionality.
 """
 
+import re
 from evennia.commands.default.muxcommand import MuxCommand
 from world.utils.permission_utils import (
     check_staff_permission, check_admin_permission, check_builder_permission,
@@ -113,9 +114,152 @@ class TargetResolutionMixin:
         
         return target
 
-class BaseExordiumCommand(MuxCommand):
+class InputValidationMixin:
+    """Mixin for secure input validation and sanitization."""
+    
+    # Maximum lengths for different input types
+    MAX_NAME_LENGTH = 50
+    MAX_DESCRIPTION_LENGTH = 4000
+    MAX_TITLE_LENGTH = 200
+    MAX_MESSAGE_LENGTH = 8000
+    
+    # Allowed attribute names for dynamic access (whitelist approach)
+    SAFE_DB_ATTRIBUTES = {
+        'stats', 'approved', 'conditions', 'tilts', 'health', 'willpower',
+        'beats', 'experience', 'clues', 'notes', 'leverage', 'anchors',
+        'mystery_clues', 'npc_clues', 'places', 'pre_summon_location',
+        'prelogout_location', 'public_alts', 'private_alts', 'alt_blocks',
+        'pending_alt_requests', 'fractional_beats', 'idle_message',
+        # Pool current values
+        'willpower_current', 'glamour_current', 'essence_current', 'blood_current',
+        'mana_current', 'plasm_current', 'satiety_current', 'instability_current',
+        'aether_current', 'pyros_current',
+        # Legacy attributes that may need migration
+        'strength', 'dexterity', 'stamina', 'presence', 'manipulation', 
+        'composure', 'intelligence', 'wits', 'resolve', 'integrity', 'size',
+        'template', 'fullname', 'birthdate', 'concept', 'virtue', 'vice'
+    }
+    
+    def validate_input_length(self, input_text, max_length, field_name="Input"):
+        """
+        Validate input length and provide user-friendly error messages.
+        
+        Args:
+            input_text (str): The input to validate
+            max_length (int): Maximum allowed length
+            field_name (str): Name of the field for error messages
+            
+        Returns:
+            bool: True if valid, False if too long
+        """
+        if not input_text:
+            return True
+            
+        if len(input_text) > max_length:
+            self.caller.msg(f"|r{field_name} is too long. Maximum {max_length} characters, you provided {len(input_text)}.|n")
+            return False
+        return True
+    
+    def sanitize_input(self, input_text, allow_newlines=True):
+        """
+        Sanitize user input to prevent injection attacks.
+        
+        Args:
+            input_text (str): Input to sanitize
+            allow_newlines (bool): Whether to allow newline characters
+            
+        Returns:
+            str: Sanitized input
+        """
+        if not input_text:
+            return ""
+            
+        # Remove null bytes and control characters except newlines/tabs
+        if allow_newlines:
+            sanitized = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', input_text)
+        else:
+            sanitized = re.sub(r'[\x00-\x1F\x7F]', '', input_text)
+            
+        # Trim excessive whitespace
+        sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+        
+        return sanitized
+    
+    def safe_getattr(self, obj, attr_name, default=None):
+        """
+        Safely get attribute from object with whitelist validation.
+        
+        Args:
+            obj: Object to get attribute from
+            attr_name (str): Name of attribute
+            default: Default value if attribute doesn't exist
+            
+        Returns:
+            Attribute value or default
+        """
+        # Validate attribute name against whitelist
+        if hasattr(obj, 'db') and attr_name not in self.SAFE_DB_ATTRIBUTES:
+            self.caller.msg(f"|rAccess to attribute '{attr_name}' is not allowed.|n")
+            return default
+            
+        try:
+            return getattr(obj.db if hasattr(obj, 'db') else obj, attr_name, default)
+        except (AttributeError, TypeError):
+            return default
+    
+    def safe_setattr(self, obj, attr_name, value):
+        """
+        Safely set attribute on object with whitelist validation.
+        
+        Args:
+            obj: Object to set attribute on
+            attr_name (str): Name of attribute
+            value: Value to set
+            
+        Returns:
+            bool: True if successful, False if blocked
+        """
+        # Validate attribute name against whitelist
+        if hasattr(obj, 'db') and attr_name not in self.SAFE_DB_ATTRIBUTES:
+            self.caller.msg(f"|rModification of attribute '{attr_name}' is not allowed.|n")
+            return False
+            
+        try:
+            setattr(obj.db if hasattr(obj, 'db') else obj, attr_name, value)
+            return True
+        except (AttributeError, TypeError) as e:
+            self.caller.msg(f"|rFailed to set attribute: {e}|n")
+            return False
+    
+    def parse_equals_syntax(self, args, required_parts=2):
+        """
+        Safely parse command arguments with equals syntax.
+        
+        Args:
+            args (str): Raw arguments
+            required_parts (int): Number of parts required after split
+            
+        Returns:
+            list or None: Split parts if valid, None if invalid
+        """
+        if not args or "=" not in args:
+            return None
+            
+        parts = [part.strip() for part in args.split("=", required_parts - 1)]
+        
+        if len(parts) != required_parts:
+            return None
+            
+        # Validate each part is not empty
+        for i, part in enumerate(parts):
+            if not part:
+                return None
+                
+        return parts
+
+class BaseExordiumCommand(MuxCommand, InputValidationMixin):
     """
-    Base command class for Exordium commands with common functionality.
+    Base command class for Exordium commands with common functionality and security.
     """
     
     def at_pre_cmd(self):

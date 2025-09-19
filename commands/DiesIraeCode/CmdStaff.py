@@ -4,6 +4,7 @@ from evennia.utils.ansi import ANSIString
 from evennia.utils import ansi
 from evennia import Command
 from evennia.utils import search
+from world.utils.permission_utils import check_admin_permission, format_permission_error
 
 class CmdStaff(default_cmds.MuxCommand):
     """
@@ -48,22 +49,22 @@ class CmdStaff(default_cmds.MuxCommand):
             self.list_staff()
         elif "position" in self.switches:
             # Set staff position (admin only)
-            if self.caller.check_permstring("Admin"):
-                self.set_position()
-            else:
-                self.caller.msg("You don't have permission to set staff positions.")
+            if not check_admin_permission(self.caller):
+                self.caller.msg(format_permission_error("Admin"))
+                return
+            self.set_position()
         elif "add" in self.switches:
             # Add staff (admin only)
-            if self.caller.check_permstring("Admin"):
-                self.add_staff()
-            else:
-                self.caller.msg("You don't have permission to add staff.")
+            if not check_admin_permission(self.caller):
+                self.caller.msg(format_permission_error("Admin"))
+                return
+            self.add_staff()
         elif "remove" in self.switches:
             # Remove staff (admin only)
-            if self.caller.check_permstring("Admin"):
-                self.remove_staff()
-            else:
-                self.caller.msg("You don't have permission to remove staff.")
+            if not check_admin_permission(self.caller):
+                self.caller.msg(format_permission_error("Admin"))
+                return
+            self.remove_staff()
         elif "duty" in self.switches:
             # Toggle duty status (staff only)
             self.toggle_duty()

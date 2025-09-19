@@ -1,42 +1,32 @@
+import re
+import random
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import create, evtable
 from evennia.utils.ansi import ANSIString
 from world.experience import ExperienceHandler
 from typeclasses.mysteries import MysteryManager
-import random
 
 class CmdInvestigation(MuxCommand):
     """
-    Manage investigations and clues.
+    Investigation commands for the Mystery System.
     
-    Personal Clues:
-        +investigation/clue <name> = <description> - Create a personal clue
-        +investigation/element <clue> = <description> - Add an element to a personal clue
-        +investigation/tag <clue> <tag> - Add a tag to a personal clue
-        +investigation/list - List your personal clues
-        +investigation/view <clue> - View a personal clue's details
-        +investigation/spend <clue> <element> - Spend a clue element
-        +investigation/truth <clue1> <clue2> [clue3...] - Attempt to uncover truth
-        
-    Mystery System:
+    Mystery Discovery:
         +investigation/mysteries - List active mysteries you can participate in
         +investigation/mystery <mystery_id> - View mystery details and your progress
-        +investigation/investigate <area|object|person> - Attempt to discover clues
-        +investigation/share <character> = <clue> - Share a clue with another character
-        +investigation/collaborate <character> - Combine investigation efforts
         +investigation/progress [mystery_id] - Show your investigation progress
         
     Discovery Methods:
         +investigation/examine <object> - Carefully examine an object for clues
-        +investigation/search <area> - Search an area for hidden clues
+        +investigation/search [area] - Search an area for hidden clues
         +investigation/interview <character> - Interview someone for information
         +investigation/research <topic> - Research a topic (requires library/resources)
         
-    Tags:
-        incomplete - Clue needs more investigation
-        tainted - Clue may be misleading
-        critical - Important clue for solving mystery
-        shared - Clue shared with other investigators
+    Collaboration:
+        +investigation/share <character> = <clue_name> - Share a mystery clue with another character
+        +investigation/collaborate <character> - Begin collaborating on investigations
+        
+    All commands work within the context of active mysteries managed by staff.
+    Use +investigation/mysteries to see what investigations are available to you.
     """
     key = "+investigation"
     aliases = ["+inv"]
@@ -48,6 +38,39 @@ class CmdInvestigation(MuxCommand):
         args = self.args.strip()
         self.switches = []
     
+    def flexible_search(self, search_term):
+        """
+        Search for an object, trying both spaces and underscores.
+        
+        Args:
+            search_term (str): The term to search for
+            
+        Returns:
+            Object or None: The found object, or None if not found
+        """
+        # Try the original search term first
+        target = self.caller.search(search_term)
+        
+        # If not found and search term contains spaces, try with underscores
+        if not target and ' ' in search_term:
+            underscore_term = search_term.replace(' ', '_')
+            target = self.caller.search(underscore_term)
+            if target:
+                # For debugging, inform user about the substitution
+                # self.caller.msg(f"|y(Found '{underscore_term}' instead of '{search_term}')|n")
+                pass
+        
+        # If still not found and search term contains underscores, try with spaces
+        if not target and '_' in search_term:
+            space_term = search_term.replace('_', ' ')
+            target = self.caller.search(space_term)
+            if target:
+                # For debugging, inform user about the substitution
+                # self.caller.msg(f"|y(Found '{space_term}' instead of '{search_term}')|n")
+                pass
+        
+        return target[0] if target else None
+    
     def func(self):
         """Execute the command"""
         if not self.switches:
@@ -56,32 +79,11 @@ class CmdInvestigation(MuxCommand):
             
         switch = self.switches[0].lower()
         
-        # Personal clue management (original functionality)
-        if switch == "clue":
-            self.create_clue()
-        elif switch == "element":
-            self.add_element()
-        elif switch == "tag":
-            self.add_tag()
-        elif switch == "list":
-            self.list_clues()
-        elif switch == "view":
-            self.view_clue()
-        elif switch == "spend":
-            self.spend_element()
-        elif switch == "truth":
-            self.uncover_truth()
-        # New mystery system functionality
-        elif switch == "mysteries":
+        # Mystery system functionality
+        if switch == "mysteries":
             self.list_mysteries()
         elif switch == "mystery":
             self.view_mystery()
-        elif switch == "investigate":
-            self.investigate()
-        elif switch == "share":
-            self.share_clue()
-        elif switch == "collaborate":
-            self.collaborate()
         elif switch == "progress":
             self.show_progress()
         elif switch == "examine":
@@ -92,183 +94,144 @@ class CmdInvestigation(MuxCommand):
             self.interview()
         elif switch == "research":
             self.research()
+        elif switch == "share":
+            self.share_clue()
+        elif switch == "collaborate":
+            self.collaborate()
         else:
             self.caller.msg("Invalid switch. See 'help +investigation' for usage.")
     
-    def create_clue(self):
-        """Create a new clue"""
-        if "=" not in self.args:
-            self.caller.msg("Usage: +investigation/clue <name> = <description>")
-            return
-            
-        name, description = [part.strip() for part in self.args.split("=", 1)]
+    # Mystery System Methods
+    def _attempt_mystery_discovery(self, method_type, target_object=None, research_topic=None):
+        """
+        Attempt to discover mystery clues using specified method.
         
-        # Initialize clues if not exists
-        if not self.caller.db.clues:
-            self.caller.db.clues = {}
+        Args:
+            method_type (str): Type of discovery method ('search', 'examine', 'interview', 'research')
+            target_object (Object, optional): Specific object being examined/interviewed
+            research_topic (str, optional): Topic being researched
             
-        if name in self.caller.db.clues:
-            self.caller.msg(f"A clue named '{name}' already exists")
-            return
-            
-        self.caller.db.clues[name] = {
-            "description": description,
-            "elements": [],
-            "tags": [],
-            "spent_elements": []
-        }
+        Returns:
+            list: Names of discovered clues
+        """
+        # Get mysteries that have clues available
+        mysteries = MysteryManager.get_active_mysteries()
+        available_clues = []
         
-        self.caller.msg(f"Created new clue: {name}")
-        self.caller.msg(f"Description: {description}")
-    
-    def add_element(self):
-        """Add an element to a clue"""
-        if "=" not in self.args:
-            self.caller.msg("Usage: +investigation/element <clue> = <description>")
-            return
-            
-        clue_name, element_desc = [part.strip() for part in self.args.split("=", 1)]
-        
-        if not self.caller.db.clues or clue_name not in self.caller.db.clues:
-            self.caller.msg(f"No clue named '{clue_name}' found")
-            return
-            
-        self.caller.db.clues[clue_name]["elements"].append(element_desc)
-        self.caller.msg(f"Added element to {clue_name}: {element_desc}")
-    
-    def add_tag(self):
-        """Add a tag to a clue"""
-        try:
-            clue_name, tag = self.args.split()
-        except ValueError:
-            self.caller.msg("Usage: +investigation/tag <clue> <tag>")
-            return
-            
-        if not self.caller.db.clues or clue_name not in self.caller.db.clues:
-            self.caller.msg(f"No clue named '{clue_name}' found")
-            return
-            
-        if tag not in ["incomplete", "tainted"]:
-            self.caller.msg("Invalid tag. Use: incomplete or tainted")
-            return
-            
-        if tag in self.caller.db.clues[clue_name]["tags"]:
-            self.caller.msg(f"Clue already has tag '{tag}'")
-            return
-            
-        self.caller.db.clues[clue_name]["tags"].append(tag)
-        self.caller.msg(f"Added tag '{tag}' to {clue_name}")
-    
-    def list_clues(self):
-        """List all clues"""
-        if not self.caller.db.clues:
-            self.caller.msg("You have no clues")
-            return
-            
-        output = ["Your clues:"]
-        for name, clue in self.caller.db.clues.items():
-            tags = " ".join(f"[{tag}]" for tag in clue["tags"])
-            output.append(f"{name} {tags}")
-            output.append(f"  {clue['description']}")
-            output.append(f"  Elements: {len(clue['elements'])} available, {len(clue['spent_elements'])} spent")
-            
-        self.caller.msg("\n".join(output))
-    
-    def view_clue(self):
-        """View a clue's details"""
-        clue_name = self.args.strip()
-        
-        if not self.caller.db.clues or clue_name not in self.caller.db.clues:
-            self.caller.msg(f"No clue named '{clue_name}' found")
-            return
-            
-        clue = self.caller.db.clues[clue_name]
-        
-        output = [
-            f"Clue: {clue_name}",
-            f"Description: {clue['description']}",
-            f"Tags: {', '.join(clue['tags']) if clue['tags'] else 'None'}"
-        ]
-        
-        if clue["elements"]:
-            output.append("\nAvailable Elements:")
-            for i, element in enumerate(clue["elements"], 1):
-                output.append(f"{i}. {element}")
+        for mystery in mysteries:
+            mystery_available = mystery.get_available_clues(self.caller)
+            for clue_id in mystery_available:
+                clue = mystery.db.clues[clue_id]
                 
-        if clue["spent_elements"]:
-            output.append("\nSpent Elements:")
-            for i, element in enumerate(clue["spent_elements"], 1):
-                output.append(f"{i}. {element}")
+                # Check if clue can be discovered by this method
+                skill_hints = clue.get('skill_hints', [])
+                location_hints = clue.get('location_hints', [])
                 
-        self.caller.msg("\n".join(output))
-    
-    def spend_element(self):
-        """Spend a clue element"""
-        try:
-            clue_name, element_num = self.args.split()
-            element_num = int(element_num)
-        except ValueError:
-            self.caller.msg("Usage: +investigation/spend <clue> <element_number>")
-            return
-            
-        if not self.caller.db.clues or clue_name not in self.caller.db.clues:
-            self.caller.msg(f"No clue named '{clue_name}' found")
-            return
-            
-        clue = self.caller.db.clues[clue_name]
-        
-        if not 1 <= element_num <= len(clue["elements"]):
-            self.caller.msg(f"Invalid element number. Choose 1-{len(clue['elements'])}")
-            return
-            
-        # Move element from available to spent
-        element = clue["elements"].pop(element_num - 1)
-        clue["spent_elements"].append(element)
-        
-        self.caller.msg(f"Spent element from {clue_name}: {element}")
-    
-    def uncover_truth(self):
-        """Attempt to uncover truth by combining clues"""
-        clue_names = self.args.split()
-        
-        if len(clue_names) < 2:
-            self.caller.msg("Usage: +investigation/truth <clue1> <clue2> [clue3...]")
-            return
-            
-        # Check if all clues exist
-        if not self.caller.db.clues:
-            self.caller.msg("You have no clues")
-            return
-            
-        for name in clue_names:
-            if name not in self.caller.db.clues:
-                self.caller.msg(f"No clue named '{name}' found")
-                return
+                # Location filtering (not applicable for research)
+                if method_type != 'research' and location_hints and self.caller.location.key not in location_hints:
+                    continue
                 
-        # Check if clues have required elements
-        for name in clue_names:
-            clue = self.caller.db.clues[name]
-            if not clue["elements"]:
-                self.caller.msg(f"Clue '{name}' has no available elements")
-                return
+                # Method filtering
+                if skill_hints and method_type not in skill_hints:
+                    continue
+                    
+                # Object-specific filtering for examine/interview
+                if target_object and method_type in ['examine', 'interview']:
+                    if target_object.key.lower() not in clue.get('description', '').lower():
+                        continue
                 
-        # Calculate dice pool
-        # Base pool is intelligence + investigation
-        intelligence = self.caller.db.attributes["mental"]["intelligence"]
-        investigation = self.caller.db.skills["mental"].get("investigation", 0)
-        dice_pool = intelligence + investigation
+                # Topic-specific filtering for research
+                if research_topic and method_type == 'research':
+                    clue_desc = clue.get('description', '').lower()
+                    clue_name = clue.get('name', '').lower()
+                    if research_topic.lower() not in clue_desc and research_topic.lower() not in clue_name:
+                        continue
+                
+                available_clues.append((mystery, clue_id, clue))
         
-        # Add bonus for number of clues
-        dice_pool += len(clue_names)
+        if not available_clues:
+            return []
+        
+        # Determine skill/attribute to use
+        attribute, skill, skill_category = self._get_skill_for_clues(available_clues)
+        
+        # Get attribute and skill values
+        attr_value = self._get_attribute_value(attribute)
+        skill_value = self.caller.db.skills[skill_category].get(skill, 0)
+        dice_pool = attr_value + skill_value
+        
+        self.caller.msg(f"Rolling {attribute.title()} + {skill.title()}: {dice_pool} dice")
         
         # Make the roll
-        self.caller.msg(f"Attempting to uncover truth with {len(clue_names)} clues")
-        self.caller.msg(f"Dice pool: {dice_pool}")
+        successes = sum(1 for _ in range(dice_pool) if random.randint(1, 10) >= 8)
         
-        # Use the existing roll command
-        self.caller.execute_cmd(f"+roll {dice_pool}")
+        if successes == 0:
+            return []
+        
+        # Determine how many clues to discover
+        if successes >= 3:
+            self.caller.msg(f"|gExceptional Success! ({successes} successes)|n")
+            clues_to_discover = min(2, len(available_clues))
+        else:
+            self.caller.msg(f"|gSuccess! ({successes} successes)|n")
+            clues_to_discover = 1
+        
+        # Attempt to discover clues
+        discovered = []
+        for i in range(min(clues_to_discover, len(available_clues))):
+            mystery, clue_id, clue = available_clues[i]
+            
+            # Check if specific clue's difficulty requirements are met
+            discovery_conditions = clue.get('discovery_conditions', {})
+            if 'skill_roll' in discovery_conditions:
+                required_difficulty = discovery_conditions['skill_roll'].get('difficulty', 2)
+                if successes < required_difficulty:
+                    continue
+            
+            success, msg = mystery.discover_clue(self.caller, clue_id, method_type)
+            if success:
+                discovered.append(clue['name'])
+        
+        return discovered
     
-    # Mystery System Methods
+    def _get_skill_for_clues(self, available_clues):
+        """Determine the best skill/attribute combination for available clues."""
+        # Default to wits + investigation
+        attribute = "wits"
+        skill = "investigation"
+        skill_category = "mental"
+        
+        # Check if any clues have specific skill requirements
+        for mystery, clue_id, clue in available_clues:
+            discovery_conditions = clue.get('discovery_conditions', {})
+            if 'skill_roll' in discovery_conditions:
+                skill_req = discovery_conditions['skill_roll']
+                skill = skill_req.get('skill', 'investigation')
+                attribute = skill_req.get('attribute', 'wits')
+                
+                # Determine skill category
+                if skill in ['investigation', 'academics', 'computer', 'crafts', 'medicine', 'occult', 'science']:
+                    skill_category = "mental"
+                elif skill in ['athletics', 'brawl', 'drive', 'firearms', 'larceny', 'stealth', 'survival', 'weaponry']:
+                    skill_category = "physical"
+                elif skill in ['animal_ken', 'empathy', 'expression', 'intimidation', 'persuasion', 'socialize', 'streetwise', 'subterfuge']:
+                    skill_category = "social"
+                break
+        
+        return attribute, skill, skill_category
+    
+    def _get_attribute_value(self, attribute):
+        """Get the value of an attribute from the character."""
+        if attribute in self.caller.db.attributes["mental"]:
+            return self.caller.db.attributes["mental"][attribute]
+        elif attribute in self.caller.db.attributes["physical"]:
+            return self.caller.db.attributes["physical"][attribute]
+        elif attribute in self.caller.db.attributes["social"]:
+            return self.caller.db.attributes["social"][attribute]
+        else:
+            # Default to wits if attribute not found
+            return self.caller.db.attributes["mental"]["wits"]
+    
     def list_mysteries(self):
         """List active mysteries the character can participate in."""
         mysteries = MysteryManager.get_active_mysteries()
@@ -363,133 +326,59 @@ class CmdInvestigation(MuxCommand):
         
         if available_clues:
             output.append(f"|yAvailable to Discover:|n {len(available_clues)} clue(s)")
-            output.append("|yHint:|n Try using +investigation/investigate, /examine, or /search to find clues.")
+            output.append("|yHint:|n Try using +investigation/search, /examine, or /search to find clues.")
         else:
             if len(discovered_clues) < len(mystery.db.clues):
                 output.append("|yNext Steps:|n You may need to discover more clues before new ones become available.")
         
         self.caller.msg("\n".join(output))
     
-    def investigate(self):
-        """General investigation attempt in current location."""
-        target = self.args.strip() if self.args else "area"
-        
-        if not self.caller.location:
-            self.caller.msg("You need to be somewhere to investigate.")
-            return
-        
-        # Get mysteries that have clues available in this location
-        mysteries = MysteryManager.get_active_mysteries()
-        location_clues = []
-        
-        for mystery in mysteries:
-            available_clues = mystery.get_available_clues(self.caller)
-            for clue_id in available_clues:
-                clue = mystery.db.clues[clue_id]
-                # Check if clue has location hints for current area
-                location_hints = clue.get('location_hints', [])
-                if not location_hints or self.caller.location.key in location_hints:
-                    location_clues.append((mystery, clue_id, clue))
-        
-        if not location_clues:
-            self.caller.msg("Your investigation of the area reveals nothing of interest.")
-            return
-        
-        # Make an investigation roll
-        intelligence = self.caller.db.attributes["mental"]["intelligence"]
-        investigation_skill = self.caller.db.skills["mental"].get("investigation", 0)
-        dice_pool = intelligence + investigation_skill
-        
-        self.caller.msg(f"|yYou begin investigating {target}...|n")
-        self.caller.msg(f"Rolling Intelligence + Investigation: {dice_pool} dice")
-        
-        # Simulate a roll (you'd integrate with your actual dice system)
-        successes = sum(1 for _ in range(dice_pool) if random.randint(1, 10) >= 8)
-        
-        if successes == 0:
-            self.caller.msg("|rYour investigation reveals nothing useful.|n")
-            return
-        elif successes >= 3:
-            # Exceptional success - might discover multiple clues or get bonus info
-            self.caller.msg(f"|gExceptional Success! ({successes} successes)|n")
-            clues_to_discover = min(2, len(location_clues))
-        else:
-            # Regular success
-            self.caller.msg(f"|gSuccess! ({successes} successes)|n")
-            clues_to_discover = 1
-        
-        # Discover clue(s)
-        discovered = []
-        for i in range(min(clues_to_discover, len(location_clues))):
-            mystery, clue_id, clue = location_clues[i]
-            success, msg = mystery.discover_clue(self.caller, clue_id, "investigation")
-            if success:
-                discovered.append(clue['name'])
-        
-        if discovered:
-            self.caller.msg(f"|yYour investigation uncovered:|n {', '.join(discovered)}")
-        else:
-            self.caller.msg("Despite your efforts, you don't find anything new.")
     
     def share_clue(self):
-        """Share a clue with another character."""
+        """Share a mystery clue with another character."""
         if "=" not in self.args:
             self.caller.msg("Usage: +investigation/share <character> = <clue_name>")
             return
         
         char_name, clue_name = [x.strip() for x in self.args.split("=", 1)]
         
-        target = self.caller.search(char_name)
+        target = self.flexible_search(char_name)
+        
         if not target:
             return
-        target = target[0]
         
-        # Check if caller has this clue
-        personal_clues = self.caller.db.clues or {}
-        if clue_name in personal_clues:
-            # Share personal clue
-            if not target.db.clues:
-                target.db.clues = {}
-            
-            shared_clue = personal_clues[clue_name].copy()
-            shared_clue['tags'] = shared_clue.get('tags', [])
-            if 'shared' not in shared_clue['tags']:
-                shared_clue['tags'].append('shared')
-            
-            target.db.clues[f"shared_{clue_name}"] = shared_clue
-            
-            self.caller.msg(f"|gYou shared the clue '{clue_name}' with {target.name}.|n")
-            target.msg(f"|y{self.caller.name} shared a clue with you: {clue_name}|n")
-            target.msg(f"|yDescription:|n {shared_clue['description']}")
-        else:
-            # Check mystery clues
-            mystery_clues = getattr(self.caller.db, 'mystery_clues', {})
-            found_clue = None
-            
-            for mystery_id, clue_ids in mystery_clues.items():
-                from evennia.utils import search
-                mystery = search.search_object(f"#{mystery_id}")
-                if mystery:
-                    mystery = mystery[0]
-                    for clue_id in clue_ids:
-                        clue = mystery.db.clues.get(clue_id, {})
-                        if clue.get('name', '').lower() == clue_name.lower():
-                            found_clue = (mystery, clue_id, clue)
-                            break
-                if found_clue:
-                    break
-            
+        # Check mystery clues that this character has discovered
+        mystery_clues = getattr(self.caller.db, 'mystery_clues', {})
+        found_clue = None
+        
+        if not mystery_clues:
+            self.caller.msg("You haven't discovered any mystery clues to share.")
+            return
+        
+        for mystery_id, clue_ids in mystery_clues.items():
+            from evennia.utils import search
+            mystery = search.search_object(f"#{mystery_id}")
+            if mystery:
+                mystery = mystery[0]
+                for clue_id in clue_ids:
+                    clue = mystery.db.clues.get(clue_id, {})
+                    if clue.get('name', '').lower() == clue_name.lower():
+                        found_clue = (mystery, clue_id, clue)
+                        break
             if found_clue:
-                mystery, clue_id, clue = found_clue
-                # Grant the clue to the target character
-                success, msg = mystery.discover_clue(target, clue_id, "shared")
-                if success:
-                    self.caller.msg(f"|gYou shared the mystery clue '{clue['name']}' with {target.name}.|n")
-                    target.msg(f"|y{self.caller.name} shared a mystery clue with you:|n {msg}")
-                else:
-                    self.caller.msg(f"|rCouldn't share clue:|n {msg}")
+                break
+        
+        if found_clue:
+            mystery, clue_id, clue = found_clue
+            # Grant the clue to the target character
+            success, msg = mystery.discover_clue(target, clue_id, "shared")
+            if success:
+                self.caller.msg(f"|gYou shared the mystery clue '{clue['name']}' with {target.name}.|n")
+                target.msg(f"|y{self.caller.name} shared a mystery clue with you:|n {msg}")
             else:
-                self.caller.msg(f"You don't have a clue named '{clue_name}'.")
+                self.caller.msg(f"|rCouldn't share clue:|n {msg}")
+        else:
+            self.caller.msg(f"You don't have a mystery clue named '{clue_name}'. Use +investigation/progress to see your discovered clues.")
     
     def collaborate(self):
         """Start a collaboration with another investigator."""
@@ -497,10 +386,11 @@ class CmdInvestigation(MuxCommand):
             self.caller.msg("Usage: +investigation/collaborate <character>")
             return
         
-        target = self.caller.search(self.args.strip())
+        search_term = self.args.strip()
+        target = self.flexible_search(search_term)
+        
         if not target:
             return
-        target = target[0]
         
         if target == self.caller:
             self.caller.msg("You can't collaborate with yourself.")
@@ -556,10 +446,11 @@ class CmdInvestigation(MuxCommand):
             self.caller.msg("Usage: +investigation/examine <object>")
             return
         
-        target = self.caller.search(self.args.strip())
+        search_term = self.args.strip()
+        target = self.flexible_search(search_term)
+        
         if not target:
             return
-        target = target[0]
         
         # Check if this is a clue object
         from typeclasses.mysteries import ClueObject
@@ -567,30 +458,14 @@ class CmdInvestigation(MuxCommand):
             # Let the clue object handle the examination
             target.at_examine(self.caller)
         else:
-            # Regular examination with investigation bonus
             self.caller.msg(f"|yYou carefully examine {target.name} for clues...|n")
             
-            # Check if any mysteries have clues related to this object
-            mysteries = MysteryManager.get_active_mysteries()
-            found_clue = False
+            # Use the general mystery discovery logic
+            discovered_clues = self._attempt_mystery_discovery("examine", target)
             
-            for mystery in mysteries:
-                available_clues = mystery.get_available_clues(self.caller)
-                for clue_id in available_clues:
-                    clue = mystery.db.clues[clue_id]
-                    # Check if this object is mentioned in clue hints
-                    skill_hints = clue.get('skill_hints', [])
-                    if 'examination' in skill_hints or target.key.lower() in clue.get('description', '').lower():
-                        # Attempt discovery
-                        success, msg = mystery.discover_clue(self.caller, clue_id, "examination")
-                        if success:
-                            self.caller.msg(f"|gYour careful examination reveals something:|n {msg}")
-                            found_clue = True
-                            break
-                if found_clue:
-                    break
-            
-            if not found_clue:
+            if discovered_clues:
+                self.caller.msg(f"|gYour careful examination reveals:|n {', '.join(discovered_clues)}")
+            else:
                 self.caller.msg(f"Your examination of {target.name} reveals nothing unusual.")
     
     def search_for_clues(self):
@@ -601,90 +476,149 @@ class CmdInvestigation(MuxCommand):
             self.caller.msg("You need to be somewhere to search.")
             return
         
+        # Get mysteries that have clues available in this location
+        mysteries = MysteryManager.get_active_mysteries()
+        location_clues = []
+        
+        for mystery in mysteries:
+            available_clues = mystery.get_available_clues(self.caller)
+            for clue_id in available_clues:
+                clue = mystery.db.clues[clue_id]
+                # Check if clue has location hints for current area
+                location_hints = clue.get('location_hints', [])
+                if not location_hints or self.caller.location.key in location_hints:
+                    # Check if this clue has search-specific discovery conditions
+                    discovery_conditions = clue.get('discovery_conditions', {})
+                    skill_hints = clue.get('skill_hints', [])
+                    if 'search' in skill_hints or not skill_hints:  # Include clues without specific skill hints
+                        location_clues.append((mystery, clue_id, clue))
+        
+        if not location_clues:
+            self.caller.msg(f"|yYou search {area} thoroughly but find nothing of interest.|n")
+            return
+        
         self.caller.msg(f"|yYou begin searching {area} for hidden clues...|n")
         
-        # This would be similar to investigate but with different skill emphasis
-        # Could use Wits + Investigation or Dexterity + Larceny for hidden things
-        wits = self.caller.db.attributes["mental"]["wits"]
-        investigation = self.caller.db.skills["mental"].get("investigation", 0)
-        dice_pool = wits + investigation
+        # Determine what skill/attribute to use based on available clues
+        # Default to wits + investigation, but use clue-specific requirements if available
+        attribute = "wits"
+        skill = "investigation"
+        skill_category = "mental"
         
-        self.caller.msg(f"Rolling Wits + Investigation: {dice_pool} dice")
+        # Check if any clues have specific skill requirements
+        for mystery, clue_id, clue in location_clues:
+            discovery_conditions = clue.get('discovery_conditions', {})
+            if 'skill_roll' in discovery_conditions:
+                skill_req = discovery_conditions['skill_roll']
+                required_skill = skill_req.get('skill', 'investigation')
+                required_attribute = skill_req.get('attribute', 'wits')
+                
+                # Use the first skill-specific requirement we find
+                skill = required_skill
+                attribute = required_attribute
+                
+                # Determine skill category based on common skills
+                if skill in ['investigation', 'academics', 'computer', 'crafts', 'medicine', 'occult', 'science']:
+                    skill_category = "mental"
+                elif skill in ['athletics', 'brawl', 'drive', 'firearms', 'larceny', 'stealth', 'survival', 'weaponry']:
+                    skill_category = "physical"
+                elif skill in ['animal_ken', 'empathy', 'expression', 'intimidation', 'persuasion', 'socialize', 'streetwise', 'subterfuge']:
+                    skill_category = "social"
+                break
+        
+        # Get the actual attribute and skill values
+        if attribute in self.caller.db.attributes["mental"]:
+            attr_value = self.caller.db.attributes["mental"][attribute]
+        elif attribute in self.caller.db.attributes["physical"]:
+            attr_value = self.caller.db.attributes["physical"][attribute]
+        elif attribute in self.caller.db.attributes["social"]:
+            attr_value = self.caller.db.attributes["social"][attribute]
+        else:
+            # Default to wits if attribute not found
+            attr_value = self.caller.db.attributes["mental"]["wits"]
+            attribute = "wits"
+        
+        skill_value = self.caller.db.skills[skill_category].get(skill, 0)
+        dice_pool = attr_value + skill_value
+        
+        self.caller.msg(f"Rolling {attribute.title()} + {skill.title()}: {dice_pool} dice")
         
         # Simulate roll
         successes = sum(1 for _ in range(dice_pool) if random.randint(1, 10) >= 8)
         
-        if successes >= 2:
-            # Search might find different types of clues than general investigation
-            self.investigate()  # Reuse investigation logic for now
-        else:
+        if successes == 0:
             self.caller.msg("|rYour search reveals nothing hidden.|n")
+            return
+        elif successes >= 3:
+            # Exceptional success - might discover multiple clues
+            self.caller.msg(f"|gExceptional Success! ({successes} successes)|n")
+            clues_to_discover = min(2, len(location_clues))
+        else:
+            # Regular success
+            self.caller.msg(f"|gSuccess! ({successes} successes)|n")
+            clues_to_discover = 1
+        
+        # Discover clue(s) based on success level and skill requirements
+        discovered = []
+        for i in range(min(clues_to_discover, len(location_clues))):
+            mystery, clue_id, clue = location_clues[i]
+            
+            # Check if this specific clue's conditions are met
+            discovery_conditions = clue.get('discovery_conditions', {})
+            can_discover = True
+            
+            if 'skill_roll' in discovery_conditions:
+                skill_req = discovery_conditions['skill_roll']
+                required_difficulty = skill_req.get('difficulty', 2)
+                if successes < required_difficulty:
+                    can_discover = False
+            
+            if can_discover:
+                success, msg = mystery.discover_clue(self.caller, clue_id, "search")
+                if success:
+                    discovered.append(clue['name'])
+        
+        if discovered:
+            self.caller.msg(f"|yYour search uncovered:|n {', '.join(discovered)}")
+        else:
+            self.caller.msg("Despite your efforts, you don't find anything new.")
     
     def interview(self):
-        """Interview a character for information."""
+        """Interview a character for information using the mystery system."""
         if not self.args:
             self.caller.msg("Usage: +investigation/interview <character>")
             return
         
-        target = self.caller.search(self.args.strip())
+        search_term = self.args.strip()
+        target = self.flexible_search(search_term)
+        
         if not target:
             return
-        target = target[0]
         
         if target == self.caller:
             self.caller.msg("You can't interview yourself.")
             return
         
-        # Check if target is an NPC with mystery information
-        npc_clues = getattr(target.db, 'npc_clues', {})
+        self.caller.msg(f"|yYou begin interviewing {target.name}...|n")
         
-        if npc_clues:
-            self.caller.msg(f"|yYou begin interviewing {target.name}...|n")
-            
-            # Social roll - Manipulation + Persuasion or similar
-            manipulation = self.caller.db.attributes["social"]["manipulation"]
-            persuasion = self.caller.db.skills["social"].get("persuasion", 0)
-            dice_pool = manipulation + persuasion
-            
-            self.caller.msg(f"Rolling Manipulation + Persuasion: {dice_pool} dice")
-            
-            successes = sum(1 for _ in range(dice_pool) if random.randint(1, 10) >= 8)
-            
-            if successes >= 2:
-                # Success - might reveal clues
-                available_clues = [clue_id for clue_id, requirements in npc_clues.items() 
-                                 if requirements.get('social_success', 0) <= successes]
-                
-                if available_clues:
-                    clue_id = available_clues[0]  # Give first available clue
-                    mystery_id = npc_clues[clue_id].get('mystery_id')
-                    
-                    if mystery_id:
-                        from evennia.utils import search
-                        mystery = search.search_object(f"#{mystery_id}")
-                        if mystery:
-                            mystery = mystery[0]
-                            success, msg = mystery.discover_clue(self.caller, clue_id, "interview")
-                            if success:
-                                self.caller.msg(f"|g{target.name} reveals something interesting:|n {msg}")
-                                target.msg(f"|yYou shared information with {self.caller.name}.|n")
-                            else:
-                                self.caller.msg(f"{target.name} doesn't seem to know anything useful.")
-                        else:
-                            self.caller.msg(f"{target.name} doesn't seem to know anything useful.")
-                    else:
-                        self.caller.msg(f"{target.name} doesn't seem to know anything useful.")
-                else:
-                    self.caller.msg(f"{target.name} doesn't have any new information to share.")
-            else:
-                self.caller.msg(f"|r{target.name} doesn't seem willing to share information with you.|n")
+        # Use the general mystery discovery logic
+        discovered_clues = self._attempt_mystery_discovery("interview", target)
+        
+        if discovered_clues:
+            self.caller.msg(f"|g{target.name} reveals something interesting:|n {', '.join(discovered_clues)}")
+            target.msg(f"|yYou shared information with {self.caller.name}.|n")
         else:
-            # Regular PC - could initiate social RP
-            self.caller.msg(f"|yYou approach {target.name} for an interview.|n")
-            target.msg(f"|y{self.caller.name} wants to interview you about ongoing investigations.|n")
+            # Check if this is a PC vs NPC
+            if target.has_account:
+                # Regular PC - initiate social RP
+                self.caller.msg(f"|y{target.name} doesn't seem to know anything about your current investigations.|n")
+                target.msg(f"|y{self.caller.name} wants to interview you about ongoing investigations.|n")
+            else:
+                # NPC with no relevant information
+                self.caller.msg(f"|r{target.name} doesn't seem willing to share information with you.|n")
     
     def research(self):
-        """Research a topic for clues."""
+        """Research a topic for clues using the mystery system."""
         if not self.args:
             self.caller.msg("Usage: +investigation/research <topic>")
             return
@@ -707,30 +641,10 @@ class CmdInvestigation(MuxCommand):
         
         self.caller.msg(f"|yYou begin researching '{topic}'...|n")
         
-        # Research roll - Intelligence + Academics or Investigation
-        intelligence = self.caller.db.attributes["mental"]["intelligence"]
-        academics = self.caller.db.skills["mental"].get("academics", 0)
-        dice_pool = intelligence + academics
+        # Use the general mystery discovery logic
+        discovered_clues = self._attempt_mystery_discovery("research", research_topic=topic)
         
-        self.caller.msg(f"Rolling Intelligence + Academics: {dice_pool} dice")
-        
-        successes = sum(1 for _ in range(dice_pool) if random.randint(1, 10) >= 8)
-        
-        if successes >= 2:
-            # Research might reveal background clues or context
-            mysteries = MysteryManager.get_active_mysteries()
-            
-            for mystery in mysteries:
-                available_clues = mystery.get_available_clues(self.caller)
-                for clue_id in available_clues:
-                    clue = mystery.db.clues[clue_id]
-                    # Check if research topic matches clue keywords
-                    if topic.lower() in clue.get('description', '').lower() or topic.lower() in clue.get('name', '').lower():
-                        success, msg = mystery.discover_clue(self.caller, clue_id, "research")
-                        if success:
-                            self.caller.msg(f"|gYour research on '{topic}' uncovers:|n {msg}")
-                            return
-            
-            self.caller.msg(f"|yYour research on '{topic}' provides some general background but no specific clues.|n")
+        if discovered_clues:
+            self.caller.msg(f"|gYour research on '{topic}' uncovers:|n {', '.join(discovered_clues)}")
         else:
-            self.caller.msg(f"|rYour research on '{topic}' doesn't turn up anything useful.|n")
+            self.caller.msg(f"|yYour research on '{topic}' provides some general background but no specific clues.|n")

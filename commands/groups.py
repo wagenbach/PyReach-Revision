@@ -63,9 +63,6 @@ class CmdGroups(MuxCommand):
     def parse(self):
         """Parse the command arguments."""
         super().parse()  # Initialize switches and other MuxCommand attributes
-        
-        args = self.args.strip()
-        self.switches = []
     def list_groups(self):
         """List all public groups."""
         groups = get_public_groups()

@@ -1929,19 +1929,30 @@ class CmdJobs(MuxCommand):
             # Create a log file with timestamp
             from datetime import datetime
             import os
+            from pathlib import Path
             
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            log_dir = os.path.join('server', 'logs', 'jobs')
+            
+            # Use absolute paths and validate directory structure
+            base_dir = Path(__file__).parent.parent.parent  # Get to project root
+            log_dir = base_dir / 'server' / 'logs' / 'jobs'
             
             # Create the jobs log directory if it doesn't exist
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
+            log_dir.mkdir(parents=True, exist_ok=True)
             
-            log_file = os.path.join(log_dir, f'jobs_archive_{timestamp}.log')
+            # Sanitize filename to prevent path traversal
+            safe_filename = f'jobs_archive_{timestamp}.log'
+            log_file = log_dir / safe_filename
+            
+            # Ensure the log file is within our expected directory
+            if not str(log_file.resolve()).startswith(str(log_dir.resolve())):
+                self.caller.msg("|rSecurity error: Invalid log file path.|n")
+                return
 
             # Write archived jobs to the log file
-            with open(log_file, 'w', encoding='utf-8') as f:
-                f.write(f"Exordium to Entropy Jobs Archive - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            try:
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Exordium to Entropy Jobs Archive - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write("=" * 80 + "\n\n")
                 
                 for job in archived_jobs:
@@ -1963,6 +1974,12 @@ class CmdJobs(MuxCommand):
                         f.write("\nComments:\n")
                         f.write(job.comments + "\n")
                     f.write("\n" + "=" * 80 + "\n\n")
+                    
+                self.caller.msg(f"|gArchived jobs logged to: {log_file}|n")
+                
+            except IOError as e:
+                self.caller.msg(f"|rError writing log file: {e}|n")
+                return
 
             # Get the count before clearing
             job_count = archived_jobs.count()

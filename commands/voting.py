@@ -39,6 +39,17 @@ class CmdVote(Command):
             
         target_name = self.args.strip()
         
+        # Validate input length and sanitize
+        if len(target_name) > 50:
+            self.caller.msg("|rCharacter name is too long.|n")
+            return
+            
+        # Basic sanitization - allow only alphanumeric, spaces, and common punctuation
+        import re
+        if not re.match(r'^[a-zA-Z0-9\s\-_\'\.]+$', target_name):
+            self.caller.msg("|rInvalid character name format.|n")
+            return
+        
         # Check if trying to vote for self
         if target_name.lower() == self.caller.name.lower():
             self.caller.msg("You cannot vote for yourself!")

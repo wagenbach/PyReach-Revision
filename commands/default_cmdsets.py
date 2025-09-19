@@ -32,8 +32,8 @@ from .integrity import CmdIntegrity
 from .equipment import CmdEquipment
 from .groups import CmdGroups, CmdRoster
 from .npc import CmdNPC
-from .DiesIraeCode.CmdPool import CmdPool  
-from .DiesIraeCode.CmdHealth import CmdHealth
+from commands.diesiraecode.CmdPool import CmdPool  
+from .CmdHealth import CmdHealth
 from .template_admin import CmdTemplate
 from .admin_commands import CmdMigrate
 from .building import (CmdAreaManage, CmdRoomSetup, CmdPlaces, CmdRoomInfo, CmdMap)
@@ -41,19 +41,19 @@ from .admin_area_init import CmdInitAreaManager
 from .mystery_admin import CmdMysteryAdmin, CmdClueObject
 from .storyteller_admin import CmdStoryteller, CmdStorytellerWho
 from .jobs.jobs_commands import CmdJobs
-from .DiesIraeCode.CmdAlias import CmdAlias
-from .DiesIraeCode.CmdAlts import CmdAlts
-from .DiesIraeCode.CmdEmit import CmdEmit
-from .DiesIraeCode.CmdPose import CmdPose
-from .DiesIraeCode.CmdLanguage import CmdLanguage
-from .DiesIraeCode.CmdSay import CmdSay
-from .DiesIraeCode.CmdShortDesc import CmdShortDesc
-from .DiesIraeCode.CmdStaff import CmdStaff
-from .DiesIraeCode.CmdTableTalk import CmdTableTalk
-from .DiesIraeCode.CmdTxt import CmdText
-from .DiesIraeCode.CmdWatch import CmdWatch
-from .DiesIraeCode.CmdWeather import CmdWeather
-from .DiesIraeCode.CmdWho import CmdWho, CmdCensus
+from commands.diesiraecode.CmdAlias import CmdAlias
+from commands.diesiraecode.CmdAlts import CmdAlts
+from commands.diesiraecode.CmdEmit import CmdEmit
+from commands.diesiraecode.CmdPose import CmdPose
+from commands.diesiraecode.CmdLanguage import CmdLanguage
+from commands.diesiraecode.CmdSay import CmdSay
+from commands.diesiraecode.CmdShortDesc import CmdShortDesc
+from commands.diesiraecode.CmdStaff import CmdStaff
+from commands.diesiraecode.CmdTableTalk import CmdTableTalk
+from commands.diesiraecode.CmdTxt import CmdText
+from commands.diesiraecode.CmdWatch import CmdWatch
+from commands.diesiraecode.CmdWeather import CmdWeather
+from commands.diesiraecode.CmdWho import CmdWho, CmdCensus
 from .lookup import CmdLookup
 from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
 from .test_xp_integration import CmdTestXP

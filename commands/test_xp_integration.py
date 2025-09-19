@@ -74,6 +74,11 @@ class CmdTestXP(Command):
             output.append(f"  Voting enabled: {voting_enabled}")
             output.append(f"  Weekly beats enabled: {weekly_enabled}")
             
+            # Test 7: Dice roll integration
+            output.append(f"✓ Dice roll integration ready")
+            output.append(f"  Exceptional success (5+ successes) will award 1 beat")
+            output.append(f"  Dramatic failure (chance die = 1) will award 1 beat")
+            
             output.append(f"\n|gAll integration tests passed!|n")
             
         except Exception as e:

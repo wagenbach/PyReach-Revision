@@ -74,6 +74,11 @@ class Group(DefaultObject):
             logger.log_info(f"Channel '{channel_name}' already exists for group '{self.name}'")
             return
         
+        # Make sure group_id is available
+        if not hasattr(self.db, 'group_id') or self.db.group_id is None:
+            logger.log_err(f"Cannot create channel for group '{self.name}' - group_id not set")
+            return
+        
         # Create channel with appropriate locks
         lock_string = (
             f"control:perm(Admin);"

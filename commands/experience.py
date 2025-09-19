@@ -24,6 +24,9 @@ class CmdExperience(Command):
         dramatic_failure, exceptional_success, conditions, aspirations,
         story, scene, session, roleplay, challenge, sacrifice,
         discovery, relationship, consequence, learning, growth
+        
+    Note: Exceptional successes and dramatic failures from dice rolls 
+    automatically award beats - no need to manually request them.
 
     Experience Costs:
         Attributes: 4 XP per dot

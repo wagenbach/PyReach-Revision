@@ -323,6 +323,13 @@ class CmdRoll(MuxCommand):
             if successes >= 5:
                 self.caller.msg("|Y|[bExceptional Success achieved! You may add a condition.|n|Y]|n")
                 self.caller.msg("|yUse: |w+condition/add <condition_name>|n")
+                # Award beat for exceptional success
+                self.award_beat("exceptional_success")
+            
+            # Handle dramatic failure
+            if successes == 0 and ones >= 1 and final_pool <= 0:
+                # Award beat for dramatic failure
+                self.award_beat("dramatic_failure")
 
     def handle_job_roll(self, rolls, successes, ones, stat_name, skill_name, stat_value, skill_value, character_name):
         """Handle rolls made to jobs."""
@@ -403,10 +410,48 @@ class CmdRoll(MuxCommand):
             if successes >= 5:
                 self.caller.msg("|Y|[bExceptional Success achieved! You may add a condition.|n|Y]|n")
                 self.caller.msg("|yUse: |w+condition/add <condition_name>|n")
+                # Award beat for exceptional success
+                self.award_beat("exceptional_success")
+            
+            # Handle dramatic failure for job rolls
+            if successes == 0 and ones >= 1 and self.dice_pool + self.modifier <= 0:
+                # Award beat for dramatic failure
+                self.award_beat("dramatic_failure")
                 
         except Job.DoesNotExist:
             self.caller.msg(f"Job #{self.job_id} not found or is archived.")
         except Exception as e:
             self.caller.msg(f"Error rolling to job: {str(e)}")
             from evennia.utils import logger
-            logger.log_err(f"Error in handle_job_roll: {str(e)}", exc_info=True) 
+            logger.log_err(f"Error in handle_job_roll: {str(e)}", exc_info=True)
+    
+    def award_beat(self, source):
+        """
+        Award a beat to the character for exceptional success or dramatic failure.
+        
+        Args:
+            source (str): The source of the beat ('exceptional_success' or 'dramatic_failure')
+        """
+        try:
+            # Use the character's experience property to award the beat
+            exp_handler = self.caller.experience
+            exp_handler.add_beat()
+            
+            # Format the message based on the source
+            if source == "exceptional_success":
+                source_msg = "exceptional success"
+                color = "|g"
+            elif source == "dramatic_failure":
+                source_msg = "dramatic failure"
+                color = "|r"
+            else:
+                source_msg = source.replace("_", " ")
+                color = "|y"
+            
+            self.caller.msg(f"{color}You gained 1 beat from {source_msg}!|n")
+            
+        except Exception as e:
+            # Don't let beat awarding errors break the roll command
+            from evennia.utils import logger
+            logger.log_err(f"Error awarding beat for {source}: {str(e)}")
+            self.caller.msg(f"|rError awarding beat: {str(e)}|n") 

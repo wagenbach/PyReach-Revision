@@ -24,7 +24,7 @@ class CmdMysteryAdmin(MuxCommand):
         +mystery/view <mystery_id>
         +mystery/edit <mystery_id>/<field> = <value>
         +mystery/delete <mystery_id>
-        +mystery/status <mystery_id> = <active|solved|suspended>
+        +mystery/status <mystery_id> = <active, solved, or suspended>
         
         +mystery/addclue <mystery_id> = <name>/<description>
         +mystery/editclue <mystery_id>/<clue_id> = <field>/<value>
@@ -33,6 +33,7 @@ class CmdMysteryAdmin(MuxCommand):
         +mystery/leads <mystery_id>/<clue_id> = <leads_to_clue_ids>
         
         +mystery/conditions <mystery_id>/<clue_id> = <conditions_json>
+        +mystery/skillroll <mystery_id>/<clue_id> = <skill>/<attribute>/<difficulty>
         +mystery/revelation <mystery_id>/<trigger_id> = <required_clues>/<revelation>
         +mystery/access <mystery_id> = <templates|characters|areas>
         
@@ -48,7 +49,7 @@ class CmdMysteryAdmin(MuxCommand):
         +mystery/create The Missing Heir = A wealthy family's heir has vanished
         +mystery/addclue mystery_1 = Torn Letter/A letter with half the address torn off
         +mystery/prereq mystery_1/clue_1 = clue_0
-        +mystery/conditions mystery_1/clue_2 = {"skill_roll": {"skill": "investigation", "difficulty": 3}}
+        +mystery/conditions mystery_1/clue_2 = {"skill_roll": {"skill": "investigation", "attribute": "wits", "difficulty": 3}}
         +mystery/grant Alice = mystery_1/clue_1
     """
     
@@ -93,6 +94,8 @@ class CmdMysteryAdmin(MuxCommand):
             self.set_leads()
         elif switch == "conditions":
             self.set_conditions()
+        elif switch == "skillroll":
+            self.set_skillroll()
         elif switch == "revelation":
             self.add_revelation()
         elif switch == "access":
@@ -159,6 +162,10 @@ class CmdMysteryAdmin(MuxCommand):
             created_by=self.caller.id
         )
         
+        if not mystery:
+            self.caller.msg("|rError:|n Failed to create mystery. Check server logs for details.")
+            return
+            
         self.caller.msg(f"|gCreated mystery:|n {title} (ID: {mystery.id})")
         self.caller.msg(f"|yDescription:|n {description}")
     
@@ -180,9 +187,10 @@ class CmdMysteryAdmin(MuxCommand):
         )
         
         for mystery in mysteries:
+            title = mystery.db.title or f"Untitled Mystery #{mystery.id}"
             table.add_row(
                 mystery.id,
-                mystery.db.title[:30],
+                title[:30],
                 mystery.db.category,
                 f"{mystery.db.completion_percentage}%",
                 mystery.db.status
@@ -318,6 +326,59 @@ class CmdMysteryAdmin(MuxCommand):
         
         mystery.db.clues[clue_id]['discovery_conditions'] = conditions
         self.caller.msg(f"|gSet discovery conditions for {clue_id}|n")
+    
+    def set_skillroll(self):
+        """Set skill roll conditions using shorthand syntax: skill/attribute/difficulty."""
+        if "=" not in self.args:
+            self.caller.msg("Usage: +mystery/skillroll <mystery_id>/<clue_id> = <skill>/<attribute>/<difficulty>")
+            return
+        
+        path, skillroll_str = [x.strip() for x in self.args.split("=", 1)]
+        
+        if "/" not in path:
+            self.caller.msg("Usage: +mystery/skillroll <mystery_id>/<clue_id> = <skill>/<attribute>/<difficulty>")
+            return
+        
+        mystery_id, clue_id = [x.strip() for x in path.split("/", 1)]
+        mystery = self._get_mystery(mystery_id)
+        if not mystery:
+            return
+        
+        if clue_id not in mystery.db.clues:
+            self.caller.msg(f"Clue '{clue_id}' not found in mystery.")
+            return
+        
+        # Parse skill/attribute/difficulty
+        parts = skillroll_str.split("/")
+        if len(parts) != 3:
+            self.caller.msg("Format: <skill>/<attribute>/<difficulty>")
+            self.caller.msg("Example: larceny/dexterity/2")
+            return
+        
+        skill, attribute, difficulty_str = [x.strip() for x in parts]
+        
+        try:
+            difficulty = int(difficulty_str)
+        except ValueError:
+            self.caller.msg("Difficulty must be a number.")
+            return
+        
+        # Create the skill_roll condition
+        skill_roll_condition = {
+            "skill_roll": {
+                "skill": skill,
+                "attribute": attribute,
+                "difficulty": difficulty
+            }
+        }
+        
+        # Update or create discovery conditions
+        if 'discovery_conditions' not in mystery.db.clues[clue_id]:
+            mystery.db.clues[clue_id]['discovery_conditions'] = {}
+        
+        mystery.db.clues[clue_id]['discovery_conditions'].update(skill_roll_condition)
+        
+        self.caller.msg(f"|gSet skill roll for {clue_id}: {attribute.title()} + {skill.title()} (difficulty {difficulty})|n")
     
     def add_revelation(self):
         """Add an automatic revelation trigger."""
@@ -459,12 +520,17 @@ class CmdMysteryAdmin(MuxCommand):
             self.caller.msg("Mystery ID must be a number.")
             return None
         
-        mystery = search.search_object(f"#{mystery_id}")
-        if not mystery or not isinstance(mystery[0], Mystery):
+        # Scripts need to be searched differently than objects
+        from evennia.scripts.models import ScriptDB
+        try:
+            mystery = ScriptDB.objects.get(id=mystery_id)
+            if not isinstance(mystery, Mystery):
+                self.caller.msg(f"Object {mystery_id} is not a mystery.")
+                return None
+            return mystery
+        except ScriptDB.DoesNotExist:
             self.caller.msg(f"Mystery {mystery_id} not found.")
             return None
-        
-        return mystery[0]
 
 
 class CmdClueObject(MuxCommand):
@@ -527,11 +593,15 @@ class CmdClueObject(MuxCommand):
         mystery_id, clue_id = [x.strip() for x in clue_path.split("/", 1)]
         
         # Create the clue object
-        clue_obj = ClueObject.create(
+        clue_obj, errors = ClueObject.create(
             name,
             location=self.caller.location,
             home=self.caller.location
         )
+        
+        if errors:
+            self.caller.msg(f"|rError:|n Failed to create clue object: {errors}")
+            return
         
         clue_obj.db.mystery_id = mystery_id
         clue_obj.db.clue_id = clue_id
@@ -568,6 +638,12 @@ class CmdClueObject(MuxCommand):
             elif field == 'hidden':
                 value = value.lower() in ['true', '1', 'yes']
             
+            # Whitelist allowed clue object fields for security
+            allowed_fields = {'discovery_message', 'skill_required', 'difficulty', 'hidden'}
+            if field not in allowed_fields:
+                self.caller.msg(f"|rField '{field}' is not allowed. Valid fields: {', '.join(allowed_fields)}|n")
+                return
+                
             setattr(clue_obj.db, field, value)
             self.caller.msg(f"|gUpdated {obj_name}.{field} to:|n {value}")
         else:
