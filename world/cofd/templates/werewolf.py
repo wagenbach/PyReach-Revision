@@ -21,16 +21,27 @@ WEREWOLF_RENOWN = [
     "cunning", "glory", "honor", "purity", "wisdom"
 ]
 
-# Valid werewolf gifts
+# Valid werewolf gifts (prefix conflicting names only)
 WEREWOLF_GIFTS = [
-    "change", "death", "dominance", "elements", "insight", "inspiration", "knowledge",
-    "nature", "rage", "strength", "technology", "travel", "war", "weather"
+    "change", "gift_death", "dominance", "elements", "insight", "inspiration", "knowledge",
+    "nature", "rage", "gift_strength", "technology", "travel", "war", "weather"
 ]
 
-# Valid werewolf rites
+# Valid werewolf rites (individual rites by rank)
 WEREWOLF_RITES = [
-    "accord", "binding", "cleansing", "dedication", "funeral", "hunting", "pack",
-    "punishment", "renown", "sacred hunt", "territorial", "warding"
+    # Rank 1 Rites
+    "chain_rage", "messenger", "banish", "harness_the_cycle", "totemic_empowerment",
+    # Rank 2 Rites
+    "bottle_spirit", "infest_locus", "rite_of_the_shroud", "sacred_hunt", "hunting_ground", "moons_mad_love",
+    "shackled_lightning", "sigrblot", "wellspring",
+    # Rank 3 Rites
+    "carrion_feast", "flay_auspice", "kindle_fury", "rite_of_absolution", "shadowbind", "the_thorn_pursuit",
+    "banshee_howl", "raiment_of_the_storm", "shadowcall", "supplication",
+    # Rank 4 Rites
+    "between_worlds", "fetish", "shadow_bridge", "twilight_purge", "hidden_path", "expel", "heal_old_wounds",
+    "lupus_venandi",
+    # Rank 5 Rites
+    "devour", "forge_alliance", "urfarahs_bane", "veil", "great_hunt", "shadow_distortion", "unleash_shadow"
 ]
 
 # Werewolf template definition

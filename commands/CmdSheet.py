@@ -1,6 +1,7 @@
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import evtable
 from world.utils.health_utils import get_health_track, set_health_track, compact_track
+from world.cofd.templates import get_template_definition
 
 class CmdSheet(MuxCommand):
     """
@@ -82,26 +83,23 @@ class CmdSheet(MuxCommand):
             self.caller.msg("\n".join(warning))
 
     def _get_template_bio_fields(self, template):
-        """Get valid bio fields for a specific template"""
-        template = template.lower() if template else "mortal"
+        """Get valid bio fields for a specific template from the template registry"""
+        if not template:
+            return ["virtue", "vice"]  # Default fallback for empty/None template
+            
+        template = template.lower()
         
-        template_fields = {
-            "mortal": ["virtue", "vice"],
-            "mage": ["virtue", "vice", "path", "order"],
-            "vampire": ["mask", "dirge", "clan", "covenant"],
-            "werewolf": ["bone", "blood", "auspice", "tribe"],
-            "changeling": ["needle", "thread", "seeming", "court", "kith"],
-            "geist": ["virtue", "vice", "burden", "archetype", "krewe"],
-            "promethean": ["virtue", "vice", "lineage", "refinement"],
-            "hunter": ["virtue", "vice", "profession", "organization", "creed"],
-            "demon": ["vice", "incarnation", "agenda", "agency"],
-            "beast": ["legend", "life", "hunger", "family", "inheritance"],
-            "deviant": ["virtue", "vice", "origin", "clade", "divergence"],
-            "mortal+": ["virtue", "vice"],
-            "mortal plus": ["virtue", "vice"]
-        }
+        # Handle alternate naming
+        if template == "mortal plus":
+            template = "mortal_plus"
         
-        return template_fields.get(template, ["virtue", "vice"])
+        # Try to get template definition from registry
+        template_def = get_template_definition(template)
+        if template_def and "bio_fields" in template_def:
+            return template_def["bio_fields"]
+        
+        # Fallback to default mortal fields if template not found
+        return ["virtue", "vice"]
 
     def _migrate_legacy_stats(self, target):
         """
@@ -219,6 +217,267 @@ class CmdSheet(MuxCommand):
     def _set_health_track(self, character, track):
         """Set health track from array format back to dictionary format."""
         set_health_track(character, track)
+    
+    def _get_template_powers(self, template):
+        """Get the list of available primary powers for a specific template."""
+        if not template:
+            return []
+            
+        template = template.lower()
+        
+        # Primary powers only (disciplines, arcana, gifts)
+        template_power_map = {
+            'vampire': [
+                       # Disciplines (categories only)
+                       'animalism', 'auspex', 'bloodworking', 'cachexy', 'celerity',
+                       'dominate', 'majesty', 'nightmare', 'obfuscate', 'praestantia', 'protean', 
+                       'resilience', 'vigor', 'crochan', 'dead_signal', 'chary', 'vitiate', 'cruac', 'theban_sorcery'
+                       ],
+            'mage': ['arcanum_death', 'fate', 'forces', 'life', 'matter', 'mind', 'prime', 'space', 'spirit', 'time'],
+            'werewolf': [
+                        # Gifts (categories)
+                        'gift_death', 'dominance', 'elementals', 'insight', 'inspiration', 'knowledge',
+                        'nature', 'rage', 'gift_strength', 'technology', 'weather', 'hunting', 'pack',
+                        'crescent_moon', 'full_moon', 'new_moon', 'gibbous_moon', 'half_moon', 'agony', 'blood',
+                        'disease', 'evasion', 'fervor', 'hunger', 'shaping', 'gift_stealth', 'warding', 'change',
+                        ],
+            'changeling': [
+                          # Crown Contracts
+                          'hostile_takeover', 'mask_of_superiority', 'paralyzing_presence', 'summon_the_loyal_servant', 'tumult',
+                          # Royal Crown Contracts
+                          'discreet_summons', 'masterminds_gambit', 'pipes_of_the_beastcaller', 'the_royal_court', 'spinning_wheel',
+                          # Jewels Contracts
+                          'blessing_of_perfection', 'changing_fortunes', 'light_shy', 'murkblur', 'trivial_reworking',
+                          # Royal Jewels Contracts
+                          'changeling_hours', 'dance_of_the_toys', 'hidden_reality', 'stealing_the_solid_reflection', 'tatterdemalions_workshop',
+                          # Mirror Contracts
+                          'glimpse_of_a_distant_mirror', 'know_the_competition', 'portents_and_visions', 'read_lucidity', 'walls_have_ears',
+                          # Royal Mirror Contracts
+                          'props_and_scenery', 'reflections_of_the_past', 'riddle_kith', 'skinmask', 'unravel_the_tapestry',
+                          # Shield Contracts
+                          'cloak_of_night', 'fae_cunning', 'shared_burden', 'thorns_and_brambles', 'trapdoor_spiders_trick',
+                          # Royal Shield Contracts
+                          'fortifying_presence', 'hedgewall', 'pure_clarity', 'vow_of_no_compromise', 'whispers_of_morning',
+                          # Steed Contracts
+                          'boon_of_the_scuttling_spider', 'dreamsteps', 'nevertread', 'pathfinder', 'seven_league_leap',
+                          # Royal Steed Contracts
+                          'chrysalis', 'flickering_hours', 'leaping_toward_nightfall', 'mirror_walk', 'talon_and_wing',
+                          # Sword Contracts
+                          'elemental_weapon', 'might_of_the_terrible_brute', 'overpowering_dread', 'primal_glory', 'touch_of_wrath',
+                          # Royal Sword Contracts
+                          'elemental_fury', 'oathbreakers_punishment', 'red_revenge', 'relentless_pursuit', 'thief_of_reason',
+                          # Chalice Contracts
+                          'filling_the_cup', 'frail_as_the_dying_word', 'sleeps_sweet_embrace', 'curses_cure', 'dreamers_phalanx',
+                          # Royal Chalice Contracts
+                          'closing_deaths_door', 'feast_of_plenty', 'still_waters_run_deep', 'poison_the_well', 'shared_cup',
+                          # Coin Contracts
+                          'book_of_black_and_red', 'give_and_take', 'beggar_knight', 'coin_mark', 'grease_the_wheels',
+                          # Royal Coin Contracts
+                          'blood_debt', 'exchange_of_gilded_contracts', 'golden_promise', 'grand_revel_of_the_harvest', 'thirty_pieces',
+                          # Scepter Contracts
+                          'burning_ambition', 'jealous_vengeance', 'litany_of_rivals', 'knights_oath', 'unmask_the_dark_horse',
+                          # Royal Scepter Contracts
+                          'a_benevolent_hand', 'fake_it_til_you_make_it', 'tempters_quest', 'curse_of_hidden_strings', 'spare_not_the_rod',
+                          # Stars Contracts
+                          'pole_star', 'straight_on_til_morning', 'cynosure', 'shooting_star', 'retrograde',
+                          # Royal Stars Contracts
+                          'frozen_star', 'star_light_star_bright', 'light_of_ancient_stars', 'pinch_of_stardust',
+                          # Thorn Contracts
+                          'briars_herald', 'by_the_pricking_of_my_thumbs', 'thistles_rebuke', 'the_gouging_curse', 'embrace_of_nettles',
+                          # Royal Thorn Contracts
+                          'acanthas_fury', 'awaken_portal', 'crown_of_thorns', 'shrikes_larder', 'witchs_brambles',
+                          # Spring Contracts
+                          'cupids_arrow', 'dreams_of_the_earth', 'gift_of_warm_breath', 'springs_kiss', 'wyrd_faced_stranger',
+                          # Royal Spring Contracts
+                          'blessing_of_spring', 'gift_of_warm_blood', 'pandoras_gift', 'prince_of_ivy', 'waking_the_inner_fae',
+                          # Summer Contracts
+                          'baleful_sense', 'child_of_the_hearth', 'helios_light', 'high_summers_zeal', 'vigilance_of_ares',
+                          # Royal Summer Contracts
+                          'fiery_tongue', 'flames_of_summer', 'helios_judgment', 'solstice_revelation', 'sunburnt_heart',
+                          # Autumn Contracts
+                          'autumns_fury', 'last_harvest', 'tale_of_the_baba_yaga', 'twilights_harbinger', 'witches_intuition',
+                          # Royal Autumn Contracts
+                          'famines_bulwark', 'mien_of_the_baba_yaga', 'riding_the_falling_leaves', 'sorcerers_rebuke', 'tasting_the_harvest',
+                          # Winter Contracts
+                          'the_dragon_knows', 'heart_of_ice', 'ice_queens_call', 'slipknot_dreams', 'touch_of_winter',
+                          # Royal Winter Contracts
+                          'ermines_winter_coat', 'fallow_fields', 'field_of_regret', 'mantle_of_frost', 'winters_curse',
+                          # Retaliation Contracts
+                          'peacemakers_draw', 'draw_likeness',
+                          # Goblin Contracts
+                          'blessing_of_forgetfulness', 'distill_the_hidden', 'glib_tongue', 'goblins_eye', 'goblins_luck',
+                          'huntsmans_clarion', 'lost_visage', 'mantle_mask', 'sight_of_truth_and_lies', 'uncanny', 'wayward_guide', 'wyrd_debt',
+                          # Independent Arcadian Contracts
+                          'coming_darkness', 'pomp_and_circumstance', 'shadow_puppet', 'steal_influence', 'earths_gentle_movements',
+                          'dread_companion', 'cracked_mirror', 'listen_with_winds_ears', 'momentary_respite', 'earths_impenetrable_walls'
+                          ],
+            'geist': [],
+            'promethean': [],
+            'demon': [],
+            'beast': [],
+            'hunter': [],
+            'deviant': []
+        }
+        
+        return template_power_map.get(template, [])
+    
+    def _get_template_secondary_powers(self, template):
+        """Get the list of available secondary powers (rituals, rites) for a specific template."""
+        if not template:
+            return []
+            
+        template = template.lower()
+        
+        # Secondary powers (rituals, rites, individual abilities)
+        template_secondary_map = {
+            'vampire': [
+                       # Cruac Rituals (individual rituals by level)
+                       # Level 1 Cruac
+                       'ban_of_the_spiteful_bastard', 'mantle_of_amorous_fire', 'pangs_of_proserpina', 
+                       'pool_of_forbidden_truths', 'rigor_mortis',
+                       # Level 2 Cruac  
+                       'cheval', 'mantle_of_the_beasts_breath', 'the_hydras_vitae', 'shed_the_virulent_bowels',
+                       # Level 3 Cruac
+                       'curse_of_aphrodites_favor', 'curse_of_the_beloved_toy', 'deflection_of_wooden_doom', 
+                       'donning_the_beasts_flesh', 'mantle_of_the_glorious_dervish', 'touch_of_the_morrigan',
+                       # Level 4 Cruac
+                       'blood_price', 'willful_vitae', 'blood_blight', 'feeding_the_crone', 'bounty_of_the_storm',
+                       'gorgons_gaze', 'manananggals_working', 'mantle_of_the_predator_goddess', 'quicken_the_withered_womb',
+                       'the_red_blossoms',
+                       # Level 5 Cruac
+                       'birthing_the_god', 'denying_hades', 'gwydions_curse', 'mantle_of_the_crone', 'scapegoat',
+                       # Theban Sorcery Miracles (individual miracles by level)
+                       # Level 1 Theban
+                       'apple_of_eden', 'blandishment_of_sin', 'blood_scourge', 'marian_apparition', 
+                       'revelatory_shroud', 'vitae_reliquary',
+                       # Level 2 Theban
+                       'apparition_of_the_host', 'bloody_icon', 'curse_of_babel', 'liars_plague', 'the_walls_of_jericho',
+                       # Level 3 Theban
+                       'aarons_rod', 'baptism_of_damnation', 'blessing_the_legion', 'the_guiding_star',
+                       'malediction_of_despair', 'miracle_of_the_dead_sun', 'pledge_to_the_worthless_one', 'the_rite_of_ascending_blood',
+                       # Level 4 Theban
+                       'blandishment_of_sin_advanced', 'curse_of_isolation', 'gift_of_lazarus', 'great_prophecy', 
+                       'stigmata', 'trials_of_job',
+                       # Level 5 Theban
+                       'apocalypse', 'the_judgment_fast', 'orison_of_voices', 'sins_of_the_ancestors', 'transubstatiation',
+                       # Ordo Dracul Coils
+                       'coil_of_the_ascendant', 'coil_of_the_wyrm', 'coil_of_the_voivode',
+                       'coil_of_zirnitra', 'coil_of_ziva'
+                       ],
+            'mage': [],  # Mages don't have secondary powers like rituals
+            'werewolf': [
+                        # Wolf Rites (individual rites by level)
+                        # Rank 1 Rites
+                        'chain_rage', 'messenger', 'banish', 'harness_the_cycle', 'totemic_empowerment',
+                        # Rank 2 Rites
+                        'bottle_spirit', 'infest_locus', 'rite_of_the_shroud', 'sacred_hunt', 'hunting_ground', 'moons_mad_love',
+                        'shackled_lightning', 'sigrblot', 'wellspring',
+                        # Rank 3 Rites
+                        'carrion_feast', 'flay_auspice', 'kindle_fury', 'rite_of_absolution', 'shadowbind', 'the_thorn_pursuit',
+                        'banshee_howl', 'raiment_of_the_storm', 'shadowcall', 'supplication',
+                        # Rank 4 Rites
+                        'between_worlds', 'fetish', 'shadow_bridge', 'twilight_purge', 'hidden_path', 'expel', 'heal_old_wounds',
+                        'lupus_venandi',
+                        # Rank 5 Rites
+                        'devour', 'forge_alliance', 'urfarahs_bane', 'veil', 'great_hunt', 'shadow_distortion', 'unleash_shadow'
+                        ],
+            'changeling': [],  # Changelings only have contracts (all primary)
+            # Other templates
+            'geist': [],
+            'promethean': [],
+            'demon': [],
+            'beast': [],
+            'hunter': [],
+            'deviant': []
+        }
+        
+        return template_secondary_map.get(template, [])
+    
+    def _format_powers_display(self, powers, template_powers, force_ascii):
+        """Format the powers section for display."""
+        if not template_powers:
+            return ["No powers available for this template."]
+        
+        power_lines = []
+        
+        # Group powers by category if applicable
+        displayed_powers = []
+        for power_name in template_powers:
+            power_value = powers.get(power_name, 0)
+            if power_value > 0:  # Only show powers they actually have
+                dots = self._format_dots(power_value, 5, force_ascii)
+                # Clean up display name - remove prefixes and format properly
+                display_name = power_name
+                if power_name.startswith('discipline_'):
+                    display_name = power_name[11:]  # Remove 'discipline_'
+                elif power_name.startswith('arcanum_'):
+                    display_name = power_name[8:]   # Remove 'arcanum_'
+                elif power_name.startswith('gift_'):
+                    display_name = power_name[5:]   # Remove 'gift_'
+                elif power_name.startswith('contract_'):
+                    display_name = power_name[9:]   # Remove 'contract_'
+                elif power_name.startswith('rite_'):
+                    display_name = power_name[5:]   # Remove 'rite_'
+                
+                power_display = f"{display_name.replace('_', ' ').title():<20} {dots}"
+                displayed_powers.append(power_display)
+        
+        if not displayed_powers:
+            return ["No powers learned yet."]
+        
+        # Display powers in 2 columns like merits
+        for i in range(0, len(displayed_powers), 2):
+            left_power = displayed_powers[i] if i < len(displayed_powers) else ""
+            right_power = displayed_powers[i + 1] if i + 1 < len(displayed_powers) else ""
+            
+            # Format with proper spacing (39 chars for left column)
+            left_formatted = left_power.ljust(39)
+            power_lines.append(f"{left_formatted} {right_power}")
+        
+        return power_lines
+    
+    def _format_secondary_powers_display(self, powers, template_secondary_powers, force_ascii):
+        """Format the secondary powers (rituals/rites) section for display."""
+        if not template_secondary_powers:
+            return ["No secondary powers available for this template."]
+        
+        power_lines = []
+        
+        # Group secondary powers by category if applicable
+        displayed_powers = []
+        for power_name in template_secondary_powers:
+            power_value = powers.get(power_name, 0)
+            if power_value > 0:  # Only show powers they actually have
+                dots = self._format_dots(power_value, 5, force_ascii)
+                # Clean up display name - remove prefixes and format properly
+                display_name = power_name
+                if power_name.startswith('discipline_'):
+                    display_name = power_name[11:]  # Remove 'discipline_'
+                elif power_name.startswith('arcanum_'):
+                    display_name = power_name[8:]   # Remove 'arcanum_'
+                elif power_name.startswith('gift_'):
+                    display_name = power_name[5:]   # Remove 'gift_'
+                elif power_name.startswith('contract_'):
+                    display_name = power_name[9:]   # Remove 'contract_'
+                elif power_name.startswith('rite_'):
+                    display_name = power_name[5:]   # Remove 'rite_'
+                
+                power_display = f"{display_name.replace('_', ' ').title():<20} {dots}"
+                displayed_powers.append(power_display)
+        
+        if not displayed_powers:
+            return ["No secondary powers learned yet."]
+        
+        # Display powers in 2 columns like merits
+        for i in range(0, len(displayed_powers), 2):
+            left_power = displayed_powers[i] if i < len(displayed_powers) else ""
+            right_power = displayed_powers[i + 1] if i + 1 < len(displayed_powers) else ""
+            
+            # Format with proper spacing (39 chars for left column)
+            left_formatted = left_power.ljust(39)
+            power_lines.append(f"{left_formatted} {right_power}")
+        
+        return power_lines
 
     def func(self):
         """Display the character sheet"""
@@ -293,8 +552,9 @@ class CmdSheet(MuxCommand):
         
         # Add template-specific bio fields
         for field in template_fields:
-            if field in bio and field not in ["virtue", "vice"]:  # virtue/vice already added above if valid
-                bio_items.append((field.title(), bio[field]))
+            if field not in ["virtue", "vice"]:  # virtue/vice already added above if valid
+                field_value = bio.get(field, "<not set>")
+                bio_items.append((field.replace("_", " ").title(), field_value))
         
         # Display bio items in two-column format
         for i in range(0, len(bio_items), 2):
@@ -480,14 +740,18 @@ class CmdSheet(MuxCommand):
             if primum > 0:
                 template_advantages.append(("Primum", primum))
         elif template == "hunter":
-            # Hunters don't typically have a power stat, but might have special advantages
+            # Hunters don't typically have a power stat, but might have special advantages depending on conspiracy
             pass
         elif template == "promethean":
             azoth = advantages.get("azoth", 0)
             if azoth > 0:
                 template_advantages.append(("Azoth", azoth))
         elif template in ["mortal+", "mortal plus"]:
-            # Mortal+ might have special advantages
+            # Mortal+ might have special advantages depending on the type, I'm not familar
+            # with all M+ types. Here's an example of how you would add this in:
+            # advantage_name = advantages.get("advantage_name", 0)
+            # if advantage_name > 0:
+            #     template_advantages.append(("Advantage Name", advantage_name))
             pass
         # Regular mortals get no special advantages
         
@@ -553,6 +817,55 @@ class CmdSheet(MuxCommand):
         output.append(self._format_section_header("|wEXPERIENCE|n"))
         output.append(f"Beats: {other.get('beats', 0)}")
         output.append(f"Experience: {other.get('experience', 0)}")
+        
+        # Primary Powers (disciplines, arcana, gifts)
+        powers = target.db.stats.get("powers", {})
+        template_powers = self._get_template_powers(template)
+        template_secondary_powers = self._get_template_secondary_powers(template)
+        
+        # Determine section names based on template
+        primary_section_names = {
+            'vampire': 'DISCIPLINES',
+            'mage': 'ARCANA',
+            'werewolf': 'GIFTS',
+            'changeling': 'CONTRACTS',
+            'geist': 'KEYS',
+            'promethean': 'TRANSMUTATIONS',
+            'demon': 'EMBEDS',
+            'beast': 'NIGHTMARES',
+            'hunter': 'ENDOWMENTS',
+            'deviant': 'VARIATIONS'
+        }
+        secondary_section_names = {
+            'vampire': 'BLOOD SORCERY & COILS',
+            'werewolf': 'RITES',
+            'geist': 'CEREMONIES',
+            'promethean': 'BESTOWMENTS',
+            'demon': 'EXPLOITS',
+            'beast': 'RITUALS',
+            'hunter': 'TACTICS',
+            'deviant': 'RITUALS'
+        }
+        
+        primary_section = primary_section_names.get(template.lower(), 'POWERS')
+        secondary_section = secondary_section_names.get(template.lower(), 'RITUALS')
+        
+        if powers or template_powers:
+            output.append(self._format_section_header(f"|w{primary_section}|n"))
+            
+            if template_powers:
+                power_display = self._format_powers_display(powers, template_powers, force_ascii)
+                output.extend(power_display)
+            else:
+                output.append("No primary powers available for this template.")
+        
+        # Secondary Powers (rituals, rites, blood sorcery)
+        if powers or template_secondary_powers:
+            if template_secondary_powers:  # Only show section if template has secondary powers
+                output.append(self._format_section_header(f"|w{secondary_section}|n"))
+                
+                secondary_power_display = self._format_secondary_powers_display(powers, template_secondary_powers, force_ascii)
+                output.extend(secondary_power_display)
         
         # Aspirations (only show if there are any)
         aspirations_list = [asp for asp in target.db.aspirations if asp] if target.db.aspirations else []

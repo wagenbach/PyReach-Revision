@@ -32,7 +32,7 @@ from . import mage
 from . import changeling
 from . import werewolf
 from . import geist
-from . import beast
+# from . import beast  # Beast template disabled, incomplete
 from . import deviant
 from . import demon
 from . import hunter

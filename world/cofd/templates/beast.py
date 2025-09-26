@@ -1,6 +1,7 @@
 """
 Beast: The Primordial Template Definition for Chronicles of Darkness.
 Beasts are primordial monsters who feed on fear and embody ancient nightmares.
+This incomplete, but you can use it as a starting point. I don't intend to finish it.
 """
 
 from . import register_template

@@ -16,9 +16,9 @@ MAGE_ORDERS = [
     "silver ladder", "free council", "seers of the throne", "unaligned"
 ]
 
-# Valid arcana for Mage characters
+# Valid arcana for Mage characters (prefix conflicting names only)
 MAGE_ARCANA = [
-    "death", "fate", "forces", "life", "matter", "mind", "prime", "space", "spirit", "time"
+    "arcanum_death", "fate", "forces", "life", "matter", "mind", "prime", "space", "spirit", "time"
 ]
 
 # Mage template definition

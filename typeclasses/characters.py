@@ -69,6 +69,7 @@ class Character(ObjectParent, DefaultCharacter):
             },
             "merits": {},
             "specialties": {},
+            "powers": {},
             "other": {
                 "template": "Mortal",
                 "integrity": 7,
