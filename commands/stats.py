@@ -19,6 +19,7 @@ class CmdStat(MuxCommand):
         +stat/approve <name> - Lock a character's stats (staff only)
         +stat/unapprove <name> - Unlock a character's stats (staff only)
         +stat/reset <name>=<template> - Reset character to new template (staff only)
+        +stat/geist <stat>=<value> - Set a geist stat (Sin-Eater characters only)
         
         The /reset switch completely wipes ALL character stats and reinitializes
         them for the new template. This is a nuclear option for fixing corrupted
@@ -83,6 +84,20 @@ class CmdStat(MuxCommand):
         +stat sacred_hunt=1 (werewolf rite - rank 2)
         +stat hostile_takeover=1 (changeling contract)
         
+        Geist Examples (Sin-Eater secondary character sheet):
+        +stat/geist concept=The Snow Queen
+        +stat/geist remembrance_description=Crisp winter cold and wedding march music
+        +stat/geist remembrance_trait=intimidation (must be skill or merit ≤3 dots)
+        +stat/geist power=7 (geist attributes: power, finesse, resistance)
+        +stat/geist finesse=3
+        +stat/geist resistance=5
+        +stat/geist virtue=empathetic
+        +stat/geist vice=implacable
+        +stat/geist crisis_trigger=betrayal
+        +stat/geist ban=Fresh pine boughs
+        +stat/geist bane=Yellow roses
+        +stat/geist innate_key=cold wind
+        
     Note: Merits can be set directly with +stat during character generation.
     Once approved, merits must be purchased using +xp/buy <merit>=[dots] command.
     Merits require prerequisite validation. Use +xp/list merits to see available merits.
@@ -122,6 +137,8 @@ class CmdStat(MuxCommand):
             self.unapprove_character()
         elif switch == "reset":
             self.reset_template()
+        elif switch == "geist":
+            self.set_geist_stat()
         else:
             self.caller.msg("Invalid switch. See help for usage.")
     
@@ -1153,6 +1170,196 @@ class CmdStat(MuxCommand):
         # Notify the target
         target.msg(f"Your character has been reset to {template.title()} template by {self.caller.name}.")
         target.msg("All your previous stats have been wiped clean. Use +stat to set new stats.")
+    
+    def set_geist_stat(self):
+        """Set a stat on a geist (Sin-Eater secondary character sheet)"""
+        if not self.args or "=" not in self.args:
+            self.caller.msg("Usage: +stat/geist <stat>=<value>")
+            return
+        
+        # Only the player can set their own geist stats (for now)
+        target = self.caller
+        
+        # Check if character is a Sin-Eater
+        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() != "geist":
+            self.caller.msg("Only Sin-Eater characters can have a geist. Your template is currently: " + character_template)
+            self.caller.msg("Use '+stat template=geist' (staff) to change your template first.")
+            return
+        
+        # Check if character is approved (same restrictions as regular stats)
+        is_npc = hasattr(target, 'db') and target.db.is_npc
+        if not is_npc and target.db.approved:
+            self.caller.msg("Your character is approved. Only staff can modify your geist stats.")
+            return
+        
+        # Parse stat and value
+        stat, value = self.args.split("=", 1)
+        stat = stat.strip().lower().replace(" ", "_")
+        value = value.strip()
+        
+        # Initialize geist_stats if needed
+        if not hasattr(target.db, 'geist_stats') or not target.db.geist_stats:
+            target.db.geist_stats = {
+                "attributes": {"power": 1, "finesse": 1, "resistance": 1},
+                "bio": {},
+                "remembrance": {},
+                "advantages": {},
+                "other": {"rank": 3, "size": 5}
+            }
+        
+        # Get template config for validation
+        from world.cofd.templates import get_template_definition
+        template_def = get_template_definition("geist")
+        geist_config = template_def.get("geist_config", {}) if template_def else {}
+        
+        # Validate and set the stat
+        stat_set = self._set_geist_stat_value(target, stat, value, geist_config)
+        
+        if stat_set:
+            self.caller.msg(f"Set geist's {stat.replace('_', ' ')} to {value}.")
+            
+            # Auto-calculate derived stats if setting attributes
+            if stat in ["power", "finesse", "resistance"]:
+                self._calculate_geist_derived_stats(target)
+        else:
+            self.caller.msg(f"Failed to set geist stat: {stat}")
+    
+    def _set_geist_stat_value(self, target, stat, value, geist_config):
+        """Set a specific geist stat value with validation"""
+        geist_stats = target.db.geist_stats
+        
+        # Try to convert value to int for numeric stats
+        original_value = value
+        try:
+            value = int(value)
+        except ValueError:
+            # Keep as string for non-numeric stats
+            pass
+        
+        # Handle different stat categories
+        if stat in ["power", "finesse", "resistance"]:
+            # Geist attributes
+            if not isinstance(value, int):
+                self.caller.msg("Geist attributes must be numbers.")
+                return False
+            
+            max_attr = geist_config.get("max_attribute", 9)
+            if not 1 <= value <= max_attr:
+                self.caller.msg(f"Geist attributes must be between 1 and {max_attr}.")
+                return False
+            
+            # Check total attribute dots (base 3 + 12 to assign = 15 total)
+            current_total = sum(geist_stats["attributes"].values())
+            current_value = geist_stats["attributes"].get(stat, 1)
+            new_total = current_total - current_value + value
+            max_total = 3 + geist_config.get("attribute_dots_to_assign", 12)
+            
+            if new_total > max_total:
+                self.caller.msg(f"Cannot set {stat} to {value}. Total attribute dots would be {new_total}, maximum is {max_total}.")
+                self.caller.msg(f"Current totals: Power {geist_stats['attributes']['power']}, Finesse {geist_stats['attributes']['finesse']}, Resistance {geist_stats['attributes']['resistance']}")
+                return False
+            
+            geist_stats["attributes"][stat] = value
+            return True
+        
+        elif stat in ["concept", "remembrance_description", "virtue", "vice", "crisis_trigger", "ban", "bane"]:
+            # Bio fields (string values)
+            if isinstance(value, int):
+                value = original_value  # Use original string value
+            
+            if len(str(value)) > 100:
+                self.caller.msg("Geist bio fields cannot exceed 100 characters.")
+                return False
+            
+            # Validate specific fields
+            if stat == "virtue":
+                # For geists, virtue can be more flexible than standard anchors
+                geist_stats["bio"][stat] = str(value).title()
+                return True
+            elif stat == "vice":
+                # For geists, vice can be more flexible than standard anchors
+                geist_stats["bio"][stat] = str(value).title()
+                return True
+            elif stat == "crisis_trigger":
+                valid_triggers = geist_config.get("crisis_triggers", [])
+                if valid_triggers and value.lower() not in valid_triggers:
+                    self.caller.msg(f"Invalid crisis trigger. Valid options: {', '.join(valid_triggers)}")
+                    return False
+                geist_stats["bio"][stat] = str(value).lower()
+                return True
+            else:
+                geist_stats["bio"][stat] = str(value)
+                return True
+        
+        elif stat == "innate_key":
+            # Innate key selection
+            valid_keys = geist_config.get("innate_keys", [])
+            if valid_keys and value.lower() not in valid_keys:
+                self.caller.msg(f"Invalid innate key. Valid options: {', '.join(valid_keys)}")
+                return False
+            geist_stats["bio"]["innate_key"] = str(value).lower()
+            return True
+        
+        elif stat == "remembrance_trait":
+            # Remembrance trait (skill or merit)
+            if not isinstance(value, str):
+                self.caller.msg("Remembrance trait must be a skill or merit name.")
+                return False
+                
+            value_lower = value.lower().replace(" ", "_")
+            valid_skills = geist_config.get("remembrance_skills", [])
+            valid_merits = geist_config.get("remembrance_merits", [])
+            
+            if value_lower not in valid_skills + valid_merits:
+                self.caller.msg(f"Invalid remembrance trait. Must be a valid skill or merit (≤3 dots).")
+                self.caller.msg(f"Valid skills: {', '.join(valid_skills)}")
+                self.caller.msg(f"Valid merits: {', '.join(valid_merits)}")
+                return False
+            
+            geist_stats["remembrance"]["trait"] = value_lower
+            geist_stats["remembrance"]["trait_type"] = "skill" if value_lower in valid_skills else "merit"
+            return True
+        
+        elif stat == "remembrance_dots":
+            # Remembrance trait dots
+            if not isinstance(value, int):
+                self.caller.msg("Remembrance dots must be a number.")
+                return False
+                
+            max_dots = geist_config.get("remembrance_max_dots", 3)
+            if not 1 <= value <= max_dots:
+                self.caller.msg(f"Remembrance trait dots must be between 1 and {max_dots}.")
+                return False
+            
+            geist_stats["remembrance"]["dots"] = value
+            return True
+        
+        else:
+            # Unknown stat
+            self.caller.msg(f"Unknown geist stat: {stat}")
+            self.caller.msg("Valid geist stats: power, finesse, resistance, concept, remembrance_description, remembrance_trait, remembrance_dots, virtue, vice, crisis_trigger, ban, bane, innate_key")
+            return False
+    
+    def _calculate_geist_derived_stats(self, target):
+        """Calculate derived stats for a geist"""
+        geist_stats = target.db.geist_stats
+        attrs = geist_stats["attributes"]
+        
+        # Calculate derived stats per Geist rules
+        defense = min(attrs["power"], attrs["finesse"])
+        initiative = attrs["finesse"] + attrs["resistance"] 
+        speed = attrs["power"] + attrs["finesse"] + 5
+        size = geist_stats["other"]["size"]  # Always 5 for geists
+        
+        # Store derived stats
+        geist_stats["advantages"] = {
+            "defense": defense,
+            "initiative": initiative,
+            "speed": speed
+        }
+        
+        self.caller.msg(f"Recalculated geist derived stats: Defense {defense}, Initiative {initiative}, Speed {speed}")
 
 class CmdRecalc(MuxCommand):
     """

@@ -10,8 +10,11 @@ class CmdSheet(MuxCommand):
     Usage:
         +sheet [character] - Display character sheet
         +sheet/ascii [character] - Force ASCII display (no Unicode dots)
+        +sheet/geist [character] - Display geist character sheet (Sin-Eater only)
+        +sheet/geist/ascii [character] - Display geist sheet in ASCII mode
         
     Shows all character statistics in an organized format.
+    The /geist switch displays the secondary character sheet for a Sin-Eater's bound geist.
     """
     
     key = "+sheet"
@@ -481,6 +484,11 @@ class CmdSheet(MuxCommand):
 
     def func(self):
         """Display the character sheet"""
+        # Check if this is a geist sheet request
+        if "geist" in self.switches:
+            self.show_geist_sheet()
+            return
+            
         # Determine target
         if self.args:
             target = self.caller.search(self.args.strip(), global_search=True)
@@ -883,4 +891,192 @@ class CmdSheet(MuxCommand):
             else:
                 output.append("|y(ASCII mode due to encoding - see note above for UTF-8)|n")
         
-        self.caller.msg("\n".join(output)) 
+        self.caller.msg("\n".join(output))
+    
+    def show_geist_sheet(self):
+        """Display the geist character sheet for Sin-Eaters"""
+        # Determine target
+        if self.args:
+            target = self.caller.search(self.args.strip(), global_search=True)
+            if not target:
+                return
+        else:
+            target = self.caller
+        
+        # Check if character is a Sin-Eater
+        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() != "geist":
+            self.caller.msg(f"{target.name} is not a Sin-Eater. Current template: {character_template}")
+            self.caller.msg("Only Sin-Eater characters have a geist to display.")
+            return
+        
+        # Check if geist stats exist
+        if not hasattr(target.db, 'geist_stats') or not target.db.geist_stats:
+            self.caller.msg(f"{target.name} has no geist character sheet set up yet.")
+            self.caller.msg("Use +stat/geist <stat>=<value> to set geist stats.")
+            return
+        
+        # Get dot style and check UTF-8 support
+        force_ascii = "ascii" in self.switches
+        filled_char, empty_char, supports_utf8 = self._get_dots_style(force_ascii)
+        
+        # Show encoding warning if needed (only for self, not when viewing others)
+        if target == self.caller and not supports_utf8 and "ascii" not in self.switches:
+            self._show_encoding_warning(supports_utf8)
+        
+        geist_stats = target.db.geist_stats
+        
+        # Build the geist sheet display with magenta color scheme
+        output = []
+        output.append(f"|m{'='*78}|n")  # Magenta border
+        
+        # Get geist concept or use default
+        geist_concept = geist_stats.get("bio", {}).get("concept", f"{target.name}'s Geist")
+        output.append(f"|m{geist_concept.center(78)}|n")  # Magenta text
+        output.append(f"|M{'GEIST CHARACTER SHEET'.center(78)}|n")  # Bright magenta
+        output.append(f"|m{'='*78}|n")
+        
+        # Bio Section
+        output.append(self._format_geist_section_header("|wBIO|n"))
+        
+        bio = geist_stats.get("bio", {})
+        other = geist_stats.get("other", {})
+        
+        # Bio data with defaults
+        concept = bio.get("concept", "<not set>")
+        virtue = bio.get("virtue", "<not set>")
+        vice = bio.get("vice", "<not set>")
+        crisis_trigger = bio.get("crisis_trigger", "<not set>")
+        ban = bio.get("ban", "<not set>")
+        bane = bio.get("bane", "<not set>")
+        innate_key = bio.get("innate_key", "<not set>")
+        rank = other.get("rank", 3)
+        
+        # Remembrance section
+        remembrance = geist_stats.get("remembrance", {})
+        remembrance_desc = bio.get("remembrance_description", "<not set>")
+        remembrance_trait = remembrance.get("trait", "<not set>")
+        remembrance_dots = remembrance.get("dots", 0)
+        remembrance_type = remembrance.get("trait_type", "")
+        
+        if remembrance_trait != "<not set>" and remembrance_dots > 0:
+            trait_display = f"{remembrance_trait.replace('_', ' ').title()} ({remembrance_type}) {self._format_dots(remembrance_dots, 3, force_ascii)}"
+        else:
+            trait_display = "<not set>"
+        
+        # Create bio items list for display
+        bio_items = [
+            ("Concept", concept),
+            ("Rank", f"{rank}"),
+            ("Virtue", virtue),
+            ("Vice", vice),
+            ("Crisis Trigger", crisis_trigger.title() if crisis_trigger != "<not set>" else crisis_trigger),
+            ("Ban", ban),
+            ("Bane", bane),
+            ("Innate Key", innate_key.title() if innate_key != "<not set>" else innate_key),
+            ("Remembrance", remembrance_desc),
+            ("Remembrance Trait", trait_display)
+        ]
+        
+        # Display bio items in two-column format
+        for i in range(0, len(bio_items), 2):
+            left_label, left_value = bio_items[i]
+            left_text = f"{left_label:<16}: {left_value}"
+            
+            if i + 1 < len(bio_items):
+                right_label, right_value = bio_items[i + 1]
+                right_text = f"{right_label:<16}: {right_value}"
+            else:
+                right_text = ""
+            
+            left_formatted = left_text.ljust(39)
+            output.append(f"{left_formatted} {right_text}")
+        
+        # Geist Attributes (simplified - Power, Finesse, Resistance)
+        attrs = geist_stats.get("attributes", {"power": 1, "finesse": 1, "resistance": 1})
+        if attrs:
+            output.append(self._format_geist_section_header("|wATTRIBUTES|n"))
+            
+            # Format geist attributes
+            power_val = attrs.get("power", 1)
+            finesse_val = attrs.get("finesse", 1)
+            resistance_val = attrs.get("resistance", 1)
+            
+            power_dots = self._format_dots(power_val, 9, force_ascii)
+            finesse_dots = self._format_dots(finesse_val, 9, force_ascii)
+            resistance_dots = self._format_dots(resistance_val, 9, force_ascii)
+            
+            output.append(f"Power          {power_dots} ({power_val})")
+            output.append(f"Finesse        {finesse_dots} ({finesse_val})")
+            output.append(f"Resistance     {resistance_dots} ({resistance_val})")
+            
+            # Show attribute total
+            total_attrs = power_val + finesse_val + resistance_val
+            output.append(f"Total: {total_attrs}/15 dots")
+        
+        # Derived Stats for Geist
+        advantages = geist_stats.get("advantages", {})
+        output.append(self._format_geist_section_header("|wADVANTAGES|n"))
+        
+        # Calculate derived stats if not already calculated
+        if not advantages:
+            defense = min(attrs.get("power", 1), attrs.get("finesse", 1))
+            initiative = attrs.get("finesse", 1) + attrs.get("resistance", 1)
+            speed = attrs.get("power", 1) + attrs.get("finesse", 1) + 5
+            size = other.get("size", 5)
+        else:
+            defense = advantages.get("defense", 0)
+            initiative = advantages.get("initiative", 0) 
+            speed = advantages.get("speed", 0)
+            size = other.get("size", 5)
+        
+        geist_advantages = [
+            ("Defense", defense),
+            ("Size", size),
+            ("Initiative", initiative),
+            ("Speed", speed)
+        ]
+        
+        # Display advantages in rows of 2 columns
+        for i in range(0, len(geist_advantages), 2):
+            row_parts = []
+            for j in range(2):
+                if i + j < len(geist_advantages):
+                    name, value = geist_advantages[i + j]
+                    part = f"{name:<16} : {value}"
+                    row_parts.append(part.ljust(39))
+                else:
+                    row_parts.append(" " * 39)
+            output.append("".join(row_parts))
+        
+        output.append("")
+        output.append(f"|mThis geist is bound to {target.name} (Sin-Eater)|n")
+        output.append(f"|mGeists are ephemeral entities with simplified traits.|n")
+        output.append(f"|mUse +stat/geist <stat>=<value> to modify geist stats.|n")
+        
+        output.append(f"|m{'='*78}|n")
+        
+        # Add encoding info to bottom if ASCII mode is being used
+        if not supports_utf8 or force_ascii:
+            if force_ascii:
+                output.append("|g(ASCII mode active - use +sheet/geist without /ascii for Unicode)|n")
+            else:
+                output.append("|y(ASCII mode due to encoding - see note above for UTF-8)|n")
+        
+        self.caller.msg("\n".join(output))
+    
+    def _format_geist_section_header(self, section_name):
+        """
+        Create an arrow-style section header for geist sheets with magenta coloring.
+        Format: <----------------- SECTION NAME ----------------->
+        """
+        total_width = 78
+        name_length = len(section_name) - 4  # Account for color codes |w and |n
+        # Account for < and > characters (2 total) and spaces around name (2 total)
+        available_dash_space = total_width - name_length - 4
+        
+        # Split dashes evenly, with extra dash on the right if odd number
+        left_dashes = available_dash_space // 2
+        right_dashes = available_dash_space - left_dashes
+        
+        return f"|m<{'-' * left_dashes}|n {section_name} |m{'-' * right_dashes}>|n" 
