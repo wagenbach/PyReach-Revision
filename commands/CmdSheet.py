@@ -314,7 +314,12 @@ class CmdSheet(MuxCommand):
                           'coming_darkness', 'pomp_and_circumstance', 'shadow_puppet', 'steal_influence', 'earths_gentle_movements',
                           'dread_companion', 'cracked_mirror', 'listen_with_winds_ears', 'momentary_respite', 'earths_impenetrable_walls'
                           ],
-            'geist': [],
+            'geist': [
+                      # Keys
+                      "beasts", "blood", "chance", "cold wind", "deep waters", "disease", "grave dirt", "pyre flame", "stillness",
+                      # Haunts
+                      "boneyard", "caul", "curse", "dirge", "marionette", "memoria", "oracle", "rage", "shroud", "tomb"
+                          ],
             'promethean': [],
             'demon': [],
             'beast': [],
@@ -385,8 +390,18 @@ class CmdSheet(MuxCommand):
                         'devour', 'forge_alliance', 'urfarahs_bane', 'veil', 'great_hunt', 'shadow_distortion', 'unleash_shadow'
                         ],
             'changeling': [],  # Changelings only have contracts (all primary)
-            # Other templates
-            'geist': [],
+            'geist': [
+                        # Level 1 Ceremonies
+                        "dead man's camera", "death watch", "diviner's jawbone", "lovers' telephone", "ishtar's perfume",
+                        # Level 2 Ceremonies
+                        "crow girl kiss", "gifts of persephone", "ghost trap", "skeleton key",
+                        # Level 3 Ceremonies
+                        "bestow regalia", "krewe binding", "speaker for the dead", "black cat's crossing", "bloody codex", "dumb supper",
+                        # Level 4 Ceremonies
+                        "forge anchor", "maggot homonculus",
+                        # Level 5 Ceremonies
+                        "pass on", "ghost binding", "persephone's return"
+                        ],
             'promethean': [],
             'demon': [],
             'beast': [],
@@ -451,7 +466,9 @@ class CmdSheet(MuxCommand):
         for power_name in template_secondary_powers:
             power_value = powers.get(power_name, 0)
             if power_value > 0:  # Only show powers they actually have
-                dots = self._format_dots(power_value, 5, force_ascii)
+                # For secondary powers, show dots
+                display_marker = self._format_dots(power_value, 5, force_ascii)
+                
                 # Clean up display name - remove prefixes and format properly
                 display_name = power_name
                 if power_name.startswith('discipline_'):
@@ -465,7 +482,7 @@ class CmdSheet(MuxCommand):
                 elif power_name.startswith('rite_'):
                     display_name = power_name[5:]   # Remove 'rite_'
                 
-                power_display = f"{display_name.replace('_', ' ').title():<20} {dots}"
+                power_display = f"{display_name.replace('_', ' ').title():<20} {display_marker}"
                 displayed_powers.append(power_display)
         
         if not displayed_powers:
@@ -604,9 +621,10 @@ class CmdSheet(MuxCommand):
                 dots = self._format_dots(val, 5, force_ascii)
                 social.append(f"{attr.title():<15} {dots}")
             
-            # Display in columns
+            # Display in columns (aligned with skills)
             for i in range(3):
-                output.append(f"{mental[i]}  {physical[i]}  {social[i]}")
+                row = mental[i].ljust(26) + physical[i].ljust(26) + social[i]
+                output.append(row)
         
         # Skills
         skills = target.db.stats.get("skills", {})
@@ -617,49 +635,55 @@ class CmdSheet(MuxCommand):
             # Mental Skills
             mental_skills = ["crafts", "investigation", "medicine", "occult", "politics", "science"]
             mental_display = []
+            mental_specialties = []
             for skill in mental_skills:
                 val = skills.get(skill, 0)
                 dots = self._format_dots(val, 5, force_ascii)
                 skill_text = f"{skill.replace('_', ' ').title():<15} {dots}"
+                mental_display.append(skill_text)
                 
-                # Add specialties if they exist
+                # Collect specialties for separate display
                 if skill in specialties and specialties[skill]:
                     specialty_list = ", ".join(specialties[skill])
-                    skill_text += f" ({specialty_list})"
-                
-                mental_display.append(skill_text)
+                    mental_specialties.append(f"  ({specialty_list})")
+                else:
+                    mental_specialties.append("")
             
             # Physical Skills
             physical_skills = ["athletics", "brawl", "drive", "firearms", "larceny", "stealth", "survival", "weaponry"]
             physical_display = []
+            physical_specialties = []
             for skill in physical_skills:
                 val = skills.get(skill, 0)
                 dots = self._format_dots(val, 5, force_ascii)
                 skill_text = f"{skill.replace('_', ' ').title():<15} {dots}"
+                physical_display.append(skill_text)
                 
-                # Add specialties if they exist
+                # Collect specialties for separate display
                 if skill in specialties and specialties[skill]:
                     specialty_list = ", ".join(specialties[skill])
-                    skill_text += f" ({specialty_list})"
-                
-                physical_display.append(skill_text)
+                    physical_specialties.append(f"  ({specialty_list})")
+                else:
+                    physical_specialties.append("")
             
             # Social Skills
             social_skills = ["animal_ken", "empathy", "expression", "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"]
             social_display = []
+            social_specialties = []
             for skill in social_skills:
                 val = skills.get(skill, 0)
                 dots = self._format_dots(val, 5, force_ascii)
                 skill_text = f"{skill.replace('_', ' ').title():<15} {dots}"
+                social_display.append(skill_text)
                 
-                # Add specialties if they exist
+                # Collect specialties for separate display
                 if skill in specialties and specialties[skill]:
                     specialty_list = ", ".join(specialties[skill])
-                    skill_text += f" ({specialty_list})"
-                
-                social_display.append(skill_text)
+                    social_specialties.append(f"  ({specialty_list})")
+                else:
+                    social_specialties.append("")
             
-            # Display skills in columns
+            # Display skills in clean columns (no specialties inline)
             max_rows = max(len(mental_display), len(physical_display), len(social_display))
             for i in range(max_rows):
                 row = ""
@@ -674,157 +698,105 @@ class CmdSheet(MuxCommand):
                 if i < len(social_display):
                     row += social_display[i]
                 output.append(row)
+            
+            # Display all specialties at the bottom of the skills section
+            specialty_groups = []
+            for skill_name, specialty_list in specialties.items():
+                if specialty_list:
+                    skill_display = skill_name.replace('_', ' ').title()
+                    specialty_text = ", ".join(specialty_list)
+                    specialty_groups.append(f"{skill_display} ({specialty_text})")
+            
+            if specialty_groups:
+                output.append("")  # Empty line before specialties
+                # Join all specialty groups with commas and wrap to fit line length
+                specialties_text = ", ".join(specialty_groups)
+                output.append(f"|cSpecialties:|n")
+                output.append(f"  {specialties_text}")
         
-        # Merits
+        # Merits and Advantages sections side by side
         merits = target.db.stats.get("merits", {})
-        if merits:
-            output.append(self._format_section_header("|wMERITS|n"))
-            
-            # Create a list of all merits with their dot displays
-            merit_list = []
-            for merit_name, merit_data in sorted(merits.items()):
-                dots = self._format_dots(merit_data.get("dots", 1), merit_data.get("max_dots", 5), force_ascii)
-                merit_display = f"{merit_name.replace('_', ' ').title():<20} {dots}"
-                merit_list.append(merit_display)
-            
-            # Display merits in 2 columns
-            for i in range(0, len(merit_list), 2):
-                left_merit = merit_list[i] if i < len(merit_list) else ""
-                right_merit = merit_list[i + 1] if i + 1 < len(merit_list) else ""
-                
-                # Format with proper spacing (39 chars for left column)
-                left_formatted = left_merit.ljust(39)
-                output.append(f"{left_formatted} {right_merit}")
-
-        # Derived Stats
         advantages = target.db.stats.get("advantages", {})
         other = target.db.stats.get("other", {})
-        
-        output.append(self._format_section_header("|wADVANTAGES|n"))
-        
-        # Get character template to determine what advantages to show
         template = other.get("template", "Mortal").lower()
         
-        # Base advantages that all characters have
-        base_advantages = [
-            ("Defense", advantages.get("defense", 0)),
-            ("Speed", advantages.get("speed", 0)),
-            ("Initiative", advantages.get("initiative", 0)),
-            ("Size", other.get("size", 5))
+        # Create merits list
+        merit_list = []
+        if merits:
+            for merit_name, merit_data in sorted(merits.items()):
+                dots = self._format_dots(merit_data.get("dots", 1), merit_data.get("max_dots", 5), force_ascii)
+                merit_display = f"{merit_name.replace('_', ' ').title():<15} {dots}"
+                merit_list.append(merit_display)
+        
+        # Create advantages list (including integrity)
+        advantage_list = [
+            f"{'Defense':<15} : {advantages.get('defense', 0)}",
+            f"{'Speed':<15} : {advantages.get('speed', 0)}",
+            f"{'Initiative':<15} : {advantages.get('initiative', 0)}",
+            f"{'Size':<15} : {other.get('size', 5)}"
         ]
         
-        # template-specific advantages
-        template_advantages = []
+        # Add integrity to advantages (except for Geist characters who don't use integrity)
+        if template != "geist":
+            integrity_name = target.get_integrity_name(template)
+            advantage_list.append(f"{integrity_name:<15} : {other.get('integrity', 7)}")
+        
+        # Add template-specific advantages
         if template == "changeling":
             wyrd = advantages.get("wyrd", 0)
-            if wyrd > 0:  # Only show if they have the stat
-                template_advantages.append(("Wyrd", wyrd))
+            if wyrd > 0:
+                advantage_list.append(f"{'Wyrd':<15} : {wyrd}")
         elif template == "werewolf":
             primal_urge = advantages.get("primal_urge", 0)
             if primal_urge > 0:
-                template_advantages.append(("Primal Urge", primal_urge))
+                advantage_list.append(f"{'Primal Urge':<15} : {primal_urge}")
         elif template == "vampire":
             blood_potency = advantages.get("blood_potency", 0)
             if blood_potency > 0:
-                template_advantages.append(("Blood Potency", blood_potency))
+                advantage_list.append(f"{'Blood Potency':<15} : {blood_potency}")
         elif template == "mage":
             gnosis = advantages.get("gnosis", 0)
             if gnosis > 0:
-                template_advantages.append(("Gnosis", gnosis))
-        elif template == "geist":
-            synergy = advantages.get("synergy", 0)
-            if synergy > 0:
-                template_advantages.append(("Synergy", synergy))
+                advantage_list.append(f"{'Gnosis':<15} : {gnosis}")
         elif template == "beast":
             satiety = advantages.get("satiety", 0)
             if satiety > 0:
-                template_advantages.append(("Satiety", satiety))
+                advantage_list.append(f"{'Satiety':<15} : {satiety}")
         elif template == "deviant":
             deviation = advantages.get("deviation", 0)
             if deviation > 0:
-                template_advantages.append(("Deviation", deviation))
+                advantage_list.append(f"{'Deviation':<15} : {deviation}")
         elif template == "demon":
             primum = advantages.get("primum", 0)
             if primum > 0:
-                template_advantages.append(("Primum", primum))
-        elif template == "hunter":
-            # Hunters don't typically have a power stat, but might have special advantages depending on conspiracy
-            pass
+                advantage_list.append(f"{'Primum':<15} : {primum}")
         elif template == "promethean":
             azoth = advantages.get("azoth", 0)
             if azoth > 0:
-                template_advantages.append(("Azoth", azoth))
-        elif template in ["mortal+", "mortal plus"]:
-            # Mortal+ might have special advantages depending on the type, I'm not familar
-            # with all M+ types. Here's an example of how you would add this in:
-            # advantage_name = advantages.get("advantage_name", 0)
-            # if advantage_name > 0:
-            #     template_advantages.append(("Advantage Name", advantage_name))
-            pass
-        # Regular mortals get no special advantages
+                advantage_list.append(f"{'Azoth':<15} : {azoth}")
+        elif template == "geist":
+            # Geist characters use Synergy instead of integrity
+            synergy = advantages.get("synergy", 1)
+            advantage_list.append(f"{'Synergy':<15} : {synergy}")
         
-        # Combine base and template advantages
-        adv_list = base_advantages + template_advantages
+        # Create section headers using the same format as other sections
+        merits_header = f"|g<{'-' * 12} MERITS {'-' * 13}>|n"
+        advantages_header = f"|g<{'-' * 9} ADVANTAGES {'-' * 13}>|n"
+        output.append(f"{merits_header.ljust(39)} {advantages_header}")
         
-        # Pad to ensure we have multiples of 3 for clean column display
-        while len(adv_list) % 3 != 0:
-            adv_list.append(("", ""))
-        
-        # Display in rows of 3 columns
-        for i in range(0, len(adv_list), 3):
-            row_parts = []
-            for j in range(3):
-                if i + j < len(adv_list):
-                    name, value = adv_list[i + j]
-                    if name:  # Only display if there's a name
-                        part = f"{name:<16} : {value}"
-                        row_parts.append(part.ljust(26))
-                    else:
-                        row_parts.append(" " * 26)
-                else:
-                    row_parts.append(" " * 26)
-            output.append("".join(row_parts))
-        
-        # Health, Willpower, Integrity
-        health_max = advantages.get("health", 7)
-        health_track = self._get_health_track(target)
-        
-        # Save the compacted track back to ensure consistency
-        self._set_health_track(target, health_track)
-        
-        # Create health boxes
-        health_boxes = []
-        for i in range(health_max):
-            damage_type = health_track[i]
-            if damage_type == "bashing":
-                health_boxes.append("[|c/|n]")  # Cyan for bashing
-            elif damage_type == "lethal":
-                health_boxes.append("[|rX|n]")  # Red for lethal
-            elif damage_type == "aggravated":
-                health_boxes.append("[|R*|n]")  # Bright red for aggravated
-            else:
-                health_boxes.append("[ ]")
-        
-        # Display health, willpower, integrity
-        output.append("")  # Empty line before health/willpower/integrity
-        output.append(f"Health: {''.join(health_boxes)}")
-        
-        willpower_max = advantages.get("willpower", 3)
-        willpower_current = target.db.willpower_current
-        if willpower_current is None:
-            willpower_current = willpower_max  # Default to full
-        
-        willpower_dots = self._format_dots(willpower_current, willpower_max, force_ascii)
-        output.append(f"Willpower : {willpower_dots} ({willpower_current}/{willpower_max})")
-        
-        # Integrity with template-specific name
-        integrity_name = target.get_integrity_name(template)
-        output.append(f"{integrity_name}: {other.get('integrity', 7)}")
+        # Display merits and advantages side by side
+        max_rows = max(len(merit_list) if merit_list else 1, len(advantage_list))
+        for i in range(max_rows):
+            left_item = merit_list[i] if i < len(merit_list) else ""
+            right_item = advantage_list[i] if i < len(advantage_list) else ""
+            
+            # Handle empty merits case
+            if not merit_list and i == 0:
+                left_item = "No merits yet."
+            
+            left_formatted = left_item.ljust(39)
+            output.append(f"{left_formatted} {right_item}")
 
-        # Experience
-        output.append(self._format_section_header("|wEXPERIENCE|n"))
-        output.append(f"Beats: {other.get('beats', 0)}")
-        output.append(f"Experience: {other.get('experience', 0)}")
         
         # Primary Powers (disciplines, arcana, gifts)
         powers = target.db.stats.get("powers", {})
@@ -858,23 +830,192 @@ class CmdSheet(MuxCommand):
         primary_section = primary_section_names.get(template.lower(), 'POWERS')
         secondary_section = secondary_section_names.get(template.lower(), 'RITUALS')
         
-        if powers or template_powers:
-            output.append(self._format_section_header(f"|w{primary_section}|n"))
+        # Special handling for Geist characters (Keys, Haunts, Ceremonies)
+        if template.lower() == "geist":
+            # Keys section (from geist_stats)
+            output.append(self._format_section_header("|wKEYS|n"))
             
-            if template_powers:
-                power_display = self._format_powers_display(powers, template_powers, force_ascii)
-                output.extend(power_display)
+            if hasattr(target.db, 'geist_stats') and target.db.geist_stats:
+                geist_keys = target.db.geist_stats.get("keys", {})
+                key_list = []
+                for key_name, has_key in geist_keys.items():
+                    if has_key:
+                        key_list.append(key_name.replace("_", " ").title())
+                
+                if key_list:
+                    # Display keys in 2 columns
+                    for i in range(0, len(key_list), 2):
+                        left_key = key_list[i] if i < len(key_list) else ""
+                        right_key = key_list[i + 1] if i + 1 < len(key_list) else ""
+                        
+                        left_formatted = left_key.ljust(39)
+                        output.append(f"{left_formatted} {right_key}")
+                else:
+                    output.append("No keys unlocked yet.")
             else:
-                output.append("No primary powers available for this template.")
+                output.append("No keys unlocked yet.")
+            
+            output.append("")
+            output.append("|gSee +sheet/geist for detailed key information and geist character sheet.|n")
+            
+            # Haunts section (category powers stored in regular powers)
+            output.append(self._format_section_header("|wHAUNTS|n"))
+            
+            # Get haunts from regular powers or geist_stats
+            haunts_from_powers = {}
+            haunts_from_geist = {}
+            
+            # Check regular powers for haunts
+            haunt_names = ["boneyard", "caul", "curse", "dirge", "marionette", "memoria", "oracle", "rage", "shroud", "tomb"]
+            for haunt_name in haunt_names:
+                if haunt_name in powers and powers[haunt_name] > 0:
+                    haunts_from_powers[haunt_name] = powers[haunt_name]
+            
+            # Check geist_stats for haunts  
+            if hasattr(target.db, 'geist_stats') and target.db.geist_stats:
+                geist_haunts = target.db.geist_stats.get("haunts", {})
+                for haunt_name, rating in geist_haunts.items():
+                    if rating > 0:
+                        haunts_from_geist[haunt_name] = rating
+            
+            # Combine and display haunts
+            all_haunts = {**haunts_from_powers, **haunts_from_geist}
+            if all_haunts:
+                haunt_list = []
+                for haunt_name, haunt_rating in all_haunts.items():
+                    dots = self._format_dots(haunt_rating, 5, force_ascii)
+                    haunt_display = f"{haunt_name.replace('_', ' ').title():<15} {dots}"
+                    haunt_list.append(haunt_display)
+                
+                # Display haunts in 2 columns like merits
+                for i in range(0, len(haunt_list), 2):
+                    left_haunt = haunt_list[i] if i < len(haunt_list) else ""
+                    right_haunt = haunt_list[i + 1] if i + 1 < len(haunt_list) else ""
+                    
+                    # Format with proper spacing (39 chars for left column)
+                    left_formatted = left_haunt.ljust(39)
+                    output.append(f"{left_formatted} {right_haunt}")
+            else:
+                output.append("No haunts learned yet.")
+            
+            # Ceremonies section (individual abilities stored in regular powers)
+            output.append(self._format_section_header("|wCEREMONIES|n"))
+            
+            ceremony_names = [
+                "dead_mans_camera", "death_watch", "diviners_jawbone", "lovers_telephone", "ishtars_perfume",
+                "crow_girl_kiss", "gifts_of_persephone", "ghost_trap", "skeleton_key", "bestow_regalia", 
+                "krewe_binding", "speaker_for_the_dead", "black_cats_crossing", "bloody_codex", "dumb_supper",
+                "forge_anchor", "maggot_homonculus", "pass_on", "ghost_binding", "persephones_return"
+            ]
+            
+            ceremony_list = []
+            for ceremony_name in ceremony_names:
+                if ceremony_name in powers and powers[ceremony_name] > 0:
+                    ceremony_display = ceremony_name.replace('_', ' ').title()
+                    ceremony_list.append(ceremony_display)
+            
+            if ceremony_list:
+                # Display ceremonies in 2 columns
+                for i in range(0, len(ceremony_list), 2):
+                    left_ceremony = ceremony_list[i] if i < len(ceremony_list) else ""
+                    right_ceremony = ceremony_list[i + 1] if i + 1 < len(ceremony_list) else ""
+                    
+                    left_formatted = left_ceremony.ljust(39)
+                    output.append(f"{left_formatted} {right_ceremony}")
+            else:
+                output.append("No ceremonies learned yet.")
         
-        # Secondary Powers (rituals, rites, blood sorcery)
-        if powers or template_secondary_powers:
+        else:
+            # Regular template power display
+            if powers or template_powers:
+                output.append(self._format_section_header(f"|w{primary_section}|n"))
+                
+                if template_powers:
+                    power_display = self._format_powers_display(powers, template_powers, force_ascii)
+                    output.extend(power_display)
+                else:
+                    output.append("No primary powers available for this template.")
+        
+        # Secondary Powers (rituals, rites, blood sorcery) - skip for Geist since handled above
+        if template.lower() != "geist" and (powers or template_secondary_powers):
             if template_secondary_powers:  # Only show section if template has secondary powers
                 output.append(self._format_section_header(f"|w{secondary_section}|n"))
                 
                 secondary_power_display = self._format_secondary_powers_display(powers, template_secondary_powers, force_ascii)
                 output.extend(secondary_power_display)
         
+        # Pools section (horizontal layout)
+        output.append(self._format_section_header("|wPOOLS|n"))
+        
+        # Get pools data
+        health_max = advantages.get("health", 7)
+        health_track = self._get_health_track(target)
+        
+        # Save the compacted track back to ensure consistency
+        self._set_health_track(target, health_track)
+        
+        # Create health boxes
+        health_boxes = []
+        for i in range(health_max):
+            damage_type = health_track[i]
+            if damage_type == "bashing":
+                health_boxes.append("[|c/|n]")  # Cyan for bashing
+            elif damage_type == "lethal":
+                health_boxes.append("[|rX|n]")  # Red for lethal
+            elif damage_type == "aggravated":
+                health_boxes.append("[|R*|n]")  # Bright red for aggravated
+            else:
+                health_boxes.append("[ ]")
+        
+        # Willpower
+        willpower_max = advantages.get("willpower", 3)
+        willpower_current = target.db.willpower_current
+        if willpower_current is None:
+            willpower_current = willpower_max  # Default to full
+        
+        willpower_dots = self._format_dots(willpower_current, willpower_max, force_ascii)
+        
+        # Template-specific resource pools
+        resource_pools = {
+            "geist": ("Plasm", "plasm"),
+            "changeling": ("Glamour", "glamour"), 
+            "vampire": ("Vitae", "vitae"),
+            "werewolf": ("Essence", "essence"),
+            "mage": ("Mana", "mana"),
+            "demon": ("Aether", "aether"),
+            "promethean": ("Pyros", "pyros")
+        }
+        
+        pool_display = ""
+        if template in resource_pools:
+            pool_name, pool_key = resource_pools[template]
+            pool_current = getattr(target.db, f"{pool_key}_current", None)
+            pool_max = advantages.get(pool_key, 10)  # Default max of 10 for most pools
+            
+            if pool_current is None:
+                pool_current = pool_max  # Default to full
+            
+            pool_dots = self._format_dots(pool_current, pool_max, force_ascii)
+            pool_display = f"{pool_name} ({pool_current}/{pool_max})"
+        
+        # Create horizontal pools layout
+        health_label = "Health"
+        willpower_label = f"Willpower ({willpower_current}/{willpower_max})"
+        
+        if pool_display:
+            # Three pools: Health, Resource Pool, Willpower
+            output.append(f"{health_label:^26}{pool_display:^26}{willpower_label:^26}")
+            health_section = f"{''.join(health_boxes):^26}"
+            pool_section = f"{pool_dots if 'pool_dots' in locals() else '':^26}"
+            willpower_section = f"{willpower_dots:^26}"
+            output.append(f"{health_section}{pool_section}{willpower_section}")
+        else:
+            # Two pools: Health, Willpower
+            output.append(f"{health_label:^39}{willpower_label:^39}")
+            health_section = f"{''.join(health_boxes):^39}"
+            willpower_section = f"{willpower_dots:^39}"
+            output.append(f"{health_section}{willpower_section}")
+
         # Aspirations (only show if there are any)
         aspirations_list = [asp for asp in target.db.aspirations if asp] if target.db.aspirations else []
         if aspirations_list:
@@ -965,32 +1106,45 @@ class CmdSheet(MuxCommand):
             trait_display = "<not set>"
         
         # Create bio items list for display
-        bio_items = [
+        short_bio_items = [
             ("Concept", concept),
             ("Rank", f"{rank}"),
             ("Virtue", virtue),
             ("Vice", vice),
             ("Crisis Trigger", crisis_trigger.title() if crisis_trigger != "<not set>" else crisis_trigger),
-            ("Ban", ban),
             ("Bane", bane),
             ("Innate Key", innate_key.title() if innate_key != "<not set>" else innate_key),
-            ("Remembrance", remembrance_desc),
-            ("Remembrance Trait", trait_display)
+            ("Trait", trait_display)
+        ]
+
+        # long fields that need their own lines
+        long_bio_items = [
+            ("Ban", ban),
+            ("Remembrance", remembrance_desc)
         ]
         
-        # Display bio items in two-column format
-        for i in range(0, len(bio_items), 2):
-            left_label, left_value = bio_items[i]
+        # Display short bio items in two-column format
+        for i in range(0, len(short_bio_items), 2):
+            left_label, left_value = short_bio_items[i]
             left_text = f"{left_label:<16}: {left_value}"
             
-            if i + 1 < len(bio_items):
-                right_label, right_value = bio_items[i + 1]
+            if i + 1 < len(short_bio_items):
+                right_label, right_value = short_bio_items[i + 1]
                 right_text = f"{right_label:<16}: {right_value}"
             else:
                 right_text = ""
             
             left_formatted = left_text.ljust(39)
             output.append(f"{left_formatted} {right_text}")
+        
+        # Add newline before long bio items
+        output.append("")
+        
+        # Display long bio items on their own lines
+        for label, value in long_bio_items:
+            if value != "<not set>":
+                output.append(f"{label:<16}: {value}")
+
         
         # Geist Attributes (simplified - Power, Finesse, Resistance)
         attrs = geist_stats.get("attributes", {"power": 1, "finesse": 1, "resistance": 1})
@@ -1009,10 +1163,45 @@ class CmdSheet(MuxCommand):
             output.append(f"Power          {power_dots} ({power_val})")
             output.append(f"Finesse        {finesse_dots} ({finesse_val})")
             output.append(f"Resistance     {resistance_dots} ({resistance_val})")
+        
+        # Keys Section
+        keys = geist_stats.get("keys", {})
+        output.append(self._format_geist_section_header("|wKEYS|n"))
+        
+        # Get key details from template
+        from world.cofd.templates.geist import GEIST_KEY_DETAILS
+        
+        if keys:
+            key_list = []
+            for key_name, has_key in keys.items():
+                if has_key:
+                    key_lookup = key_name  # Keep as stored (with spaces)
+                    key_details = GEIST_KEY_DETAILS.get(key_lookup, {})
+                    full_name = key_details.get("full_name", key_name.replace("_", " ").title())
+                    unlock_attr = key_details.get("unlock_attribute", "")
+                    
+                    key_display = f"|c{full_name}|n"
+                    if unlock_attr:
+                        key_display += f" (Unlock: {unlock_attr})"
+                    key_list.append(key_display)
             
-            # Show attribute total
-            total_attrs = power_val + finesse_val + resistance_val
-            output.append(f"Total: {total_attrs}/15 dots")
+            if key_list:
+                for i, key_display in enumerate(key_list):
+                    output.append(f"  {key_display}")
+                    
+                    clean_key_name = key_display.split(" (")[0]
+                    # Remove color codes from the key name
+                    clean_key_name = clean_key_name.replace("|c", "").replace("|n", "").lower()
+                    for key_code, details in GEIST_KEY_DETAILS.items():
+                        if details["full_name"].lower() == clean_key_name:
+                            output.append(f"    |cResonance:|n {details['resonance']}")
+                            output.append(f"    |rDoom:|n {details['doom']}")
+                            output.append("")
+                            break
+            else:
+                output.append("  No keys unlocked yet.")
+        else:
+            output.append("  No keys unlocked yet.")
         
         # Derived Stats for Geist
         advantages = geist_stats.get("advantages", {})
@@ -1048,12 +1237,6 @@ class CmdSheet(MuxCommand):
                 else:
                     row_parts.append(" " * 39)
             output.append("".join(row_parts))
-        
-        output.append("")
-        output.append(f"|mThis geist is bound to {target.name} (Sin-Eater)|n")
-        output.append(f"|mGeists are ephemeral entities with simplified traits.|n")
-        output.append(f"|mUse +stat/geist <stat>=<value> to modify geist stats.|n")
-        
         output.append(f"|m{'='*78}|n")
         
         # Add encoding info to bottom if ASCII mode is being used

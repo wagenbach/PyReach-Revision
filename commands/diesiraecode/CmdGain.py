@@ -1,15 +1,13 @@
 from evennia.commands.default.muxcommand import MuxCommand
 
-class CmdPool(MuxCommand):
+class CmdGain(MuxCommand):
     """
-    View and manage character pools (administrative functions).
+    Regain points in character pools (willpower and supernatural pools).
     
     Usage:
-        +pool - Show all available pools
-        +pool <pool> - Show specific pool status
-        +pool/<pool> - Show specific pool status 
-        +pool/<pool>/set <current>/<max> - Set pool values (staff only)
-        +pool/<pool>/reset - Reset pool to maximum (staff only)
+        +gain <pool>=<amount> - Gain amount in specified pool
+        +gain <pool> - Gain 1 point in specified pool
+        +gain - Show available pools
         
     Available Pools:
         willpower - Universal pool for all characters
@@ -23,23 +21,14 @@ class CmdPool(MuxCommand):
         aether - Demon occult matrix fuel (based on Primum)
         pyros - Promethean divine fire (based on Azoth)
         
-    Pool Maximums (Power Stat 1-10):
-        1-4: 10, 11, 12, 13 points
-        5: 15 points
-        6-8: 20, 25, 30 points  
-        9-10: 50, 75 points
-        Special: Blood Potency 0 = Stamina value
-        
-    Note: Use +spend and +gain commands to spend/gain pool points.
-        
     Examples:
-        +pool/essence - Check essence pool
-        +pool/mana/set 5/10 - Set mana to 5/10 (staff)
-        +pool/willpower/reset - Reset willpower to max (staff)
+        +gain willpower=2 - Gain 2 willpower
+        +gain essence - Gain 1 essence
+        +gain plasm=3 - Gain 3 plasm
     """
     
-    key = "+pool"
-    aliases = ["pool", "pools"]
+    key = "+gain"
+    aliases = ["gain"]
     help_category = "Roleplaying Tools"
     
     def _get_template_info(self, caller):
@@ -217,32 +206,33 @@ class CmdPool(MuxCommand):
         return any(pool["name"] == pool_name for pool in available_pools)
     
     def func(self):
-        """Manage character pools"""
+        """Gain points in character pools"""
         
-        # No arguments - show all pools
-        if not self.args and not self.switches:
+        # No arguments - show available pools
+        if not self.args:
             self._show_all_pools(self.caller)
             return
         
-        # Determine which pool we're working with
+        # Parse arguments - looking for pool=amount or just pool
         pool_name = None
+        amount = 1
         
-        # Check if pool is specified in switches
-        for switch in self.switches:
-            if switch in ["willpower", "essence", "blood", "glamour", "mana", "plasm", "satiety", "instability", "aether", "pyros"]:
-                pool_name = switch
-                break
+        if "=" in self.args:
+            pool_name, amount_str = self.args.split("=", 1)
+            pool_name = pool_name.strip().lower()
+            try:
+                amount = int(amount_str.strip())
+            except ValueError:
+                self.caller.msg("Amount must be a number.")
+                return
+        else:
+            pool_name = self.args.strip().lower()
         
-        # If no pool in switches, check args
-        if not pool_name and self.args:
-            potential_pool = self.args.split()[0].lower()
-            if potential_pool in ["willpower", "essence", "blood", "glamour", "mana", "plasm", "satiety", "instability", "aether", "pyros"]:
-                pool_name = potential_pool
-        
-        # If still no pool specified, show error
-        if not pool_name:
-            self.caller.msg("Usage: +pool/<pool_name>/action or +pool <pool_name>")
-            self.caller.msg("Available pools: willpower, essence, blood, glamour, mana, plasm, satiety, instability, aether, pyros")
+        # Validate pool name
+        valid_pools = ["willpower", "essence", "blood", "glamour", "mana", "plasm", "satiety", "instability", "aether", "pyros"]
+        if pool_name not in valid_pools:
+            self.caller.msg(f"Unknown pool: {pool_name}")
+            self.caller.msg(f"Valid pools: {', '.join(valid_pools)}")
             return
         
         # Validate pool for this character
@@ -257,65 +247,23 @@ class CmdPool(MuxCommand):
             self.caller.msg(f"You don't have the {pool_name} pool available.")
             return
         
-        # Just showing the pool status
-        if not any(action in self.switches for action in ["set", "reset"]):
-            self.caller.msg(f"{pool_name.title()}: {current}/{maximum}")
+        # Validate amount
+        if amount < 1:
+            self.caller.msg(f"You must gain at least 1 {pool_name}.")
             return
         
-        # Handle pool actions
-        if "set" in self.switches:
-            # Staff only
-            if not self.caller.check_permstring("Builder"):
-                self.caller.msg(f"You don't have permission to set {pool_name}.")
-                return
-            
-            if not self.args or "/" not in self.args:
-                self.caller.msg(f"Usage: +pool/{pool_name}/set <current>/<max>")
-                return
-            
-            try:
-                args_part = self.args.split()[-1]  # Get the last argument in case pool name was also specified
-                current_str, max_str = args_part.split("/", 1)
-                new_current = int(current_str)
-                new_max = int(max_str)
-                
-                if new_current < 0 or new_max < 1:
-                    self.caller.msg(f"{pool_name.title()} values must be positive.")
-                    return
-                
-                if new_current > new_max:
-                    self.caller.msg(f"Current {pool_name} cannot exceed maximum.")
-                    return
-                
-                # Set the values
-                if pool_name == "willpower":
-                    if not self.caller.db.stats:
-                        self.caller.db.stats = {}
-                    if "advantages" not in self.caller.db.stats:
-                        self.caller.db.stats["advantages"] = {}
-                    self.caller.db.stats["advantages"]["willpower"] = new_max
-                    self.caller.db.willpower_current = new_current
-                else:
-                    setattr(self.caller.db, current_attr, new_current)
-                    # Note: Setting max for supernatural pools would require changing the power stat
-                
-                self.caller.msg(f"{pool_name.title()} set to {new_current}/{new_max}")
-                
-            except ValueError:
-                self.caller.msg(f"Usage: +pool/{pool_name}/set <current>/<max> (numbers only)")
+        # Calculate new current value (can't exceed maximum)
+        new_current = min(maximum, current + amount)
+        gained = new_current - current
         
-        elif "reset" in self.switches:
-            # Staff only
-            if not self.caller.check_permstring("Builder"):
-                self.caller.msg(f"You don't have permission to reset {pool_name}.")
-                return
-            
-            if pool_name == "willpower":
-                self.caller.db.willpower_current = maximum
-            else:
-                setattr(self.caller.db, current_attr, maximum)
-            
-            self.caller.msg(f"{pool_name.title()} reset to maximum: {maximum}/{maximum}")
+        if gained == 0:
+            self.caller.msg(f"Your {pool_name} is already at maximum.")
+            return
         
+        # Gain the pool points
+        if pool_name == "willpower":
+            self.caller.db.willpower_current = new_current
         else:
-            self.caller.msg("Valid actions: /set, /reset") 
+            setattr(self.caller.db, current_attr, new_current)
+        
+        self.caller.msg(f"You gain {gained} {pool_name}. Current: {new_current}/{maximum}")

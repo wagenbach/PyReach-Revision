@@ -32,7 +32,9 @@ from .integrity import CmdIntegrity
 from .equipment import CmdEquipment
 from .groups import CmdGroups, CmdRoster
 from .npc import CmdNPC
-from commands.diesiraecode.CmdPool import CmdPool  
+from commands.diesiraecode.CmdPool import CmdPool
+from commands.diesiraecode.CmdSpend import CmdSpend
+from commands.diesiraecode.CmdGain import CmdGain  
 from .CmdHealth import CmdHealth
 from .template_admin import CmdTemplate
 from .admin_commands import CmdMigrate
@@ -87,6 +89,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         # Sheet management and stat views
         self.add(CmdSheet())
         self.add(CmdPool())
+        self.add(CmdSpend())
+        self.add(CmdGain())
         self.add(CmdHealth())
         
         # Character management

@@ -97,6 +97,23 @@ class CmdStat(MuxCommand):
         +stat/geist ban=Fresh pine boughs
         +stat/geist bane=Yellow roses
         +stat/geist innate_key=cold wind
+        +stat/geist boneyard=3 (haunts are rated 1-5)
+        
+        Semantic Power Setting (Individual Abilities):
+        Keys (Geist): +stat key=beasts, +stat key=stillness, +stat key=cold_wind
+        Ceremonies (Geist): +stat ceremony=pass_on, +stat ceremony=ghost_trap
+        Rites (Werewolf): +stat rite=sacred_hunt, +stat rite=bottle_spirit
+        Rituals (Vampire): +stat ritual=pangs_of_proserpina, +stat ritual=blood_scourge
+        Contracts (Changeling): +stat contract=hostile_takeover, +stat contract=cloak_of_night
+
+        Category Powers (1-5 dots):
+        Haunts (Geist): +stat boneyard=3, +stat curse=2
+        Disciplines (Vampire): +stat animalism=4, +stat auspex=2
+        Arcana (Mage): +stat forces=3, +stat death=1
+        Gifts (Werewolf): +stat strength=2, +stat dominance=3
+        
+        Note: Individual abilities use semantic syntax (known/unknown).
+        Categories use regular numeric ratings (1-5 dots).
         
     Note: Merits can be set directly with +stat during character generation.
     Once approved, merits must be purchased using +xp/buy <merit>=[dots] command.
@@ -212,6 +229,7 @@ class CmdStat(MuxCommand):
                         'devour', 'forge_alliance', 'urfarahs_bane', 'veil', 'great_hunt', 'shadow_distortion', 'unleash_shadow'
                         ],
             'changeling': [
+                          # all contracts use semantic syntax
                           # Crown Contracts
                           'hostile_takeover', 'mask_of_superiority', 'paralyzing_presence', 'summon_the_loyal_servant', 'tumult',
                           # Royal Crown Contracts
@@ -281,8 +299,13 @@ class CmdStat(MuxCommand):
                           'coming_darkness', 'pomp_and_circumstance', 'shadow_puppet', 'steal_influence', 'earths_gentle_movements',
                           'dread_companion', 'cracked_mirror', 'listen_with_winds_ears', 'momentary_respite', 'earths_impenetrable_walls'
                           ],
-            # Add other templates as they're implemented
-            'geist': [],
+            'geist': [
+                            # Keys (semantic syntax)
+                            "beasts", "blood", "chance", "cold wind", "deep waters", "disease", "grave dirt", "pyre flame", "stillness",
+                            # Haunts (categories)
+                            "boneyard", "caul", "curse", "dirge", "marionette", "memoria", "oracle", "rage", "shroud", "tomb"
+                                ],
+            # other templates as they're implemented
             'promethean': [],
             'demon': [],
             'beast': [],
@@ -323,9 +346,20 @@ class CmdStat(MuxCommand):
             else:
                 # Format: stat=value (self)
                 stat, value = args.split("=", 1)
+                stat = stat.strip().lower()
+                value = value.strip()
+                
+                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, etc.
+                semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract"]
+                if stat in semantic_prefixes:
+                    # this is semantic syntax like key=beasts
+                    power_type = stat
+                    power_name = value.lower().replace(" ", "_")
+                    return None, f"{power_type}:{power_name}", "known"  # Mark as known for individual abilities
+                
                 # Convert spaces to underscores in stat names
-                stat = stat.strip().lower().replace(" ", "_")
-                return None, stat, value.strip()
+                stat = stat.replace(" ", "_")
+                return None, stat, value
         else:
             return None, None, None
     
@@ -452,10 +486,11 @@ class CmdStat(MuxCommand):
         
         # Check template-specific bio fields
         elif stat in ["path", "order", "mask", "dirge", "clan", "covenant", "bone", "blood", 
-                     "auspice", "tribe", "seeming", "court", "kith", "burden", "archetype", 
+                     "auspice", "tribe", "seeming", "court", "kith", "burden", "root", "bloom", 
                      "krewe", "lineage", "refinement", "profession", "organization", "creed", 
                      "incarnation", "agenda", "agency", "hunger", "family", "inheritance", 
-                     "origin", "clade", "divergence", "needle", "thread", "legend", "life"]:
+                     "origin", "clade", "divergence", "needle", "thread", "legend", "life",
+                     "geist_name", "embrace_date"]:
             
             # Get character's template
             character_template = target.db.stats.get("other", {}).get("template", "Mortal")
@@ -491,20 +526,70 @@ class CmdStat(MuxCommand):
             target.db.stats["bio"][stat] = str(value)
             stat_set = True
         
-        # Check template (staff only)
+        # Check template (staff only, or self if not approved)
         elif stat == "template":
-            if not self.caller.check_permstring("Builder"):
-                self.caller.msg("Only staff can set template.")
+            # Check permissions: staff can always change templates, players can change their own if not approved
+            if target != self.caller:
+                # Changing someone else's template - requires staff
+                if not self.caller.check_permstring("Builder"):
+                    self.caller.msg("Only staff can set template for other characters.")
+                    return
+            else:
+                # Changing own template - allowed if not approved, staff always allowed
+                if target.db.approved and not self.caller.check_permstring("Builder"):
+                    self.caller.msg("Your character is approved. Only staff can change your template now.")
+                    self.caller.msg("Contact staff if you need a template change.")
+                    return
+            
+            # Validate template
+            valid_templates = [
+                "changeling", "vampire", "werewolf", "mage", "geist", 
+                "deviant", "demon", "hunter", "promethean", 
+                "mortal+", "mortal plus", "mortal"
+            ]
+            
+            if value.lower() not in valid_templates:
+                self.caller.msg("Invalid template. Valid templates: Changeling, Vampire, Werewolf, Mage, Geist, Deviant, Demon, Hunter, Promethean, Mortal+, Mortal")
                 return
             
-            # Use character's set_template method
-            success, message = target.set_template(value, self.caller)
-            if success:
-                self.caller.msg(message)
-                stat_set = True
-            else:
-                self.caller.msg(message)
-                return
+            # Completely wipe character stats for clean slate
+            old_template = target.db.stats.get("other", {}).get("template", "Mortal") if target.db.stats else "Mortal"
+            
+            # Confirm the nuclear option
+            self.caller.msg(f"|rWARNING:|n This will completely wipe all of {target.name}'s stats!")
+            self.caller.msg(f"Changing template from {old_template} to {value.title()}...")
+            
+            # Nuclear option: completely wipe stats
+            target.db.stats = {
+                "attributes": {},
+                "skills": {},
+                "advantages": {},
+                "anchors": {},
+                "bio": {},
+                "merits": {},
+                "specialties": {},
+                "powers": {},
+                "other": {"template": value.title()}
+            }
+            
+            # Also wipe any geist stats if they exist
+            if hasattr(target.db, 'geist_stats'):
+                target.db.geist_stats = None
+            
+            # Clear other character-specific data
+            target.db.willpower_current = None
+            target.db.aspirations = []
+            target.db.approved = False  # Template changes require re-approval
+            
+            self.caller.msg(f"Template changed to {value.title()}. All stats have been wiped clean.")
+            self.caller.msg("Character is now unapproved and ready for fresh character generation.")
+            
+            # Notify the target
+            if target != self.caller:
+                target.msg(f"Your template has been changed to {value.title()} by {self.caller.name}.")
+                target.msg("All your stats have been wiped clean. Use +stat to set new stats.")
+            
+            stat_set = True
         
         # Other stats
         elif stat in ["integrity", "size", "beats", "experience"]:
@@ -544,8 +629,12 @@ class CmdStat(MuxCommand):
                 self.caller.msg(f"{expected_integrity_name} must be between 0 and 10.")
                 return
             
-            # Store as integrity regardless of alias used
-            target.db.stats["other"]["integrity"] = value
+            # Special handling for Geist characters - Synergy is an advantage, not integrity
+            if character_template.lower() == "geist" and stat.lower() == "synergy":
+                target.db.stats["advantages"]["synergy"] = value
+            else:
+                # Store as integrity for other templates
+                target.db.stats["other"]["integrity"] = value
             stat_set = True
         
         # Check specialties
@@ -596,6 +685,11 @@ class CmdStat(MuxCommand):
             # Add the specialty
             target.db.stats["specialties"][skill_name].append(value.strip().title())
             stat_set = True
+        
+        # Check for semantic power syntax (key:beasts, ceremony:pass_on, etc.)
+        elif ":" in stat:
+            power_type, power_name = stat.split(":", 1)
+            return self._handle_semantic_power(target, power_type, power_name, value)
         
         # Check powers (template-specific supernatural abilities)
         else:
@@ -1151,7 +1245,7 @@ class CmdStat(MuxCommand):
         # Validate template
         valid_templates = [
             "changeling", "vampire", "werewolf", "mage", "geist", 
-            "beast", "deviant", "demon", "hunter", "promethean", 
+            "deviant", "demon", "hunter", "promethean", 
             "mortal+", "mortal plus", "mortal"
         ]
         
@@ -1204,6 +1298,8 @@ class CmdStat(MuxCommand):
                 "attributes": {"power": 1, "finesse": 1, "resistance": 1},
                 "bio": {},
                 "remembrance": {},
+                "keys": {},
+                "haunts": {},
                 "advantages": {},
                 "other": {"rank": 3, "size": 5}
             }
@@ -1335,10 +1431,18 @@ class CmdStat(MuxCommand):
             geist_stats["remembrance"]["dots"] = value
             return True
         
+        
         else:
             # Unknown stat
             self.caller.msg(f"Unknown geist stat: {stat}")
-            self.caller.msg("Valid geist stats: power, finesse, resistance, concept, remembrance_description, remembrance_trait, remembrance_dots, virtue, vice, crisis_trigger, ban, bane, innate_key")
+            self.caller.msg("Valid geist stats:")
+            self.caller.msg("  Attributes: power, finesse, resistance")
+            self.caller.msg("  Bio: concept, remembrance_description, virtue, vice, crisis_trigger, ban, bane, innate_key")
+            self.caller.msg("  Remembrance: remembrance_trait, remembrance_dots")
+            self.caller.msg("  Note: For keys, use the semantic syntax:")
+            self.caller.msg("    +stat key=beasts")
+            self.caller.msg("  Note: For haunts, use regular numeric syntax:")
+            self.caller.msg("    +stat boneyard=3")
             return False
     
     def _calculate_geist_derived_stats(self, target):
@@ -1360,6 +1464,102 @@ class CmdStat(MuxCommand):
         }
         
         self.caller.msg(f"Recalculated geist derived stats: Defense {defense}, Initiative {initiative}, Speed {speed}")
+    
+    def _handle_semantic_power(self, target, power_type, power_name, value):
+        """Handle semantic power syntax like key=beasts, ceremony=pass_on"""
+        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        
+        # Define valid powers for each semantic type
+        valid_powers = {
+            "key": ["beasts", "blood", "chance", "cold_wind", "deep_waters", "disease", "grave_dirt", "pyre_flame", "stillness"],
+            "ceremony": [
+                "dead_mans_camera", "death_watch", "diviners_jawbone", "lovers_telephone", "ishtars_perfume",
+                "crow_girl_kiss", "gifts_of_persephone", "ghost_trap", "skeleton_key", "bestow_regalia", 
+                "krewe_binding", "speaker_for_the_dead", "black_cats_crossing", "bloody_codex", "dumb_supper",
+                "forge_anchor", "maggot_homonculus", "pass_on", "ghost_binding", "persephones_return"
+            ],
+            "rite": [
+                "chain_rage", "messenger", "banish", "harness_the_cycle", "totemic_empowerment",
+                "bottle_spirit", "infest_locus", "rite_of_the_shroud", "sacred_hunt", "hunting_ground", "moons_mad_love",
+                "shackled_lightning", "sigrblot", "wellspring", "carrion_feast", "flay_auspice", "kindle_fury", 
+                "rite_of_absolution", "shadowbind", "the_thorn_pursuit", "banshee_howl", "raiment_of_the_storm", 
+                "shadowcall", "supplication", "between_worlds", "fetish", "shadow_bridge", "twilight_purge", 
+                "hidden_path", "expel", "heal_old_wounds", "lupus_venandi", "devour", "forge_alliance", 
+                "urfarahs_bane", "veil", "great_hunt", "shadow_distortion", "unleash_shadow"
+            ],
+            "ritual": [
+                "ban_of_the_spiteful_bastard", "mantle_of_amorous_fire", "pangs_of_proserpina", 
+                "pool_of_forbidden_truths", "rigor_mortis", "cheval", "mantle_of_the_beasts_breath", 
+                "the_hydras_vitae", "shed_the_virulent_bowels", "curse_of_aphrodites_favor", 
+                "curse_of_the_beloved_toy", "deflection_of_wooden_doom", "donning_the_beasts_flesh", 
+                "mantle_of_the_glorious_dervish", "touch_of_the_morrigan", "blood_price", "willful_vitae", 
+                "blood_blight", "feeding_the_crone", "bounty_of_the_storm", "gorgons_gaze", 
+                "manananggals_working", "mantle_of_the_predator_goddess", "quicken_the_withered_womb", 
+                "the_red_blossoms", "birthing_the_god", "denying_hades", "gwydions_curse", 
+                "mantle_of_the_crone", "scapegoat", "apple_of_eden", "blandishment_of_sin", 
+                "blood_scourge", "marian_apparition", "revelatory_shroud", "vitae_reliquary", 
+                "apparition_of_the_host", "bloody_icon", "curse_of_babel", "liars_plague", 
+                "the_walls_of_jericho", "aarons_rod", "baptism_of_damnation", "blessing_the_legion", 
+                "the_guiding_star", "malediction_of_despair", "miracle_of_the_dead_sun", 
+                "pledge_to_the_worthless_one", "the_rite_of_ascending_blood", "blandishment_of_sin_advanced", 
+                "curse_of_isolation", "gift_of_lazarus", "great_prophecy", "stigmata", "trials_of_job", 
+                "apocalypse", "the_judgment_fast", "orison_of_voices", "sins_of_the_ancestors", "transubstatiation"
+            ]
+        }
+        
+        # Validate power type
+        if power_type not in valid_powers:
+            self.caller.msg(f"Invalid power type: {power_type}")
+            self.caller.msg("Valid types: key, ceremony, rite, ritual, contract")
+            return False
+        
+        # Validate power name
+        if power_name not in valid_powers[power_type]:
+            self.caller.msg(f"Invalid {power_type}: {power_name}")
+            self.caller.msg(f"Valid {power_type}s: {', '.join(valid_powers[power_type])}")
+            return False
+        
+        # Check template compatibility
+        template_requirements = {
+            "key": ["geist"],
+            "ceremony": ["geist"],
+            "rite": ["werewolf"],
+            "ritual": ["vampire"],
+            "contract": ["changeling"]
+        }
+        
+        required_templates = template_requirements.get(power_type, [])
+        if required_templates and character_template.lower() not in required_templates:
+            self.caller.msg(f"{power_type.title()}s are only available to {', '.join(required_templates).title()} characters.")
+            self.caller.msg(f"Your template is: {character_template}")
+            return False
+        
+        # Handle different power types
+        if power_type == "key":
+            # Keys go to geist stats for Sin-Eaters
+            if not hasattr(target.db, 'geist_stats') or not target.db.geist_stats:
+                target.db.geist_stats = {
+                    "attributes": {"power": 1, "finesse": 1, "resistance": 1},
+                    "bio": {},
+                    "remembrance": {},
+                    "keys": {},
+                    "haunts": {},
+                    "advantages": {},
+                    "other": {"rank": 3, "size": 5}
+                }
+            
+            # Keys are known/unknown - semantic syntax means they have the key
+            target.db.geist_stats["keys"][power_name.replace("_", " ")] = True
+            self.caller.msg(f"Set {target.name} to have the {power_name.replace('_', ' ').title()} key.")
+        else:
+            # Ceremonies, rites, rituals go to regular powers as known abilities (stored as 1)
+            if "powers" not in target.db.stats:
+                target.db.stats["powers"] = {}
+            
+            target.db.stats["powers"][power_name] = 1
+            self.caller.msg(f"Set {target.name} to know {power_name.replace('_', ' ').title()} ({power_type}).")
+        
+        return True
 
 class CmdRecalc(MuxCommand):
     """
