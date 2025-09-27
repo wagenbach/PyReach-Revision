@@ -87,41 +87,38 @@ class LegacyExperienceHandler:
         logger.log_info(f"Admin set {self.obj.name}'s experience from {old_amount} to {self._experience}")
         return f"Experience set to {self._experience} (was {old_amount})"
 
-# Legacy experience costs (higher than 2nd edition)
+# Legacy experience costs (1st Edition - new rating x multiplier)
 LEGACY_EXPERIENCE_COSTS = {
-    # Attributes (much more expensive)
-    'attribute_1_to_2': 4,
-    'attribute_2_to_3': 8,
-    'attribute_3_to_4': 12,
-    'attribute_4_to_5': 16,
+    # Attributes: new dots x 5xp
+    'attribute': 5,  # multiplier for new rating
     
-    # Skills
-    'skill_0_to_1': 2,
-    'skill_1_to_2': 4,
-    'skill_2_to_3': 6,
-    'skill_3_to_4': 8,
-    'skill_4_to_5': 10,
+    # Skills: new dots x 3xp  
+    'skill': 3,  # multiplier for new rating
     
-    # Specialties
-    'skill_specialty': 2,
+    # Specialties: flat cost
+    'skill_specialty': 3,
     
-    # Advantages
-    'willpower': 2,  # per dot
-    'virtue_vice': 3,  # per dot
+    # Merits: new dots x 2xp
+    'merit': 2,  # multiplier for new rating
     
-    # Merits (more expensive)
-    'merit': 2,  # per dot
+    # Morality/Integrity: new dots x 3xp
+    'integrity': 3,  # multiplier for new rating
     
-    # Integrity/Morality
-    'integrity': 3,  # per dot
+    # Willpower (flat cost)
+    'willpower': 8,  # flat cost for willpower
     
-    # Powers (template-specific)
-    'discipline': 7,  # per dot (Vampire)
-    'arcanum': 8,    # per dot (Mage)
-    'gift': 7,       # per dot (Werewolf)
-    'contract': 6,   # per dot (Changeling)
-    'key': 5,        # per key (Geist)
-    'ceremony': 4,   # per ceremony (Geist)
+    # Vampire-specific costs
+    'clan_discipline': 5,      # new rating x 5 (clan/bloodline disciplines)
+    'other_discipline': 7,     # new rating x 7 (out-of-clan disciplines)
+    'blood_sorcery_ritual': 2, # ritual level x 2 (Theban/Cruac rituals)
+    'blood_potency': 8,        # new rating x 8
+    
+    # Other template powers (using new rating system)
+    'arcanum': 8,     # per new rating (Mage)
+    'gift': 7,        # per new rating (Werewolf)
+    'contract': 6,    # per new rating (Changeling)
+    'key': 5,         # per new rating (Geist)
+    'ceremony': 4,    # per new rating (Geist)
 }
 
 # Ways to earn experience in legacy mode (no beats)
@@ -140,37 +137,85 @@ LEGACY_XP_AWARDS = {
     'staff_award': 3,            # Staff discretionary award
 }
 
-def get_attribute_cost(current_level):
-    """Get the cost to raise an attribute from current level to next"""
-    cost_map = {
-        1: LEGACY_EXPERIENCE_COSTS['attribute_1_to_2'],
-        2: LEGACY_EXPERIENCE_COSTS['attribute_2_to_3'], 
-        3: LEGACY_EXPERIENCE_COSTS['attribute_3_to_4'],
-        4: LEGACY_EXPERIENCE_COSTS['attribute_4_to_5']
-    }
-    return cost_map.get(current_level, 0)
+def get_attribute_cost(target_level):
+    """Get the cost to raise an attribute to target level (new rating x 5)"""
+    return target_level * LEGACY_EXPERIENCE_COSTS['attribute']
 
-def get_skill_cost(current_level):
-    """Get the cost to raise a skill from current level to next"""
-    cost_map = {
-        0: LEGACY_EXPERIENCE_COSTS['skill_0_to_1'],
-        1: LEGACY_EXPERIENCE_COSTS['skill_1_to_2'],
-        2: LEGACY_EXPERIENCE_COSTS['skill_2_to_3'],
-        3: LEGACY_EXPERIENCE_COSTS['skill_3_to_4'],
-        4: LEGACY_EXPERIENCE_COSTS['skill_4_to_5']
-    }
-    return cost_map.get(current_level, 0)
+def get_skill_cost(target_level):
+    """Get the cost to raise a skill to target level (new rating x 3)"""
+    return target_level * LEGACY_EXPERIENCE_COSTS['skill']
 
-def calculate_total_cost(stat_type, current_level, target_level):
-    """Calculate total cost to raise a stat from current to target level"""
-    if target_level <= current_level:
+def get_merit_cost(target_level):
+    """Get the cost to raise a merit to target level (new rating x 2)"""
+    return target_level * LEGACY_EXPERIENCE_COSTS['merit']
+
+def get_integrity_cost(target_level):
+    """Get the cost to raise integrity/morality to target level (new rating x 3)"""
+    return target_level * LEGACY_EXPERIENCE_COSTS['integrity']
+
+def get_willpower_cost():
+    """Get the cost to raise willpower (flat 8 XP)"""
+    return LEGACY_EXPERIENCE_COSTS['willpower']
+
+def get_clan_discipline_cost(target_level):
+    """Get the cost to raise a clan/bloodline discipline (new rating x 5)"""
+    return target_level * LEGACY_EXPERIENCE_COSTS['clan_discipline']
+
+def get_other_discipline_cost(target_level):
+    """Get the cost to raise an out-of-clan discipline (new rating x 7)"""
+    return target_level * LEGACY_EXPERIENCE_COSTS['other_discipline']
+
+def get_blood_sorcery_ritual_cost(ritual_level):
+    """Get the cost for a blood sorcery ritual (ritual level x 2)"""
+    return ritual_level * LEGACY_EXPERIENCE_COSTS['blood_sorcery_ritual']
+
+def get_blood_potency_cost(target_level):
+    """Get the cost to raise blood potency (new rating x 8)"""
+    return target_level * LEGACY_EXPERIENCE_COSTS['blood_potency']
+
+def calculate_vampire_discipline_cost(character, discipline, target_level):
+    """Calculate vampire discipline cost based on character's clan"""
+    # Get character's clan
+    clan = None
+    if hasattr(character, 'db') and character.db.stats:
+        clan = character.db.stats.get("bio", {}).get("clan", "")
+    
+    # Import the vampire-specific function
+    try:
+        from world.cofd.templates.legacy_vampire import get_vampire_discipline_cost
+        return get_vampire_discipline_cost(clan, discipline, target_level)
+    except ImportError:
+        # Fallback to other discipline cost if import fails
+        return get_other_discipline_cost(target_level)
+
+def calculate_stat_cost(stat_type, target_level, character=None, stat_name=None):
+    """Calculate cost to raise a stat to target level using 1st Edition rules"""
+    if target_level <= 0:
         return 0
     
-    total_cost = 0
-    for level in range(current_level, target_level):
-        if stat_type == 'attribute':
-            total_cost += get_attribute_cost(level)
-        elif stat_type == 'skill':
-            total_cost += get_skill_cost(level)
+    if stat_type == 'attribute':
+        return get_attribute_cost(target_level)
+    elif stat_type == 'skill':
+        return get_skill_cost(target_level)
+    elif stat_type == 'merit':
+        return get_merit_cost(target_level)
+    elif stat_type == 'integrity':
+        return get_integrity_cost(target_level)
+    elif stat_type == 'willpower':
+        return get_willpower_cost()
+    elif stat_type == 'specialty':
+        return LEGACY_EXPERIENCE_COSTS['skill_specialty']
+    elif stat_type == 'discipline':
+        # For vampire disciplines, check if character and stat_name are provided
+        if character and stat_name:
+            template = character.db.stats.get("other", {}).get("template", "").lower()
+            if template == "legacy_vampire":
+                return calculate_vampire_discipline_cost(character, stat_name, target_level)
+        # Fallback to other discipline cost
+        return get_other_discipline_cost(target_level)
+    elif stat_type == 'blood_potency':
+        return get_blood_potency_cost(target_level)
+    elif stat_type == 'blood_sorcery_ritual':
+        return get_blood_sorcery_ritual_cost(target_level)
     
-    return total_cost
+    return 0

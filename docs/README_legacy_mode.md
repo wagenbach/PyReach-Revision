@@ -2,7 +2,7 @@
 
 ## Overview
 
-Legacy Mode transforms the MUSH to operate using Chronicles/World of Darkness 1st Edition mechanics instead of the default 2nd Edition framework. This is a global setting that affects all characters and systems.
+Legacy Mode transforms the MUSH to operate using Chronicles/World of Darkness 1st Edition mechanics instead of the default 2nd Edition framework. This is a global setting that affects all characters and systems. Use with caution. :) Also it's kind of not so complete. You might need to add in your own merits and powers, as I was mostly focused on getting 2nd edition up and running and less focused on backwards compatibility. That said, 1st edition is super popular and I figured it'd be fine to add it in. I wouldn't say this is actively supported, as it's intended to be kind of vestigial to the system that I intended PyReach to emulate.
 
 ## Activation
 
@@ -48,15 +48,37 @@ When Legacy Mode is activated, all connected players receive a system announceme
 - **Higher Costs**: More expensive advancement reflecting 1st edition
 - **Direct Awards**: Experience given directly, no beat conversion
 
-#### Legacy Experience Costs:
+#### Legacy Experience Costs (1st Edition):
 ```
-Attributes: 4/8/12/16 XP (current level × 4)
-Skills: 2/4/6/8/10 XP (new level × 2)
-Specialties: 2 XP each
-Merits: 2 XP per dot
-Integrity: 3 XP per dot
-Powers: 6-8 XP per dot (template dependent)
+Attributes: New rating × 5 XP
+Skills: New rating × 3 XP
+Specialties: 3 XP each
+Merits: New rating × 2 XP
+Morality/Integrity: New rating × 3 XP
+Willpower: 8 XP (flat cost)
+
+Vampire-Specific:
+Clan Disciplines: New rating × 5 XP
+Other Disciplines: New rating × 7 XP
+Blood Sorcery Rituals: Ritual level × 2 XP
+Blood Potency: New rating × 8 XP
+
+Clan Disciplines by Clan:
+• Daeva: Celerity, Majesty, Vigor
+• Gangrel: Animalism, Protean, Resilience
+• Mekhet: Auspex, Celerity, Obfuscate
+• Nosferatu: Nightmare, Obfuscate, Vigor
+• Ventrue: Animalism, Dominate, Resilience
 ```
+
+Examples:
+- Raising Strength to 4: 4 × 5 = 20 XP
+- Raising Athletics to 3: 3 × 3 = 9 XP  
+- Buying a specialty: 3 XP
+- Raising Contacts merit to 2: 2 × 2 = 4 XP
+- Daeva raising Celerity to 3: 3 × 5 = 15 XP (clan)
+- Daeva raising Nightmare to 2: 2 × 7 = 14 XP (other)
+- Learning Pangs of Proserpina (Level 1): 1 × 2 = 2 XP
 
 #### Experience Sources:
 - Automatic weekly: 1 XP
