@@ -2,6 +2,7 @@ from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import evtable
 from world.utils.health_utils import get_health_track, set_health_track, compact_track
 from world.cofd.templates import get_template_definition
+from world.legacy_virtues_vices import LEGACY_VIRTUES, LEGACY_VICES, get_virtue_info, get_vice_info
 
 class CmdSheet(MuxCommand):
     """
@@ -513,6 +514,10 @@ class CmdSheet(MuxCommand):
                 return
         else:
             target = self.caller
+            
+        # Check if legacy mode is active
+        from commands.CmdLegacy import is_legacy_mode
+        legacy_mode = is_legacy_mode()
         
         # Auto-migrate legacy stats if any exist (silent)
         # Note: Migration functionality has been moved to admin commands
@@ -539,6 +544,11 @@ class CmdSheet(MuxCommand):
             output.append(f"|g{'APPROVED'.center(78)}|n")
         else:
             output.append(f"|r{'NOT APPROVED'.center(78)}|n")
+        
+        # Show legacy mode status
+        if legacy_mode:
+            output.append(f"|m{'nWoD 1st Edition'.center(78)}|n")
+        
         output.append(f"|y{'='*78}|n")
         
         # Bio Section
@@ -594,6 +604,12 @@ class CmdSheet(MuxCommand):
             
             left_formatted = left_text.ljust(39)
             output.append(f"{left_formatted} {right_text}")
+        
+        # In legacy mode, add detailed virtue/vice information
+        if legacy_mode and virtue is not None and vice is not None:
+            output.append("")  # Add spacing
+            legacy_virtue_vice = self._format_legacy_virtue_vice(virtue, vice)
+            output.extend(legacy_virtue_vice)
         
         # Attributes
         attrs = target.db.stats.get("attributes", {})
@@ -1016,12 +1032,19 @@ class CmdSheet(MuxCommand):
             willpower_section = f"{willpower_dots:^39}"
             output.append(f"{health_section}{willpower_section}")
 
-        # Aspirations (only show if there are any)
-        aspirations_list = [asp for asp in target.db.aspirations if asp] if target.db.aspirations else []
-        if aspirations_list:
-            output.append(self._format_section_header("|wASPIRATIONS|n"))
-            for i, asp in enumerate(aspirations_list, 1):
-                output.append(f"{i}. {asp}")
+        # Aspirations (only show if there are any and not in legacy mode)
+        if not legacy_mode:
+            aspirations_list = [asp for asp in target.db.aspirations if asp] if target.db.aspirations else []
+            if aspirations_list:
+                output.append(self._format_section_header("|wASPIRATIONS|n"))
+                for i, asp in enumerate(aspirations_list, 1):
+                    output.append(f"{i}. {asp}")
+        
+        # Legacy Experience (only show in legacy mode)
+        if legacy_mode:
+            output.append(self._format_section_header("|wEXPERIENCE|n"))
+            legacy_xp = target.attributes.get('legacy_experience', default=0)
+            output.append(f"Experience Points: |y{legacy_xp}|n")
         
         output.append(f"|y{'='*78}|n")
         
@@ -1262,4 +1285,28 @@ class CmdSheet(MuxCommand):
         left_dashes = available_dash_space // 2
         right_dashes = available_dash_space - left_dashes
         
-        return f"|m<{'-' * left_dashes}|n {section_name} |m{'-' * right_dashes}>|n" 
+        return f"|m<{'-' * left_dashes}|n {section_name} |m{'-' * right_dashes}>|n"
+    
+    def _format_legacy_virtue_vice(self, virtue_name, vice_name):
+        """Format legacy virtue and vice with detailed descriptions"""
+        output = []
+        
+        # Virtue information
+        if virtue_name and virtue_name != "<not set>":
+            virtue_info = get_virtue_info(virtue_name)
+            if virtue_info:
+                output.append(f"|gVirtue: {virtue_info['name']}|n")
+                output.append(f"  {virtue_info['description']}")
+                output.append(f"  |cWillpower Regained:|n {virtue_info['willpower_condition']}")
+                output.append("")
+        
+        # Vice information  
+        if vice_name and vice_name != "<not set>":
+            vice_info = get_vice_info(vice_name)
+            if vice_info:
+                output.append(f"|rVice: {vice_info['name']}|n")
+                output.append(f"  {vice_info['description']}")
+                output.append(f"  |cWillpower Regained:|n {vice_info['willpower_condition']}")
+                output.append("")
+        
+        return output 

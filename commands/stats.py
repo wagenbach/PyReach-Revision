@@ -465,6 +465,32 @@ class CmdStat(MuxCommand):
             if stat in ["full_name", "fullname"]:
                 bio_field = "full_name"  # Store as full_name internally
             
+            # Special validation for virtue/vice in legacy mode
+            if stat in ["virtue", "vice"]:
+                from commands.CmdLegacy import is_legacy_mode
+                if is_legacy_mode():
+                    from world.legacy_virtues_vices import is_valid_virtue, is_valid_vice, get_virtue_info, get_vice_info, get_legacy_virtue_list, get_legacy_vice_list
+                    
+                    value_lower = str(value).lower()
+                    if stat == "virtue":
+                        if not is_valid_virtue(value_lower):
+                            virtue_list = ", ".join([v.title() for v in get_legacy_virtue_list()])
+                            self.caller.msg(f"'{value}' is not a valid legacy virtue.")
+                            self.caller.msg(f"Valid legacy virtues: {virtue_list}")
+                            return
+                        # Get the proper capitalized name
+                        virtue_info = get_virtue_info(value_lower)
+                        value = virtue_info["name"]
+                    elif stat == "vice":
+                        if not is_valid_vice(value_lower):
+                            vice_list = ", ".join([v.title() for v in get_legacy_vice_list()])
+                            self.caller.msg(f"'{value}' is not a valid legacy vice.")
+                            self.caller.msg(f"Valid legacy vices: {vice_list}")
+                            return
+                        # Get the proper capitalized name
+                        vice_info = get_vice_info(value_lower)
+                        value = vice_info["name"]
+            
             # Validate length for string fields
             if isinstance(value, str) and len(value) > 50:
                 self.caller.msg("Bio field values cannot exceed 50 characters.")
@@ -541,16 +567,33 @@ class CmdStat(MuxCommand):
                     self.caller.msg("Contact staff if you need a template change.")
                     return
             
-            # Validate template
-            valid_templates = [
-                "changeling", "vampire", "werewolf", "mage", "geist", 
-                "deviant", "demon", "hunter", "promethean", 
-                "mortal+", "mortal plus", "mortal"
-            ]
+            # Validate template based on legacy mode
+            from commands.CmdLegacy import is_legacy_mode
+            from world.cofd.template_registry import template_registry
             
-            if value.lower() not in valid_templates:
-                self.caller.msg("Invalid template. Valid templates: Changeling, Vampire, Werewolf, Mage, Geist, Deviant, Demon, Hunter, Promethean, Mortal+, Mortal")
-                return
+            legacy_mode = is_legacy_mode()
+            
+            if legacy_mode:
+                # In legacy mode, only allow legacy templates and exclude 2nd edition only templates
+                valid_templates = [
+                    "legacy_vampire", "legacy_werewolf", "legacy_mage", "legacy_changeling", 
+                    "legacy_geist", "legacy_promethean", "legacy_hunter", "mortal"
+                ]
+                
+                if value.lower() not in valid_templates:
+                    self.caller.msg("Invalid template for Legacy Mode. Valid legacy templates: Legacy Vampire, Legacy Werewolf, Legacy Mage, Legacy Changeling, Legacy Geist, Legacy Promethean, Legacy Hunter, Mortal")
+                    return
+            else:
+                # In modern mode, allow all templates except legacy ones
+                valid_templates = [
+                    "changeling", "vampire", "werewolf", "mage", "geist", 
+                    "deviant", "demon", "hunter", "promethean", 
+                    "mortal+", "mortal plus", "mortal"
+                ]
+                
+                if value.lower() not in valid_templates:
+                    self.caller.msg("Invalid template. Valid templates: Changeling, Vampire, Werewolf, Mage, Geist, Deviant, Demon, Hunter, Promethean, Mortal+, Mortal")
+                    return
             
             # Completely wipe character stats for clean slate
             old_template = target.db.stats.get("other", {}).get("template", "Mortal") if target.db.stats else "Mortal"
@@ -1242,16 +1285,32 @@ class CmdStat(MuxCommand):
         if not target:
             return
         
-        # Validate template
-        valid_templates = [
-            "changeling", "vampire", "werewolf", "mage", "geist", 
-            "deviant", "demon", "hunter", "promethean", 
-            "mortal+", "mortal plus", "mortal"
-        ]
+        # Validate template based on legacy mode
+        from commands.CmdLegacy import is_legacy_mode
         
-        if template.lower() not in valid_templates:
-            self.caller.msg("Invalid template. Valid templates: Changeling, Vampire, Werewolf, Mage, Geist, Beast, Deviant, Demon, Hunter, Promethean, Mortal+, Mortal")
-            return
+        legacy_mode = is_legacy_mode()
+        
+        if legacy_mode:
+            # In legacy mode, only allow legacy templates
+            valid_templates = [
+                "legacy_vampire", "legacy_werewolf", "legacy_mage", "legacy_changeling", 
+                "legacy_geist", "legacy_promethean", "legacy_hunter", "mortal"
+            ]
+            
+            if template.lower() not in valid_templates:
+                self.caller.msg("Invalid template for Legacy Mode. Valid legacy templates: Legacy Vampire, Legacy Werewolf, Legacy Mage, Legacy Changeling, Legacy Geist, Legacy Promethean, Legacy Hunter, Mortal")
+                return
+        else:
+            # In modern mode, allow all templates except legacy ones
+            valid_templates = [
+                "changeling", "vampire", "werewolf", "mage", "geist", 
+                "deviant", "demon", "hunter", "promethean", 
+                "mortal+", "mortal plus", "mortal"
+            ]
+            
+            if template.lower() not in valid_templates:
+                self.caller.msg("Invalid template. Valid templates: Changeling, Vampire, Werewolf, Mage, Geist, Deviant, Demon, Hunter, Promethean, Mortal+, Mortal")
+                return
         
         # Confirm the reset action
         self.caller.msg(f"|rWARNING:|n This will completely wipe all of {target.name}'s stats!")
