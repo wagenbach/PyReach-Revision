@@ -62,13 +62,26 @@ class CmdExperience(Command):
 
     def func(self):
         """Execute the command."""
-        # Use the character's experience property which uses lazy loading
-        exp_handler = self.caller.experience
+        # Check if legacy mode is active
+        from commands.CmdLegacy import is_legacy_mode
+        legacy_mode = is_legacy_mode()
+        
+        # Get the appropriate experience handler
+        if legacy_mode:
+            from world.legacy_experience import LegacyExperienceHandler
+            exp_handler = LegacyExperienceHandler(self.caller)
+        else:
+            # Use the character's experience property which uses lazy loading
+            exp_handler = self.caller.experience
 
         if not self.switch:
             self.show_experience(exp_handler)
         elif self.switch == "beat":
-            self.add_beat(exp_handler)
+            if legacy_mode:
+                self.caller.msg("|rBeats system is disabled in Legacy Mode.|n")
+                self.caller.msg("Experience is awarded directly. Use +xp/award for staff awards.")
+            else:
+                self.add_beat(exp_handler)
         elif self.switch == "spend":
             self.spend_experience(exp_handler)
         elif self.switch == "buy":
@@ -86,19 +99,28 @@ class CmdExperience(Command):
 
     def show_experience(self, exp_handler):
         """Show current experience and beats."""
+        from commands.CmdLegacy import is_legacy_mode
+        legacy_mode = is_legacy_mode()
+        
         output = []
         output.append("|wExperience Summary|n")
         output.append("-" * 40)
         
-        # Show whole beats and total beats including fractional
-        fractional_beats = self.caller.attributes.get('fractional_beats', default=0.0)
-        if fractional_beats > 0:
-            output.append(f"Beats: |c{exp_handler.beats}|n + |c{fractional_beats:.1f}|n fractional = |c{exp_handler.total_beats:.1f}|n total")
+        if legacy_mode:
+            # Legacy mode - show only experience points
+            output.append(f"Experience Points: |y{exp_handler.experience}|n")
+            output.append("|cLegacy Mode:|n Experience awarded directly, no beats system")
         else:
-            output.append(f"Beats: |c{exp_handler.beats}|n")
-            
-        output.append(f"Experience Points: |y{exp_handler.experience}|n")
-        output.append(f"(5 beats = 1 experience point)")
+            # Modern mode - show beats and experience
+            fractional_beats = self.caller.attributes.get('fractional_beats', default=0.0)
+            if fractional_beats > 0:
+                output.append(f"Beats: |c{exp_handler.beats}|n + |c{fractional_beats:.1f}|n fractional = |c{exp_handler.total_beats:.1f}|n total")
+            else:
+                output.append(f"Beats: |c{exp_handler.beats}|n")
+                
+            output.append(f"Experience Points: |y{exp_handler.experience}|n")
+            output.append(f"(5 beats = 1 experience point)")
+        
         self.caller.msg("\n".join(output))
 
     def add_beat(self, exp_handler):

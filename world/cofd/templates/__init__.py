@@ -38,4 +38,13 @@ from . import demon
 from . import hunter
 from . import promethean
 from . import mummy
-from . import mortal_plus 
+from . import mortal_plus
+
+# Import legacy template modules for 1st Edition support
+from . import legacy_vampire
+from . import legacy_mage
+from . import legacy_changeling
+from . import legacy_werewolf
+from . import legacy_geist
+from . import legacy_promethean
+from . import legacy_hunter 

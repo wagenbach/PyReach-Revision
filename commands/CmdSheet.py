@@ -96,11 +96,39 @@ class CmdSheet(MuxCommand):
         # Handle alternate naming
         if template == "mortal plus":
             template = "mortal_plus"
+        elif template == "legacy_vampire":
+            template = "legacy_vampire"
+        elif template == "legacy_werewolf":
+            template = "legacy_werewolf" 
+        elif template == "legacy_mage":
+            template = "legacy_mage"
+        elif template == "legacy_changeling":
+            template = "legacy_changeling"
+        elif template == "legacy_geist":
+            template = "legacy_geist"
+        elif template == "legacy_promethean":
+            template = "legacy_promethean"
+        elif template == "legacy_hunter":
+            template = "legacy_hunter"
         
         # Try to get template definition from registry
         template_def = get_template_definition(template)
         if template_def and "bio_fields" in template_def:
             return template_def["bio_fields"]
+        
+        # Fallback for legacy templates if registry lookup fails
+        legacy_bio_fields = {
+            "legacy_vampire": ["clan", "covenant", "sire", "embrace_date", "virtue", "vice"],
+            "legacy_werewolf": ["auspice", "tribe", "pack", "totem", "virtue", "vice"],
+            "legacy_mage": ["path", "order", "cabal", "shadow_name", "virtue", "vice"],
+            "legacy_changeling": ["seeming", "kith", "court", "motley", "keeper", "virtue", "vice"],
+            "legacy_geist": ["archetype", "threshold", "krewe", "geist_name", "virtue", "vice"],
+            "legacy_promethean": ["lineage", "refinement", "creator", "role", "virtue", "vice"],
+            "legacy_hunter": ["profession", "organization", "creed", "cell", "virtue", "vice"]
+        }
+        
+        if template in legacy_bio_fields:
+            return legacy_bio_fields[template]
         
         # Fallback to default mortal fields if template not found
         return ["virtue", "vice"]
@@ -237,13 +265,26 @@ class CmdSheet(MuxCommand):
                        'dominate', 'majesty', 'nightmare', 'obfuscate', 'praestantia', 'protean', 
                        'resilience', 'vigor', 'crochan', 'dead_signal', 'chary', 'vitiate', 'cruac', 'theban_sorcery'
                        ],
+            'legacy_vampire': [
+                       # Legacy vampire disciplines (1st edition)
+                       'animalism', 'auspex', 'celerity', 'dominate', 'majesty', 
+                       'nightmare', 'obfuscate', 'protean', 'resilience', 'vigor',
+                       'coils_of_the_dragon', 'cruac', 'theban_sorcery'
+                       ],
             'mage': ['arcanum_death', 'fate', 'forces', 'life', 'matter', 'mind', 'prime', 'space', 'spirit', 'time'],
+            'legacy_mage': ['death', 'fate', 'forces', 'life', 'matter', 'mind', 'prime', 'space', 'spirit', 'time'],
             'werewolf': [
                         # Gifts (categories)
                         'gift_death', 'dominance', 'elementals', 'insight', 'inspiration', 'knowledge',
                         'nature', 'rage', 'gift_strength', 'technology', 'weather', 'hunting', 'pack',
                         'crescent_moon', 'full_moon', 'new_moon', 'gibbous_moon', 'half_moon', 'agony', 'blood',
                         'disease', 'evasion', 'fervor', 'hunger', 'shaping', 'gift_stealth', 'warding', 'change',
+                        ],
+            'legacy_werewolf': [
+                        # Legacy werewolf gifts (1st edition)
+                        'cunning', 'glory', 'honor', 'purity', 'wisdom',
+                        'crescent_moon', 'full_moon', 'gibbous_moon', 'half_moon', 'new_moon',
+                        'death', 'elementals', 'nature', 'spirits', 'hunting', 'pack', 'strength', 'warding'
                         ],
             'changeling': [
                           # Crown Contracts
@@ -321,6 +362,27 @@ class CmdSheet(MuxCommand):
                       # Haunts
                       "boneyard", "caul", "curse", "dirge", "marionette", "memoria", "oracle", "rage", "shroud", "tomb"
                           ],
+            'legacy_changeling': [
+                      # Legacy changeling contracts (1st edition)
+                      "dream", "hearth", "mirror", "smoke", "artifice",
+                      "spring", "summer", "autumn", "winter",
+                      "fang_and_talon", "darkness", "elements", "vainglory", "stone", "goblin_contracts"
+                      ],
+            'legacy_geist': [
+                      # Legacy geist powers (1st edition)
+                      "beasts", "blood", "chance", "cold_wind", "deep_waters", 
+                      "disease", "grave_dirt", "pyre_flame", "stillness", "ceremonies"
+                      ],
+            'legacy_promethean': [
+                      # Legacy promethean transmutations (1st edition)
+                      "alchemicus", "corporeum", "deception", "disquiet", "electrification",
+                      "mesmerism", "metamorphosis", "pyros", "sensorium", "vulcanus"
+                      ],
+            'legacy_hunter': [
+                      # Legacy hunter tactics (1st edition)
+                      "professional_training", "benediction", "castigation", "advanced_armory", 
+                      "relic", "thaumatechnology", "elixir", "implant"
+                      ],
             'promethean': [],
             'demon': [],
             'beast': [],
@@ -591,6 +653,7 @@ class CmdSheet(MuxCommand):
                 field_value = bio.get(field, "<not set>")
                 bio_items.append((field.replace("_", " ").title(), field_value))
         
+        
         # Display bio items in two-column format
         for i in range(0, len(bio_items), 2):
             left_label, left_value = bio_items[i]
@@ -822,14 +885,21 @@ class CmdSheet(MuxCommand):
         # Determine section names based on template
         primary_section_names = {
             'vampire': 'DISCIPLINES',
+            'legacy_vampire': 'DISCIPLINES',
             'mage': 'ARCANA',
+            'legacy_mage': 'ARCANA',
             'werewolf': 'GIFTS',
+            'legacy_werewolf': 'GIFTS',
             'changeling': 'CONTRACTS',
+            'legacy_changeling': 'CONTRACTS',
             'geist': 'KEYS',
+            'legacy_geist': 'KEYS',
             'promethean': 'TRANSMUTATIONS',
+            'legacy_promethean': 'TRANSMUTATIONS',
             'demon': 'EMBEDS',
             'beast': 'NIGHTMARES',
             'hunter': 'ENDOWMENTS',
+            'legacy_hunter': 'TACTICS',
             'deviant': 'VARIATIONS'
         }
         secondary_section_names = {

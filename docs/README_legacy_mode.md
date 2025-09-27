@@ -231,9 +231,16 @@ A: Many 2nd Edition systems are disabled in Legacy Mode by design.
 ### Getting Help
 
 - Use `+legacy` to check current mode status
-- Use `+virtue/list` and `+vice/list` to see options
+- Use `+stat virtue=<virtue>` and `+stat vice=<vice>` to set virtue/vice
 - Use `+xp/costs` to see experience costs
 - Contact staff for mode-related issues
+
+### Template Installation
+
+**To install legacy templates:**
+1. Use `+template/install builtin` (installs all templates including legacy ones)
+2. Do NOT use `+template/install module legacy_vampire` - this will fail
+3. Legacy templates are imported automatically when the system loads
 
 ## Technical Details
 

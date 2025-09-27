@@ -59,6 +59,7 @@ from commands.diesiraecode.CmdWho import CmdWho, CmdCensus
 from .lookup import CmdLookup
 from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
 from .test_xp_integration import CmdTestXP
+from .CmdLegacy import CmdLegacy
 
 # Uncomment the line below to use custom help command with forced 80-character width
 # from .help_custom import CmdHelp
@@ -114,7 +115,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdWho())
         self.add(CmdCensus())
         self.add(CmdLookup())
-        
+        self.add(CmdLegacy())
         # Voting and recommendations
         self.add(CmdVote())
         self.add(CmdRecommend())

@@ -41,6 +41,13 @@ class CmdTilt(MuxCommand):
         """
         This is the main command function that handles the switches.
         """
+        # Check if legacy mode is active
+        from commands.CmdLegacy import is_legacy_mode
+        if is_legacy_mode():
+            self.caller.msg("|rTilts system is disabled in Legacy Mode.|n")
+            self.caller.msg("Legacy Mode uses traditional World of Darkness mechanics without tilts.")
+            return
+        
         if not self.switches:
             self.caller.msg("Usage: +tilt/add, +tilt/remove, +tilt/list, +tilt/env, or +tilt/help")
             return

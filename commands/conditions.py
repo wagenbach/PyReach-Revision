@@ -36,6 +36,13 @@ class CmdCondition(MuxCommand):
         """
         This is the main command function that handles the switches.
         """
+        # Check if legacy mode is active
+        from commands.CmdLegacy import is_legacy_mode
+        if is_legacy_mode():
+            self.caller.msg("|rConditions system is disabled in Legacy Mode.|n")
+            self.caller.msg("Legacy Mode uses traditional World of Darkness mechanics without conditions.")
+            return
+        
         if not self.switches:
             self.caller.msg("Usage: +condition/add, +condition/remove, +condition/list, or +condition/help")
             return

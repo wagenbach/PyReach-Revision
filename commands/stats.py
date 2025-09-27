@@ -206,6 +206,12 @@ class CmdStat(MuxCommand):
                        'coil_of_the_ascendant', 'coil_of_the_wyrm', 'coil_of_the_voivode',
                        'coil_of_zirnitra', 'coil_of_ziva'
                        ],
+            'legacy_vampire': [
+                       # Legacy vampire disciplines (1st edition)
+                       'animalism', 'auspex', 'celerity', 'dominate', 'majesty', 
+                       'nightmare', 'obfuscate', 'protean', 'resilience', 'vigor',
+                       'coils_of_the_dragon', 'cruac', 'theban_sorcery'
+                       ],
             'mage': ['arcanum_death', 'fate', 'forces', 'life', 'matter', 'mind', 'prime', 'space', 'spirit', 'time'],
             'werewolf': [
                         # Gifts (categories)
@@ -449,8 +455,10 @@ class CmdStat(MuxCommand):
                 self.caller.msg("Skills must be between 0 and 5.")
                 return
         
-        # Check advantages
-        elif stat in ["health", "willpower", "speed", "defense", "initiative"]:
+        # Check advantages (including supernatural power stats)
+        elif stat in ["health", "willpower", "speed", "defense", "initiative", 
+                      "blood_potency", "gnosis", "primal_urge", "wyrd", "synergy", 
+                      "azoth", "primum", "satiety", "deviation"]:
             if isinstance(value, int) and value >= 0:
                 target.db.stats["advantages"][stat] = value
                 stat_set = True
@@ -459,7 +467,7 @@ class CmdStat(MuxCommand):
                 return
         
         # Check bio fields
-        elif stat in ["fullname", "full_name", "birthdate", "concept", "virtue", "vice"]:
+        elif stat in ["fullname", "full_name", "birthdate", "concept", "virtue", "vice", "sire"]:
             # Map alternate names and handle space conversions
             bio_field = stat
             if stat in ["full_name", "fullname"]:

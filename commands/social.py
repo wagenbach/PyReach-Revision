@@ -29,6 +29,13 @@ class CmdSocial(MuxCommand):
     
     def func(self):
         """Execute the command"""
+        # Check if legacy mode is active
+        from commands.CmdLegacy import is_legacy_mode
+        if is_legacy_mode():
+            self.caller.msg("|rSocial combat system is disabled in Legacy Mode.|n")
+            self.caller.msg("Legacy Mode uses traditional social interaction without doors mechanics.")
+            return
+        
         if not self.switches:
             self.caller.msg("Usage: +social/impression, +social/doors, +social/leverage, or +social/roll")
             return

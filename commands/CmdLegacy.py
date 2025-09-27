@@ -96,7 +96,7 @@ class CmdLegacy(MuxCommand):
                 logger.log_info(f"Legacy mode enabled by {self.caller.name}")
                 
                 # Announce to all connected players
-                from evennia import SESSIONS
+                from evennia.server.sessionhandler import SESSIONS
                 announcement = "|ySystem Announcement:|n Legacy mode has been enabled. The game is now operating in Chronicles/World of Darkness 1st Edition framework."
                 for session in SESSIONS.get_sessions():
                     if session.puppet:
@@ -110,7 +110,7 @@ class CmdLegacy(MuxCommand):
                 logger.log_info(f"Legacy mode disabled by {self.caller.name}")
                 
                 # Announce to all connected players
-                from evennia import SESSIONS
+                from evennia.server.sessionhandler import SESSIONS
                 announcement = "|ySystem Announcement:|n Legacy mode has been disabled. The game is now operating in standard Chronicles of Darkness 2nd Edition framework."
                 for session in SESSIONS.get_sessions():
                     if session.puppet:

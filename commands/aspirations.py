@@ -20,6 +20,13 @@ class CmdAspiration(MuxCommand):
     
     def func(self):
         """Execute the command"""
+        # Check if legacy mode is active
+        from commands.CmdLegacy import is_legacy_mode
+        if is_legacy_mode():
+            self.caller.msg("|rAspiration system is disabled in Legacy Mode.|n")
+            self.caller.msg("Legacy Mode uses only Virtue and Vice for character motivation.")
+            return
+        
         if not self.switches:
             self.caller.msg("Usage: +aspiration/list, +aspiration/add, +aspiration/remove, or +aspiration/fulfill")
             return

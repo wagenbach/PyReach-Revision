@@ -47,25 +47,70 @@ class TemplateRegistry:
         self._load_templates()
         return self._cache.get(name.lower())
     
-    def get_all_templates(self):
+    def get_all_templates(self, legacy_mode=None):
         """
-        Get all active templates.
+        Get all active templates, optionally filtered by legacy mode.
+        
+        Args:
+            legacy_mode (bool, optional): Filter by legacy mode. None = all templates
         
         Returns:
             list: List of TemplateDefinition objects
         """
         self._load_templates()
-        return list(self._cache.values())
+        templates = list(self._cache.values())
+        
+        if legacy_mode is not None:
+            # Filter templates based on legacy mode
+            filtered_templates = []
+            for template in templates:
+                # Check if template has legacy_mode field in description or other metadata
+                is_legacy = self._is_legacy_template(template)
+                if legacy_mode and is_legacy:
+                    filtered_templates.append(template)
+                elif not legacy_mode and not is_legacy:
+                    filtered_templates.append(template)
+            return filtered_templates
+        
+        return templates
     
-    def get_template_names(self):
+    def get_template_names(self, legacy_mode=None):
         """
-        Get list of all active template names.
+        Get list of all active template names, optionally filtered by legacy mode.
+        
+        Args:
+            legacy_mode (bool, optional): Filter by legacy mode. None = all templates
         
         Returns:
             list: List of template names
         """
-        self._load_templates()
-        return list(self._cache.keys())
+        templates = self.get_all_templates(legacy_mode)
+        return [template.name for template in templates]
+    
+    def _is_legacy_template(self, template):
+        """
+        Check if a template is a legacy template.
+        
+        Args:
+            template: TemplateDefinition object
+            
+        Returns:
+            bool: True if template is legacy
+        """
+        # Check if template name starts with 'legacy_'
+        if template.name.startswith('legacy_'):
+            return True
+        
+        # Check if template has legacy_mode flag in field_validations or other metadata
+        if hasattr(template, 'field_validations') and template.field_validations:
+            if template.field_validations.get('legacy_mode', False):
+                return True
+        
+        # Check description for legacy indicators
+        if 'legacy' in template.description.lower() or '1st edition' in template.description.lower():
+            return True
+            
+        return False
     
     def is_valid_template(self, name):
         """
