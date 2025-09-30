@@ -1,5 +1,5 @@
 import re
-import random
+import secrets
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import create, evtable
 from evennia.utils.ansi import ANSIString
@@ -163,7 +163,7 @@ class CmdInvestigation(MuxCommand):
         self.caller.msg(f"Rolling {attribute.title()} + {skill.title()}: {dice_pool} dice")
         
         # Make the roll
-        successes = sum(1 for _ in range(dice_pool) if random.randint(1, 10) >= 8)
+        successes = sum(1 for _ in range(dice_pool) if secrets.randbelow(10) + 1 >= 8)
         
         if successes == 0:
             return []
@@ -544,7 +544,7 @@ class CmdInvestigation(MuxCommand):
         self.caller.msg(f"Rolling {attribute.title()} + {skill.title()}: {dice_pool} dice")
         
         # Simulate roll
-        successes = sum(1 for _ in range(dice_pool) if random.randint(1, 10) >= 8)
+        successes = sum(1 for _ in range(dice_pool) if secrets.randbelow(10) + 1 >= 8)
         
         if successes == 0:
             self.caller.msg("|rYour search reveals nothing hidden.|n")

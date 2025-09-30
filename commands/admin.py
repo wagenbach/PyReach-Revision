@@ -1,7 +1,9 @@
 from evennia.utils import logger
 from evennia.commands.default.general import CmdLook
 from evennia.utils.search import search_object
-from exordium.utils.search_helpers import search_character
+from utils.search_helpers import search_character
+import evennia
+from evennia.server.models import ServerConfig
 from typeclasses.characters import Character
 from evennia import Command
 from evennia.utils import search
@@ -301,8 +303,11 @@ class CmdSummon(MuxCommand):
             
             # Make sure the location is valid
             if original_location and hasattr(original_location, "id"):
-                # Store location for return
+                # Store location directly as object reference to avoid serialization issues
                 target.db.pre_summon_location = original_location
+                
+                # Log the movement on the server
+                evennia.logger.log_info(f"Staff Summon: {caller.name} (#{caller.id}) summoned {target.name} (#{target.id}) from {original_location.name} (#{original_location.id}) to {caller.location.name} (#{caller.location.id})")
                 
                 if debug_mode:
                     caller.msg(f"DEBUG: Stored {original_location.name} (#{original_location.id}) as pre_summon_location for {target.name}")
@@ -311,6 +316,9 @@ class CmdSummon(MuxCommand):
                 if debug_mode:
                     caller.msg(f"DEBUG: Current location is {original_location}")
             
+        # Force synchronization before moving to prevent desync
+        target.save()
+        
         # Do the teleport
         if target.move_to(
             caller.location,
@@ -321,6 +329,9 @@ class CmdSummon(MuxCommand):
             caller.msg(f"You have summoned {target.name} to your location.")
             if "quiet" not in self.switches:
                 target.msg(f"{caller.name} has summoned you.")
+            
+            # Force another save after the move to ensure location is synchronized
+            target.save()
             
             # Double-check storage worked
             if debug_mode and hasattr(target, "db"):
@@ -376,12 +387,22 @@ class CmdReturn(MuxCommand):
             self.caller.msg("Use +return/force to try alternative location attributes, or +return/set to set one manually.")
             return False
 
-        # Verify the location still exists
-        if not prev_location or not prev_location.id:
-            self.caller.msg(f"The previous {location_type} location for {character.name} no longer exists.")
+        # Verify the location still exists and is valid
+        if not (prev_location and hasattr(prev_location, 'id') and 
+                hasattr(prev_location, 'name') and
+                prev_location.access(character, 'view')):
+            self.caller.msg(f"The previous {location_type} location for {character.name} is no longer valid.")
             if location_type == "pre-summon":
                 character.attributes.remove("pre_summon_location")
             return False
+        
+        # Log the movement on the server
+        current_location = character.location
+        if current_location and hasattr(current_location, "id"):
+            evennia.logger.log_info(f"Staff Return: {self.caller.name} (#{self.caller.id}) returned {character.name} (#{character.id}) from {current_location.name} (#{current_location.id}) to {prev_location.name} (#{prev_location.id})")
+        
+        # Force synchronization before moving to prevent desync
+        character.save()
             
         # Move the character back
         if character.move_to(
@@ -397,6 +418,9 @@ class CmdReturn(MuxCommand):
             # Clear the stored location if it was pre_summon_location
             if location_type == "pre-summon":
                 character.attributes.remove("pre_summon_location")
+            
+            # Force another save after the move to ensure location is synchronized
+            character.save()
             return True
         else:
             self.caller.msg(f"Failed to return {character.name}.")
@@ -454,3 +478,181 @@ class CmdReturn(MuxCommand):
             
         # Return the character
         self.return_character(target, quiet, force)
+
+
+class CmdConfigOOCIC(MuxCommand):
+    """
+    Configure OOC/IC room settings from in-game.
+    
+    Usage:
+        +config/ooc
+        +config/ooc <room dbref or name>
+        +config/ic
+        +config/ic <room dbref or name>
+        +config/ooc/clear
+        +config/ic/clear
+        +config/list
+    
+    Switches:
+        ooc - Set or view the OOC room setting
+        ic - Set or view the IC starting room setting
+        clear - Clear the specified setting
+        list - List all OOC/IC configuration settings
+    
+    This command allows developer-level staff to configure the OOC_ROOM_DBREF
+    and IC_STARTING_ROOM_DBREF settings without editing the configuration file.
+    
+    Examples:
+        +config/list                    # Show current settings
+        +config/ooc #123               # Set OOC room to dbref #123
+        +config/ooc OOC Lounge         # Set OOC room by name
+        +config/ic #1                  # Set IC starting room to dbref #1
+        +config/ooc/clear              # Clear OOC room setting
+    """
+    
+    key = "+config"
+    aliases = ["config"]
+    locks = "cmd:perm(developer)"
+    help_category = "Admin Configuration"
+    switch_options = ("ooc", "ic", "clear", "list")
+    
+    def func(self):
+        """Execute the command"""
+        caller = self.caller
+        args = self.args.strip()
+        
+        # Check developer permissions
+        if not caller.check_permstring("developer"):
+            caller.msg("You need developer permissions to use this command.")
+            return
+        
+        # Handle list switch - show current settings
+        if "list" in self.switches or not self.switches:
+            self.show_current_settings()
+            return
+        
+        # Handle clear switches
+        if "clear" in self.switches:
+            if "ooc" in self.switches:
+                self.clear_setting("OOC_ROOM_DBREF", "OOC room")
+            elif "ic" in self.switches:
+                self.clear_setting("IC_STARTING_ROOM_DBREF", "IC starting room")
+            else:
+                caller.msg("Usage: +config/ooc/clear or +config/ic/clear")
+            return
+        
+        # Handle setting configuration
+        if "ooc" in self.switches:
+            if not args:
+                self.show_setting("OOC_ROOM_DBREF", "OOC room")
+            else:
+                self.set_room_setting("OOC_ROOM_DBREF", "OOC room", args)
+        elif "ic" in self.switches:
+            if not args:
+                self.show_setting("IC_STARTING_ROOM_DBREF", "IC starting room")
+            else:
+                self.set_room_setting("IC_STARTING_ROOM_DBREF", "IC starting room", args)
+        else:
+            caller.msg("Usage: +config/ooc <room> or +config/ic <room>")
+    
+    def show_current_settings(self):
+        """Show all current OOC/IC configuration settings"""
+        caller = self.caller
+        
+        caller.msg("=== OOC/IC Configuration Settings ===")
+        
+        # Get OOC room setting
+        ooc_dbref = ServerConfig.objects.conf("OOC_ROOM_DBREF")
+        if ooc_dbref:
+            ooc_room = evennia.search_object(f"#{ooc_dbref}")
+            if ooc_room:
+                caller.msg(f"OOC Room: #{ooc_dbref} ({ooc_room[0].name})")
+            else:
+                caller.msg(f"OOC Room: #{ooc_dbref} (ROOM NOT FOUND)")
+        else:
+            caller.msg("OOC Room: Not set")
+        
+        # Get IC starting room setting
+        ic_dbref = ServerConfig.objects.conf("IC_STARTING_ROOM_DBREF")
+        if ic_dbref:
+            ic_room = evennia.search_object(f"#{ic_dbref}")
+            if ic_room:
+                caller.msg(f"IC Starting Room: #{ic_dbref} ({ic_room[0].name})")
+            else:
+                caller.msg(f"IC Starting Room: #{ic_dbref} (ROOM NOT FOUND)")
+        else:
+            caller.msg("IC Starting Room: Not set")
+        
+        caller.msg("\nUse '+config/ooc <room>' or '+config/ic <room>' to set these values.")
+        caller.msg("Use '+config/ooc/clear' or '+config/ic/clear' to clear them.")
+    
+    def show_setting(self, setting_key, setting_name):
+        """Show a specific setting"""
+        caller = self.caller
+        
+        dbref = ServerConfig.objects.conf(setting_key)
+        if dbref:
+            room = evennia.search_object(f"#{dbref}")
+            if room:
+                caller.msg(f"{setting_name}: #{dbref} ({room[0].name})")
+            else:
+                caller.msg(f"{setting_name}: #{dbref} (ROOM NOT FOUND)")
+        else:
+            caller.msg(f"{setting_name}: Not set")
+    
+    def set_room_setting(self, setting_key, setting_name, room_input):
+        """Set a room setting by dbref or name"""
+        caller = self.caller
+        
+        # Try to find the room
+        room = None
+        
+        # First try as a dbref
+        if room_input.startswith('#'):
+            try:
+                dbref = int(room_input[1:])
+                room = evennia.search_object(f"#{dbref}")
+                if room:
+                    room = room[0]
+            except ValueError:
+                pass
+        
+        # If not found as dbref, try by name
+        if not room:
+            room_matches = caller.search(room_input, global_search=True)
+            if room_matches:
+                room = room_matches
+        
+        if not room:
+            caller.msg(f"Could not find room '{room_input}'.")
+            return
+        
+        # Verify it's actually a room
+        if not hasattr(room, 'location') or room.location is not None:
+            caller.msg(f"'{room.name}' doesn't appear to be a room.")
+            return
+        
+        # Set the configuration
+        ServerConfig.objects.conf(setting_key, room.id)
+        
+        # Log the change
+        evennia.logger.log_info(f"Config Change: {caller.name} (#{caller.id}) set {setting_key} to {room.name} (#{room.id})")
+        
+        caller.msg(f"Set {setting_name} to: {room.name} (#{room.id})")
+        caller.msg(f"The {setting_name.lower()} commands will now use this room.")
+    
+    def clear_setting(self, setting_key, setting_name):
+        """Clear a configuration setting"""
+        caller = self.caller
+        
+        # Get current value for logging
+        current_value = ServerConfig.objects.conf(setting_key)
+        
+        # Clear the setting
+        ServerConfig.objects.conf(setting_key, delete=True)
+        
+        # Log the change
+        evennia.logger.log_info(f"Config Change: {caller.name} (#{caller.id}) cleared {setting_key} (was: {current_value})")
+        
+        caller.msg(f"Cleared {setting_name} setting.")
+        caller.msg(f"The {setting_name.lower()} commands will no longer work until this is set again.")

@@ -1,4 +1,4 @@
-from random import randint
+import secrets
 from typing import List, Tuple, Literal, Set
 from enum import Enum
 
@@ -10,6 +10,7 @@ class RollType(Enum):
     TEN_AGAIN = "10-again"   # Roll again on 10
     ROTE = "rote"         # Reroll all failed dice once
     REFLEXIVE = "reflexive" # Reflexive action (no action cost)
+    DAMAGE = "damage"      # Damage roll (no wound penalties)
 
 def roll_dice(dice_pool: int, difficulty: int = 8, roll_types: Set[RollType] = None) -> Tuple[List[int], int, int]:
     """
@@ -35,7 +36,7 @@ def roll_dice(dice_pool: int, difficulty: int = 8, roll_types: Set[RollType] = N
 
     # Handle chance die case (when dice pool is 0 or negative)
     if dice_pool <= 0:
-        roll = randint(1, 10)
+        roll = secrets.randbelow(10) + 1
         all_rolls.append(roll)
         if roll >= difficulty:
             successes = 1
@@ -46,12 +47,12 @@ def roll_dice(dice_pool: int, difficulty: int = 8, roll_types: Set[RollType] = N
     # Function to handle a single die roll with again rules
     def roll_with_again(again_threshold: int) -> List[int]:
         rolls = []
-        roll = randint(1, 10)
+        roll = secrets.randbelow(10) + 1
         rolls.append(roll)
         
         # Handle again rule
         while roll >= again_threshold:
-            roll = randint(1, 10)
+            roll = secrets.randbelow(10) + 1
             rolls.append(roll)
             
         return rolls
@@ -85,7 +86,7 @@ def roll_dice(dice_pool: int, difficulty: int = 8, roll_types: Set[RollType] = N
         for rolls in initial_rolls:
             # If none of the rolls were successes, reroll once
             if not any(roll >= difficulty for roll in rolls):
-                roll = randint(1, 10)
+                roll = secrets.randbelow(10) + 1
                 rote_rolls.append(roll)
                 all_rolls.append(roll)
                 if roll >= difficulty:
@@ -137,6 +138,8 @@ def interpret_roll_results(successes: int, ones: int, rolls: List[int] = None, d
             type_descriptions.append("rote")
         if RollType.REFLEXIVE in roll_types:
             type_descriptions.append("reflexive")
+        if RollType.DAMAGE in roll_types:
+            type_descriptions.append("damage")
         if type_descriptions:
             roll_type_str = f" ({', '.join(type_descriptions)})"
 
@@ -181,7 +184,7 @@ def roll_to_job_display(successes: int, ones: int, rolls: List[int], dice_pool: 
                        roll_types: Set[RollType], modifier: int = 0, 
                        stat_name: str = None, skill_name: str = None, 
                        stat_value: int = None, skill_value: int = None,
-                       character_name: str = None) -> str:
+                       character_name: str = None, wound_penalty: int = 0) -> str:
     """
     Create a single-line formatted dice roll display.
     
@@ -197,21 +200,30 @@ def roll_to_job_display(successes: int, ones: int, rolls: List[int], dice_pool: 
         stat_value (int): Value of the stat (if applicable)
         skill_value (int): Value of the skill (if applicable)
         character_name (str): Name of the character making the roll
+        wound_penalty (int): Wound penalty from health damage
         
     Returns:
         str: Single-line formatted roll result
     """
     # Determine the roll description
-    final_pool = dice_pool + modifier
+    final_pool = dice_pool + modifier + wound_penalty
     
     if stat_name and skill_name:
+        modifier_parts = []
         if modifier != 0:
-            modifier_str = f" {modifier:+d}"
+            modifier_parts.append(f"{modifier:+d}")
+        if wound_penalty != 0:
+            modifier_parts.append(f"{wound_penalty:+d} (wound)")
+        
+        if modifier_parts:
+            modifier_str = " " + " ".join(modifier_parts)
             roll_desc = f"{stat_name.title()} + {skill_name.title()}{modifier_str}"
         else:
             roll_desc = f"{stat_name.title()} + {skill_name.title()}"
     else:
         roll_desc = f"{final_pool} dice"
+        if wound_penalty != 0:
+            roll_desc += f" (includes {wound_penalty:+d} wound penalty)"
     
     # Add chance die indicator
     if final_pool <= 0:
@@ -247,7 +259,7 @@ def roll_to_job_display(successes: int, ones: int, rolls: List[int], dice_pool: 
 def roll_to_room_display(successes: int, ones: int, dice_pool: int, 
                         roll_types: Set[RollType], modifier: int = 0, 
                         stat_name: str = None, skill_name: str = None,
-                        character_name: str = None) -> str:
+                        character_name: str = None, wound_penalty: int = 0) -> str:
     """
     Create a single-line formatted dice roll display for room observers (without dice details).
     
@@ -265,16 +277,24 @@ def roll_to_room_display(successes: int, ones: int, dice_pool: int,
         str: Single-line formatted roll result without dice details
     """
     # Determine the roll description
-    final_pool = dice_pool + modifier
+    final_pool = dice_pool + modifier + wound_penalty
     
     if stat_name and skill_name:
+        modifier_parts = []
         if modifier != 0:
-            modifier_str = f" {modifier:+d}"
+            modifier_parts.append(f"{modifier:+d}")
+        if wound_penalty != 0:
+            modifier_parts.append(f"{wound_penalty:+d} (wound)")
+        
+        if modifier_parts:
+            modifier_str = " " + " ".join(modifier_parts)
             roll_desc = f"{stat_name.title()} + {skill_name.title()}{modifier_str}"
         else:
             roll_desc = f"{stat_name.title()} + {skill_name.title()}"
     else:
         roll_desc = f"{final_pool} dice"
+        if wound_penalty != 0:
+            roll_desc += f" (includes {wound_penalty:+d} wound penalty)"
     
     # Add chance die indicator
     if final_pool <= 0:
@@ -298,7 +318,8 @@ def roll_to_room_display(successes: int, ones: int, dice_pool: int,
 def format_roll_display(successes: int, ones: int, rolls: List[int], dice_pool: int, 
                        roll_types: Set[RollType], modifier: int = 0, 
                        stat_name: str = None, skill_name: str = None, 
-                       stat_value: int = None, skill_value: int = None) -> str:
+                       stat_value: int = None, skill_value: int = None,
+                       wound_penalty: int = 0) -> str:
     """
     Create a beautifully formatted display box for dice roll results (expansive format for job rolls).
     
@@ -351,11 +372,23 @@ def format_roll_display(successes: int, ones: int, rolls: List[int], dice_pool: 
     output.append(format_divider("Roll Information"))
     
     # Determine roll description
-    final_pool = dice_pool + modifier
+    final_pool = dice_pool + modifier + wound_penalty
     if stat_name and skill_name:
-        roll_desc = f"|g{stat_name.title()}|n + |g{skill_name.title()}|n (|w{final_pool}|n dice)"
+        modifier_parts = []
+        if modifier != 0:
+            modifier_parts.append(f"{modifier:+d}")
+        if wound_penalty != 0:
+            modifier_parts.append(f"{wound_penalty:+d} (wound)")
+        
+        if modifier_parts:
+            modifier_str = " " + " ".join(modifier_parts)
+            roll_desc = f"|g{stat_name.title()}|n + |g{skill_name.title()}|n{modifier_str} (|w{final_pool}|n dice)"
+        else:
+            roll_desc = f"|g{stat_name.title()}|n + |g{skill_name.title()}|n (|w{final_pool}|n dice)"
     else:
         roll_desc = f"|g{final_pool}|n dice"
+        if wound_penalty != 0:
+            roll_desc += f" (includes {wound_penalty:+d} wound penalty)"
     
     output.append(format_line("Roll", roll_desc))
     
@@ -390,7 +423,7 @@ def format_roll_display(successes: int, ones: int, rolls: List[int], dice_pool: 
         success_color = "|g"
     
     # Interpretation
-    if successes == 0 and ones >= 1 and dice_pool + modifier <= 0:
+    if successes == 0 and ones >= 1 and dice_pool + modifier + wound_penalty <= 0:
         interpretation = "|R[DRAMATIC FAILURE]|n"
     elif successes >= 5:
         interpretation = "|G[EXCEPTIONAL SUCCESS]|n"

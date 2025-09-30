@@ -1053,8 +1053,14 @@ class CmdSheet(MuxCommand):
             else:
                 health_boxes.append("[ ]")
         
-        # Willpower
-        willpower_max = advantages.get("willpower", 3)
+        # Willpower - calculate dynamically if not in advantages
+        willpower_max = advantages.get("willpower")
+        if willpower_max is None:
+            # Calculate from resolve + composure
+            attrs = target.db.stats.get("attributes", {})
+            resolve = attrs.get("resolve", 1)
+            composure = attrs.get("composure", 1)
+            willpower_max = resolve + composure
         willpower_current = target.db.willpower_current
         if willpower_current is None:
             willpower_current = willpower_max  # Default to full

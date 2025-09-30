@@ -38,6 +38,7 @@ from commands.diesiraecode.CmdGain import CmdGain
 from .CmdHealth import CmdHealth
 from .template_admin import CmdTemplate
 from .admin_commands import CmdMigrate
+from .admin import CmdConfigOOCIC
 from .building import (CmdAreaManage, CmdRoomSetup, CmdPlaces, CmdRoomInfo, CmdMap)
 from .admin_area_init import CmdInitAreaManager
 from .mystery_admin import CmdMysteryAdmin, CmdClueObject
@@ -60,9 +61,11 @@ from .lookup import CmdLookup
 from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
 from .test_xp_integration import CmdTestXP
 from .CmdLegacy import CmdLegacy
+from .ooc_ic_commands import CmdOOC, CmdIC, CmdJoin
 
-# Uncomment the line below to use custom help command with forced 80-character width
-# from .help_custom import CmdHelp
+# Custom help command that escapes ANSI codes in help text
+from .help_custom import CmdHelp
+from evennia.contrib.game_systems import mail
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
     """
@@ -146,6 +149,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdClueObject())
         self.add(CmdStoryteller())
         self.add(CmdStorytellerWho())
+        self.add(CmdConfigOOCIC())
         
         # Building commands (areas, rooms, places, mapping)
         self.add(CmdAreaManage())
@@ -154,8 +158,13 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdPlaces())
         self.add(CmdMap())
         
-        # Uncomment the line below to use custom help command with forced width
-        # self.add(CmdHelp())
+        # OOC/IC Movement commands
+        self.add(CmdOOC())
+        self.add(CmdIC())
+        self.add(CmdJoin())
+        
+        # Custom help command with ANSI stripping to prevent the color codes from breaking the help text
+        self.add(CmdHelp())
 
         # TinyMUX commands
         # self.add(TinyMuxCmdSet())
@@ -179,7 +188,7 @@ class AccountCmdSet(default_cmds.AccountCmdSet):
         #
         # any commands you add below will overload the default ones.
         #
-
+        self.add(mail.CmdMail())
 
 class UnloggedinCmdSet(default_cmds.UnloggedinCmdSet):
     """

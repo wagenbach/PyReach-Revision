@@ -5,7 +5,6 @@ Implements the standard CoD dice pool mechanics with 10-sided dice.
 
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils.utils import inherits_from
-from random import randint
 from world.conditions import STANDARD_CONDITIONS
 from world.utils.dice_utils import roll_dice, interpret_roll_results, roll_to_job_display, roll_to_room_display, format_roll_display, RollType
 from django.utils import timezone
@@ -15,9 +14,9 @@ class CmdRoll(MuxCommand):
     Roll dice for Chronicles of Darkness system.
     
     Usage:
-        +roll[/8|9|10|rote|reflex|job] <stat> + <skill> [+/- modifier]
-        +roll[/8|9|10|rote|reflex|job] <number of dice>
-        +roll[/8|9|10|rote|reflex|job] <stat> + <skill> + <modifier>
+        +roll[/8|9|10|rote|reflex|damage|job] <stat> + <skill> [+/- modifier]
+        +roll[/8|9|10|rote|reflex|damage|job] <number of dice>
+        +roll[/8|9|10|rote|reflex|damage|job] <stat> + <skill> + <modifier>
         +roll/job <dice pool>=<job id>
         +roll/job <stat> + <skill>=<job id>
     
@@ -27,6 +26,7 @@ class CmdRoll(MuxCommand):
         /10 - 10-again (roll again on 10)
         /rote - Reroll all failed dice once
         /reflex - Reflexive action (no action cost)
+        /damage - Damage roll (no wound penalties apply)
         /job - Roll to a job (uses expansive format, adds to job comments)
         
     Multiple switches can be combined, e.g.:
@@ -36,6 +36,7 @@ class CmdRoll(MuxCommand):
         +roll/8 Strength + Weaponry
         +roll/9/rote 4
         +roll/reflex Strength + Weaponry + 3
+        +roll/damage Strength + 2
         +roll/job Wits + Investigation=123
         +roll/job/8 5=456
     """
@@ -71,6 +72,8 @@ class CmdRoll(MuxCommand):
                     self.roll_types.add(RollType.ROTE)
                 elif switch == "reflex":
                     self.roll_types.add(RollType.REFLEXIVE)
+                elif switch == "damage":
+                    self.roll_types.add(RollType.DAMAGE)
                 elif switch == "job":
                     self.is_job_roll = True
         
@@ -262,8 +265,21 @@ class CmdRoll(MuxCommand):
         if not hasattr(self, 'dice_pool'):
             return
             
-        # Apply modifier
-        final_pool = self.dice_pool + self.modifier
+        # Apply modifier and wound penalties
+        wound_penalty = 0
+        if (hasattr(self.caller, 'get_wound_penalty') and 
+            RollType.REFLEXIVE not in self.roll_types and 
+            RollType.DAMAGE not in self.roll_types):
+            # Wound penalties don't apply to reflexive actions or damage rolls
+            wound_penalty = self.caller.get_wound_penalty()
+        elif not hasattr(self.caller, 'get_wound_penalty'):
+            # Fallback: calculate wound penalty directly if method doesn't exist
+            from world.utils.health_utils import calculate_wound_penalty
+            if (RollType.REFLEXIVE not in self.roll_types and 
+                RollType.DAMAGE not in self.roll_types):
+                wound_penalty = calculate_wound_penalty(self.caller)
+        
+        final_pool = self.dice_pool + self.modifier + wound_penalty
         
         # Roll the dice using the utility function
         rolls, successes, ones = roll_dice(final_pool, 8, self.roll_types)
@@ -282,7 +298,7 @@ class CmdRoll(MuxCommand):
         
         # Handle job rolls specially
         if self.is_job_roll:
-            self.handle_job_roll(rolls, successes, ones, self.stat_name, self.skill_name, stat_value, skill_value, character_name)
+            self.handle_job_roll(rolls, successes, ones, self.stat_name, self.skill_name, stat_value, skill_value, character_name, wound_penalty)
         else:
             # Regular roll handling
             # Format the roll message for the player (with dice details)
@@ -297,7 +313,8 @@ class CmdRoll(MuxCommand):
                 skill_name=self.skill_name,
                 stat_value=stat_value,
                 skill_value=skill_value,
-                character_name=character_name
+                character_name=character_name,
+                wound_penalty=wound_penalty
             )
             
             # Send to the player
@@ -312,7 +329,8 @@ class CmdRoll(MuxCommand):
                 modifier=self.modifier,
                 stat_name=self.stat_name,
                 skill_name=self.skill_name,
-                character_name=character_name
+                character_name=character_name,
+                wound_penalty=wound_penalty
             )
             
             # Send to others in the room
@@ -331,7 +349,7 @@ class CmdRoll(MuxCommand):
                 # Award beat for dramatic failure
                 self.award_beat("dramatic_failure")
 
-    def handle_job_roll(self, rolls, successes, ones, stat_name, skill_name, stat_value, skill_value, character_name):
+    def handle_job_roll(self, rolls, successes, ones, stat_name, skill_name, stat_value, skill_value, character_name, wound_penalty=0):
         """Handle rolls made to jobs."""
         from world.jobs.models import Job
         
@@ -358,7 +376,8 @@ class CmdRoll(MuxCommand):
                 stat_name=stat_name,
                 skill_name=skill_name,
                 stat_value=stat_value,
-                skill_value=skill_value
+                skill_value=skill_value,
+                wound_penalty=wound_penalty
             )
             
             # Send the expansive format to the roller
@@ -366,13 +385,26 @@ class CmdRoll(MuxCommand):
             
             # Create a roll summary for the job comment
             if stat_name and skill_name:
-                roll_desc = f"{stat_name.title()} + {skill_name.title()}"
+                modifier_parts = []
+                if self.modifier != 0:
+                    modifier_parts.append(f"{self.modifier:+d}")
+                if wound_penalty != 0:
+                    modifier_parts.append(f"{wound_penalty:+d} (wound)")
+                
+                if modifier_parts:
+                    modifier_str = " " + " ".join(modifier_parts)
+                    roll_desc = f"{stat_name.title()} + {skill_name.title()}{modifier_str}"
+                else:
+                    roll_desc = f"{stat_name.title()} + {skill_name.title()}"
             else:
-                final_pool = self.dice_pool + self.modifier
+                final_pool = self.dice_pool + self.modifier + wound_penalty
                 roll_desc = f"{final_pool} dice"
+                if wound_penalty != 0:
+                    roll_desc += f" (includes {wound_penalty:+d} wound penalty)"
             
             # Success interpretation for the comment
-            if successes == 0 and ones >= 1 and self.dice_pool + self.modifier <= 0:
+            final_pool_for_failure = self.dice_pool + self.modifier + wound_penalty
+            if successes == 0 and ones >= 1 and final_pool_for_failure <= 0:
                 result = f"{successes} successes (Dramatic Failure)"
             elif successes >= 5:
                 result = f"{successes} successes (Exceptional Success)"
@@ -381,13 +413,13 @@ class CmdRoll(MuxCommand):
             else:
                 result = f"{successes} successes"
             
-            # Format dice for the comment
-            dice_str = ", ".join(str(roll) for roll in sorted(rolls, reverse=True))
+            # Use the enhanced roll display format for the job comment
+            enhanced_comment_text = job_roll_display
             
             # Add the roll as a comment to the job
             roll_comment = {
                 "author": character_name,
-                "text": f"Rolled {roll_desc} -> {result} ({dice_str})",
+                "text": enhanced_comment_text,
                 "created_at": timezone.now().strftime('%Y-%m-%d %H:%M:%S')
             }
             
@@ -401,20 +433,23 @@ class CmdRoll(MuxCommand):
             cmd_jobs = CmdJobs()
             cmd_jobs.caller = self.caller
             
-            notification_message = f"{character_name} made a dice roll on Job #{self.job_id}: {roll_desc} -> {result}"
+            # Create a simple format for notifications (since they're sent via mail)
+            dice_str = ", ".join(str(roll) for roll in sorted(rolls, reverse=True))
+            notification_message = f"{character_name} made a dice roll on Job #{self.job_id}: {roll_desc} -> {result} ({dice_str})"
             cmd_jobs.send_mail_to_all_participants(job, notification_message, exclude_account=self.caller.account)
+            
+            # Post to the jobs channel for staff notification
+            cmd_jobs.post_to_jobs_channel(character_name, job.id, "made a dice roll on")
             
             self.caller.msg(f"|gRoll added to Job #{self.job_id} and participants notified.|n")
             
-            # Handle exceptional success
+            # Handle exceptional success (message already included in format_roll_display)
             if successes >= 5:
-                self.caller.msg("|Y|[bExceptional Success achieved! You may add a condition.|n|Y]|n")
-                self.caller.msg("|yUse: |w+condition/add <condition_name>|n")
                 # Award beat for exceptional success
                 self.award_beat("exceptional_success")
             
             # Handle dramatic failure for job rolls
-            if successes == 0 and ones >= 1 and self.dice_pool + self.modifier <= 0:
+            if successes == 0 and ones >= 1 and final_pool_for_failure <= 0:
                 # Award beat for dramatic failure
                 self.award_beat("dramatic_failure")
                 

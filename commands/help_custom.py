@@ -1,14 +1,15 @@
 """
-Custom help command with forced width control.
+Custom help command that escapes ANSI codes in help text.
 """
 
 from evennia.commands.default.help import CmdHelp as DefaultCmdHelp
 from evennia.utils import evtable
+from textwrap import dedent
 
 
 class CmdHelp(DefaultCmdHelp):
     """
-    Custom help command that forces 80-character width.
+    Custom help command that escapes ANSI codes in help text.
     
     Usage:
         help [topic or command]
@@ -16,20 +17,35 @@ class CmdHelp(DefaultCmdHelp):
         help all
     """
     
-    def func(self):
-        """Execute the help command with forced 80-character width."""
-        # Store the original caller width detection
-        original_client_width = self.caller.client_width
+    def format_help_entry(
+        self,
+        topic="",
+        help_text="",
+        aliases=None,
+        suggested=None,
+        subtopics=None,
+        click_topics=True,
+    ):
+        """
+        Override format_help_entry to escape ANSI codes in the help text content only.
+        This preserves the header/footer formatting while preventing docstring ANSI interpretation.
+        """
+        # Escape ANSI codes in the help text content only
+        if help_text:
+            # Escape pipe characters to prevent ANSI interpretation
+            escaped_help_text = help_text.replace('|', '||')
+        else:
+            escaped_help_text = help_text
         
-        # Force 80-character width for this command
-        self.caller.client_width = lambda: 80
-        
-        try:
-            # Call the original help command
-            super().func()
-        finally:
-            # Restore original width detection
-            self.caller.client_width = original_client_width
+        # Call the parent's format_help_entry with escaped help text
+        return super().format_help_entry(
+            topic=topic,
+            help_text=escaped_help_text,
+            aliases=aliases,
+            suggested=suggested,
+            subtopics=subtopics,
+            click_topics=click_topics,
+        )
 
 
 # Alternative: Override just the command listing part

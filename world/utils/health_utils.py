@@ -109,3 +109,57 @@ def damage_severity(damage_type):
     """Return numeric severity for damage comparison"""
     severity = {"bashing": 1, "lethal": 2, "aggravated": 3}
     return severity.get(damage_type, 1)
+
+def calculate_wound_penalty(character):
+    """
+    Calculate wound penalties based on Chronicles of Darkness rules.
+    
+    Wound Penalties:
+    - If damage reaches the third-to-last health box: -1 penalty
+    - If damage reaches the second-to-last health box: -2 penalty  
+    - If damage reaches the last health box: -3 penalty
+    
+    Args:
+        character: The character object to calculate wound penalties for
+        
+    Returns:
+        int: The wound penalty (0, -1, -2, or -3)
+    """
+    advantages = character.db.stats.get("advantages", {})
+    health_max = advantages.get("health", 7)
+    health_track = get_health_track(character)
+    
+    # Count total damage taken
+    total_damage = sum(1 for box in health_track if box is not None)
+    
+    # If no damage, no penalty
+    if total_damage == 0:
+        return 0
+    
+    # Calculate penalty based on how much damage has been taken
+    # If damage reaches the third-to-last box or beyond: penalty applies
+    # For a health track of size N:
+    # - Third-to-last box is at position N-3 (0-indexed: N-3)
+    # - Second-to-last box is at position N-2 (0-indexed: N-2) 
+    # - Last box is at position N-1 (0-indexed: N-1)
+    
+    # Since damage fills from left to right, we check if damage has reached these positions
+    if total_damage >= health_max:  # Last box filled (incapacitated)
+        return -3
+    elif total_damage >= health_max - 1:  # Second-to-last box filled
+        return -2
+    elif total_damage >= health_max - 2:  # Third-to-last box filled
+        return -1
+    else:
+        return 0
+
+def get_health_display_with_penalty(character, force_ascii=False):
+    """Get a visual representation of current health with wound penalty indicator"""
+    display = get_health_display(character, force_ascii)
+    wound_penalty = calculate_wound_penalty(character)
+    
+    if wound_penalty < 0:
+        penalty_text = f" |r(Wound Penalty: {wound_penalty})|n"
+        display += penalty_text
+    
+    return display

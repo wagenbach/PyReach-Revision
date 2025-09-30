@@ -458,7 +458,7 @@ class CmdStat(MuxCommand):
         # Check advantages (including supernatural power stats)
         elif stat in ["health", "willpower", "speed", "defense", "initiative", 
                       "blood_potency", "gnosis", "primal_urge", "wyrd", "synergy", 
-                      "azoth", "primum", "satiety", "deviation"]:
+                      "azoth", "primum", "satiety", "deviation", "psyche"]:
             if isinstance(value, int) and value >= 0:
                 target.db.stats["advantages"][stat] = value
                 stat_set = True
@@ -610,11 +610,57 @@ class CmdStat(MuxCommand):
             self.caller.msg(f"|rWARNING:|n This will completely wipe all of {target.name}'s stats!")
             self.caller.msg(f"Changing template from {old_template} to {value.title()}...")
             
-            # Nuclear option: completely wipe stats
+            # Nuclear option: completely wipe stats but initialize with defaults
             target.db.stats = {
-                "attributes": {},
-                "skills": {},
-                "advantages": {},
+                "attributes": {
+                    # Mental attributes
+                    "intelligence": 1,
+                    "wits": 1, 
+                    "resolve": 1,
+                    # Physical attributes
+                    "strength": 1,
+                    "dexterity": 1,
+                    "stamina": 1,
+                    # Social attributes
+                    "presence": 1,
+                    "manipulation": 1,
+                    "composure": 1
+                },
+                "skills": {
+                    # Mental skills
+                    "crafts": 0,
+                    "investigation": 0,
+                    "medicine": 0,
+                    "occult": 0,
+                    "politics": 0,
+                    "science": 0,
+                    # Physical skills
+                    "athletics": 0,
+                    "brawl": 0,
+                    "drive": 0,
+                    "firearms": 0,
+                    "larceny": 0,
+                    "stealth": 0,
+                    "survival": 0,
+                    "weaponry": 0,
+                    # Social skills
+                    "animal_ken": 0,
+                    "empathy": 0,
+                    "expression": 0,
+                    "intimidation": 0,
+                    "persuasion": 0,
+                    "socialize": 0,
+                    "streetwise": 0,
+                    "subterfuge": 0
+                },
+                "advantages": {
+                    # Calculate derived stats from default attributes
+                    "willpower": 2,  # resolve (1) + composure (1) = 2
+                    "health": 6,     # size (5) + stamina (1) = 6
+                    "speed": 7,      # strength (1) + dexterity (1) + 5 = 7
+                    "defense": 1,    # min(wits, dexterity) + athletics = min(1,1) + 0 = 1
+                    "initiative": 2  # dexterity (1) + composure (1) = 2
+                },
                 "anchors": {},
                 "bio": {},
                 "merits": {},
@@ -871,8 +917,73 @@ class CmdStat(MuxCommand):
             if stat in ["strength", "dexterity", "stamina", "composure", "resolve", "wits", "size"]:
                 target.calculate_derived_stats(self.caller)
             
+            # Auto-calculate power pools if setting power stats
+            if stat in ["blood_potency", "gnosis", "primal_urge", "wyrd", "synergy", 
+                       "azoth", "primum", "deviation"]:
+                if hasattr(target, 'calculate_power_pools'):
+                    target.calculate_power_pools(self.caller)
+                else:
+                    # Fallback: manually calculate power pools if method doesn't exist yet
+                    self._calculate_power_pools_fallback(target, stat, value)
+            
             # Clean up misplaced stats
             target.cleanup_misplaced_stats(self.caller)
+    
+    def _calculate_power_pools_fallback(self, target, stat, value):
+        """Fallback method to calculate power pools when the typeclass method isn't available"""
+        advantages = target.db.stats.get("advantages", {})
+        other = target.db.stats.get("other", {})
+        template = other.get("template", "Mortal").lower()
+        
+        # Standard supernatural pool lookup table
+        pool_lookup = {
+            1: 10, 2: 11, 3: 12, 4: 13, 5: 15,
+            6: 20, 7: 25, 8: 30, 9: 50, 10: 75
+        }
+        
+        # Calculate the appropriate pool based on template and stat
+        pool_updated = None
+        
+        if template == "vampire" and stat == "blood_potency":
+            if value == 0:
+                # Blood Potency 0 uses Stamina
+                attrs = target.db.stats.get("attributes", {})
+                stamina = attrs.get("stamina", 1)
+                advantages["vitae"] = stamina
+            else:
+                advantages["vitae"] = pool_lookup.get(value, 10)
+            pool_updated = "vitae"
+            
+        elif template == "changeling" and stat == "wyrd":
+            advantages["glamour"] = pool_lookup.get(value, 10)
+            pool_updated = "glamour"
+            
+        elif template == "werewolf" and stat == "primal_urge":
+            advantages["essence"] = pool_lookup.get(value, 10)
+            pool_updated = "essence"
+            
+        elif template == "mage" and stat == "gnosis":
+            advantages["mana"] = pool_lookup.get(value, 10)
+            pool_updated = "mana"
+            
+        elif template == "geist" and stat == "synergy":
+            advantages["plasm"] = pool_lookup.get(value, 10)
+            pool_updated = "plasm"
+            
+        elif template == "promethean" and stat == "azoth":
+            advantages["pyros"] = pool_lookup.get(value, 10)
+            pool_updated = "pyros"
+            
+        elif template == "demon" and stat == "primum":
+            advantages["aether"] = pool_lookup.get(value, 10)
+            pool_updated = "aether"
+            
+        elif template == "deviant" and stat == "deviation":
+            advantages["instability"] = pool_lookup.get(value, 10)
+            pool_updated = "instability"
+        
+        if pool_updated:
+            self.caller.msg(f"Updated power pool: {pool_updated}")
     
     def remove_stat(self):
         """Remove a stat"""

@@ -1,7 +1,7 @@
 from evennia.commands.default.muxcommand import MuxCommand
 from world.utils.health_utils import (
     get_health_track, compact_track, set_health_track, 
-    get_health_display, parse_damage_type, damage_severity
+    get_health_display, get_health_display_with_penalty, parse_damage_type, damage_severity
 )
 from world.utils.permission_utils import check_builder_permission
 
@@ -38,8 +38,8 @@ class CmdHealth(MuxCommand):
     help_category = "Character"
     
     def _get_health_display(self, caller, force_ascii=False):
-        """Get a visual representation of current health"""
-        return get_health_display(caller, force_ascii)
+        """Get a visual representation of current health with wound penalty"""
+        return get_health_display_with_penalty(caller, force_ascii)
     
     def _get_health_track(self, caller):
         """Get health track as an array where index 0 is leftmost (most severe)."""

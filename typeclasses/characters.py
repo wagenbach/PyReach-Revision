@@ -18,6 +18,7 @@ from world.conditions import ConditionHandler
 from world.tilts import TiltHandler
 from world.experience import ExperienceHandler, EXPERIENCE_COSTS
 from world.cofd.template_registry import template_registry
+from world.utils.health_utils import calculate_wound_penalty
 
 from .objects import ObjectParent
 
@@ -168,11 +169,57 @@ class Character(ObjectParent, DefaultCharacter):
         # Get template-specific starting integrity
         starting_integrity = template_registry.get_starting_integrity(new_template)
         
-        # Completely wipe the stats dictionary
+        # Completely wipe the stats dictionary but initialize with defaults
         self.db.stats = {
-            "attributes": {},
-            "skills": {},
-            "advantages": {},
+            "attributes": {
+                # Mental attributes
+                "intelligence": 1,
+                "wits": 1, 
+                "resolve": 1,
+                # Physical attributes
+                "strength": 1,
+                "dexterity": 1,
+                "stamina": 1,
+                # Social attributes
+                "presence": 1,
+                "manipulation": 1,
+                "composure": 1
+            },
+            "skills": {
+                # Mental skills
+                "crafts": 0,
+                "investigation": 0,
+                "medicine": 0,
+                "occult": 0,
+                "politics": 0,
+                "science": 0,
+                # Physical skills
+                "athletics": 0,
+                "brawl": 0,
+                "drive": 0,
+                "firearms": 0,
+                "larceny": 0,
+                "stealth": 0,
+                "survival": 0,
+                "weaponry": 0,
+                # Social skills
+                "animal_ken": 0,
+                "empathy": 0,
+                "expression": 0,
+                "intimidation": 0,
+                "persuasion": 0,
+                "socialize": 0,
+                "streetwise": 0,
+                    "subterfuge": 0
+                },
+            "advantages": {
+                # Calculate derived stats from default attributes
+                "willpower": 2,  # resolve (1) + composure (1) = 2
+                "health": 6,     # size (5) + stamina (1) = 6
+                "speed": 7,      # strength (1) + dexterity (1) + 5 = 7
+                "defense": 1,    # min(wits, dexterity) + athletics = min(1,1) + 0 = 1
+                "initiative": 2  # dexterity (1) + composure (1) = 2
+            },
             "anchors": {},
             "bio": {
                 "full_name": "",
@@ -360,6 +407,74 @@ class Character(ObjectParent, DefaultCharacter):
         
         return updated_stats
 
+    def calculate_power_pools(self, caller=None):
+        """Calculate supernatural power pools based on power stats"""
+        advantages = self.db.stats.get("advantages", {})
+        other = self.db.stats.get("other", {})
+        template = other.get("template", "Mortal").lower()
+        
+        # Standard supernatural pool lookup table
+        pool_lookup = {
+            1: 10, 2: 11, 3: 12, 4: 13, 5: 15,
+            6: 20, 7: 25, 8: 30, 9: 50, 10: 75
+        }
+        
+        updated_pools = []
+        
+        # Template-specific power pool calculations
+        # Store pool maximums in advantages dictionary for sheet display
+        if template == "vampire" and "blood_potency" in advantages:
+            blood_potency = advantages["blood_potency"]
+            if blood_potency == 0:
+                # Blood Potency 0 uses Stamina
+                attrs = self.db.stats.get("attributes", {})
+                stamina = attrs.get("stamina", 1)
+                advantages["vitae"] = stamina
+            else:
+                advantages["vitae"] = pool_lookup.get(blood_potency, 10)
+            updated_pools.append("vitae")
+            
+        elif template == "changeling" and "wyrd" in advantages:
+            wyrd = advantages["wyrd"]
+            advantages["glamour"] = pool_lookup.get(wyrd, 10)
+            updated_pools.append("glamour")
+            
+        elif template == "werewolf" and "primal_urge" in advantages:
+            primal_urge = advantages["primal_urge"]
+            advantages["essence"] = pool_lookup.get(primal_urge, 10)
+            updated_pools.append("essence")
+            
+        elif template == "mage" and "gnosis" in advantages:
+            gnosis = advantages["gnosis"]
+            advantages["mana"] = pool_lookup.get(gnosis, 10)
+            updated_pools.append("mana")
+            
+        elif template == "geist" and "synergy" in advantages:
+            synergy = advantages["synergy"]
+            advantages["plasm"] = pool_lookup.get(synergy, 10)
+            updated_pools.append("plasm")
+            
+        elif template == "promethean" and "azoth" in advantages:
+            azoth = advantages["azoth"]
+            advantages["pyros"] = pool_lookup.get(azoth, 10)
+            updated_pools.append("pyros")
+            
+        elif template == "demon" and "primum" in advantages:
+            primum = advantages["primum"]
+            advantages["aether"] = pool_lookup.get(primum, 10)
+            updated_pools.append("aether")
+            
+        elif template == "deviant" and "deviation" in advantages:
+            deviation = advantages["deviation"]
+            advantages["instability"] = pool_lookup.get(deviation, 10)
+            updated_pools.append("instability")
+        
+        # Send message to caller if provided
+        if caller and updated_pools:
+            caller.msg(f"Updated power pools: {', '.join(updated_pools)}")
+        
+        return updated_pools
+
     def recalculate_derived_stats(self, caller=None):
         """Recalculate derived stats for a character"""
         if not self.db.stats:
@@ -485,3 +600,12 @@ class Character(ObjectParent, DefaultCharacter):
             return True
             
         return False
+
+    def get_wound_penalty(self):
+        """
+        Get the current wound penalty for this character.
+        
+        Returns:
+            int: The wound penalty (0, -1, -2, or -3)
+        """
+        return calculate_wound_penalty(self)

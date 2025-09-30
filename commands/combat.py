@@ -10,7 +10,7 @@ from world.utils.permission_utils import check_builder_permission
 
 # Combat system implementation
 from world.utils.dice_utils import roll_dice, RollType
-from random import randint
+import secrets
 
 class WeaponData:
     """Data class for weapon statistics"""
@@ -141,7 +141,7 @@ class CombatTracker:
         init_attr = dex + composure
         
         # Roll 1d10 + initiative
-        roll = randint(1, 10)
+        roll = secrets.randbelow(10) + 1
         total_initiative = roll + init_attr
         
         # Store initiative
