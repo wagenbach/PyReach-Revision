@@ -28,9 +28,6 @@ class CmdCondition(MuxCommand):
     def parse(self):
         """Parse the command arguments."""
         super().parse()  # Initialize switches and other MuxCommand attributes
-        
-        args = self.args.strip()
-        self.switches = []
     
     def func(self):
         """

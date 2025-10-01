@@ -257,7 +257,7 @@ class InputValidationMixin:
                 
         return parts
 
-class BaseExordiumCommand(MuxCommand, InputValidationMixin):
+class BasePyReachCommand(MuxCommand, InputValidationMixin):
     """
     Base command class for Exordium commands with common functionality and security.
     """

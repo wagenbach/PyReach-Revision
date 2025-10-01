@@ -34,9 +34,6 @@ class CmdInvestigation(MuxCommand):
     def parse(self):
         """Parse the command arguments."""
         super().parse()  # Initialize switches and other MuxCommand attributes
-        
-        args = self.args.strip()
-        self.switches = []
     
     def flexible_search(self, search_term):
         """

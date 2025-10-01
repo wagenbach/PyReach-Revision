@@ -161,7 +161,12 @@ Once you have the Storyteller flag, you can use:
         target = self.caller.search(self.args.strip(), global_search=True)
         if not target:
             return
-        target = target[0]
+        
+        # Handle both single object and list returns from search
+        if isinstance(target, list):
+            if not target:
+                return
+            target = target[0]
         
         # Check if it's a character
         if not hasattr(target, 'db') or not hasattr(target, 'account'):
@@ -211,7 +216,12 @@ Once you have the Storyteller flag, you can use:
         target = self.caller.search(self.args.strip(), global_search=True)
         if not target:
             return
-        target = target[0]
+        
+        # Handle both single object and list returns from search
+        if isinstance(target, list):
+            if not target:
+                return
+            target = target[0]
         
         # Check if it's a character
         if not hasattr(target, 'db') or not hasattr(target, 'account'):
@@ -252,7 +262,12 @@ Once you have the Storyteller flag, you can use:
             target = self.caller.search(self.args.strip(), global_search=True)
             if not target:
                 return
-            target = target[0]
+            
+            # Handle both single object and list returns from search
+            if isinstance(target, list):
+                if not target:
+                    return
+                target = target[0]
         else:
             target = self.caller
         

@@ -774,6 +774,8 @@ class CmdRoomInfo(MuxCommand):
         caller.msg(f"Places Active: {'Yes' if location.db.places_active else 'No'}")
         
         places = getattr(location.db, 'places', {})
+        if places is None:
+            places = {}
         caller.msg(f"Places Defined: {len(places)}")
         
         # Exits info

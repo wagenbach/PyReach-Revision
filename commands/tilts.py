@@ -49,7 +49,8 @@ class CmdTilt(MuxCommand):
             return
         
         if not self.switches:
-            self.caller.msg("Usage: +tilt/add, +tilt/remove, +tilt/list, +tilt/env, or +tilt/help")
+            # Default behavior: list tilts on character
+            self.tilt_list()
             return
             
         # Handle environmental tilts
@@ -67,6 +68,8 @@ class CmdTilt(MuxCommand):
             self.tilt_list()
         elif switch == "help":
             self.tilt_help()
+        elif switch == "list":
+            self.tilt_list_all()
         elif switch == "advance":
             self.tilt_advance()
         elif switch == "clear":
@@ -109,17 +112,17 @@ class CmdTilt(MuxCommand):
     
     def tilt_add(self):
         """Add a tilt to a character"""
-        if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +tilt/add [character] = <tilt_name>")
+        if not self.args:
+            self.caller.msg("Usage: +tilt/add <tilt_name> or +tilt/add <character> = <tilt_name>")
             return
             
-        parts = self.args.split("=", 1)
-        if len(parts) == 2:
+        if "=" in self.args:
+            parts = self.args.split("=", 1)
             target_name, tilt_name = [part.strip() for part in parts]
         else:
-            # If no target specified, default to caller
+            # If no = sign, default to caller
             target_name = "self"
-            tilt_name = parts[0].strip()
+            tilt_name = self.args.strip()
         
         # Find the target
         target = self.caller.search(target_name)
@@ -161,17 +164,17 @@ class CmdTilt(MuxCommand):
 
     def tilt_remove(self):
         """Remove a tilt from a character"""
-        if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +tilt/remove [character] = <tilt_name>")
+        if not self.args:
+            self.caller.msg("Usage: +tilt/remove <tilt_name> or +tilt/remove <character> = <tilt_name>")
             return
             
-        parts = self.args.split("=", 1)
-        if len(parts) == 2:
+        if "=" in self.args:
+            parts = self.args.split("=", 1)
             target_name, tilt_name = [part.strip() for part in parts]
         else:
-            # If no target specified, default to caller
+            # If no = sign, default to caller
             target_name = "self"
-            tilt_name = parts[0].strip()
+            tilt_name = self.args.strip()
         
         # Find the target
         target = self.caller.search(target_name)
@@ -216,23 +219,26 @@ class CmdTilt(MuxCommand):
                 
         self.caller.msg("\n".join(output))
 
+    def tilt_list_all(self):
+        """List all available tilts"""
+        output = ["Available Tilts:"]
+        output.append("\n|cPersonal Tilts:|n")
+        personal_tilts = [name for name, tilt in STANDARD_TILTS.items() if tilt.tilt_type == "personal"]
+        for tilt_name in sorted(personal_tilts):
+            output.append(f"  {tilt_name}")
+            
+        output.append("\n|cEnvironmental Tilts:|n")
+        environmental_tilts = [name for name, tilt in STANDARD_TILTS.items() if tilt.tilt_type == "environmental"]
+        for tilt_name in sorted(environmental_tilts):
+            output.append(f"  {tilt_name}")
+            
+        output.append("\nUse '+tilt/help <tilt_name>' for detailed information.")
+        self.caller.msg("\n".join(output))
+        
     def tilt_help(self):
         """Get information about a specific tilt"""
         if not self.args:
-            # List all available tilts
-            output = ["Available Tilts:"]
-            output.append("\n|cPersonal Tilts:|n")
-            personal_tilts = [name for name, tilt in STANDARD_TILTS.items() if tilt.tilt_type == "personal"]
-            for tilt_name in sorted(personal_tilts):
-                output.append(f"  {tilt_name}")
-                
-            output.append("\n|cEnvironmental Tilts:|n")
-            environmental_tilts = [name for name, tilt in STANDARD_TILTS.items() if tilt.tilt_type == "environmental"]
-            for tilt_name in sorted(environmental_tilts):
-                output.append(f"  {tilt_name}")
-                
-            output.append("\nUse '+tilt/help <tilt_name>' for detailed information.")
-            self.caller.msg("\n".join(output))
+            self.caller.msg("Usage: +tilt/help <tilt_name>")
             return
             
         tilt_name = self.args.strip().lower()

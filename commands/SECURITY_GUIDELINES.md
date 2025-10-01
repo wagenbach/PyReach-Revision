@@ -56,7 +56,7 @@ if self.caller.check_permstring("Admin"):
 
 **✅ CORRECT:**
 ```python
-from commands.base import BaseExordiumCommand
+from commands.base import BasePyReachCommand
 
 class MyCommand(BaseExordiumCommand):
     def func(self):

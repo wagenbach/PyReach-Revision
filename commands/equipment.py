@@ -1,319 +1,9 @@
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import create
+from world.equipment_database import WEAPON_DATABASE, ARMOR_DATABASE, WeaponData, ArmorData
+from world.equipment_purchasing import PURCHASE_CONFIG, get_available_equipment, can_purchase_equipment, purchase_equipment, EquipmentPurchasingConfig
+from .base import BuilderMixin
 
-
-# Weapon and Armor Data
-# Chronicles of Darkness Weapons Database
-# Extracted from Hurt Locker supplement
-
-WEAPON_DATA = {
-    # MELEE WEAPONS - BLADED
-    "battle_axe": {"damage": 3, "initiative": -4, "strength": 3, "size": 3, "tags": "9-again, two-handed", "range": "melee", "availability": 3},
-    "fire_axe": {"damage": 2, "initiative": -4, "strength": 3, "size": 3, "tags": "9-again, two-handed", "range": "melee", "availability": 2},
-    "great_sword": {"damage": 4, "initiative": -5, "strength": 4, "size": 3, "tags": "9-again, two-handed", "range": "melee", "availability": 4},
-    "hatchet": {"damage": 1, "initiative": -2, "strength": 1, "size": 1, "tags": "", "range": "melee", "availability": 2},
-    "knife_small": {"damage": 0, "initiative": 0, "strength": 1, "size": 1, "tags": "thrown", "range": "melee", "availability": 1},
-    "knife_hunting": {"damage": 1, "initiative": -1, "strength": 1, "size": 2, "tags": "enhance_crafts_survival", "range": "melee", "availability": 2},
-    "machete": {"damage": 2, "initiative": -2, "strength": 2, "size": 2, "tags": "", "range": "melee", "availability": 2},
-    "rapier": {"damage": 1, "initiative": -2, "strength": 1, "size": 2, "tags": "piercing_1", "range": "melee", "availability": 2},
-    "sword": {"damage": 3, "initiative": -3, "strength": 2, "size": 3, "tags": "initiative_bonus_1", "range": "melee", "availability": 3},
-
-    # MELEE WEAPONS - BLUNT
-    "brass_knuckles": {"damage": 0, "initiative": 0, "strength": 1, "size": 1, "tags": "brawl", "range": "melee", "availability": 1},
-    "metal_club": {"damage": 2, "initiative": -2, "strength": 2, "size": 2, "tags": "stun", "range": "melee", "availability": 1},
-    "nightstick": {"damage": 1, "initiative": -1, "strength": 2, "size": 2, "tags": "stun", "range": "melee", "availability": 2},
-    "nunchaku": {"damage": 1, "initiative": 1, "strength": 2, "size": 2, "tags": "stun, dexterity_requirement", "range": "melee", "availability": 2},
-    "sap": {"damage": 0, "initiative": -1, "strength": 2, "size": 2, "tags": "stun", "range": "melee", "availability": 1},
-    "sledgehammer": {"damage": 3, "initiative": -4, "strength": 3, "size": 3, "tags": "knockdown, stun", "range": "melee", "availability": 1},
-
-    # MELEE WEAPONS - EXOTIC
-    "catchpole": {"damage": 0, "initiative": -3, "strength": 2, "size": 2, "tags": "grapple, reach", "range": "melee", "availability": 1},
-    "chain": {"damage": 1, "initiative": -3, "strength": 2, "size": 2, "tags": "grapple, inaccurate, reach", "range": "melee", "availability": 1},
-    "chainsaw": {"damage": 3, "initiative": -6, "strength": 4, "size": 3, "tags": "bleed, inaccurate, two-handed", "range": "melee", "availability": 3},
-    "kusari_gama_chain": {"damage": 1, "initiative": -3, "strength": 2, "size": 2, "tags": "grapple, inaccurate, reach", "range": "melee", "availability": 1},
-    "kusari_gama_sickle": {"damage": 1, "initiative": -1, "strength": 1, "size": 2, "tags": "", "range": "melee", "availability": 2},
-    "shield_small": {"damage": 0, "initiative": -2, "strength": 2, "size": 2, "tags": "concealed", "range": "melee", "availability": 2},
-    "shield_large": {"damage": 2, "initiative": -4, "strength": 3, "size": 3, "tags": "concealed", "range": "melee", "availability": 2},
-    "stake": {"damage": 0, "initiative": -4, "strength": 1, "size": 1, "tags": "", "range": "melee", "availability": 0},
-    "stun_gun_melee": {"damage": 0, "initiative": -1, "strength": 1, "size": 1, "tags": "stun, no_bonus_damage", "range": "melee", "availability": 1},
-    "tiger_claws": {"damage": 1, "initiative": -1, "strength": 2, "size": 2, "tags": "brawl", "range": "melee", "availability": 2},
-    "whip": {"damage": 0, "initiative": -2, "strength": 1, "size": 2, "tags": "grapple, stun, dexterity_weaponry", "range": "melee", "availability": 1},
-
-    # MELEE WEAPONS - IMPROVISED
-    "blowtorch": {"damage": 0, "initiative": -2, "strength": 2, "size": 2, "tags": "incendiary, piercing_2, blinded_tilt", "range": "melee", "availability": 2},
-    "board_with_nail": {"damage": 1, "initiative": -3, "strength": 2, "size": 2, "tags": "fragile, stun", "range": "melee", "availability": 0},
-    "improvised_shield": {"damage": 0, "initiative": -4, "strength": 2, "size": 2, "tags": "concealed", "range": "melee", "availability": 1},
-    "nail_gun": {"damage": 0, "initiative": -2, "strength": 2, "size": 2, "tags": "inaccurate, piercing_1, strength_firearms", "range": "melee", "availability": 1},
-    "shovel": {"damage": 1, "initiative": -3, "strength": 2, "size": 2, "tags": "knockdown", "range": "melee", "availability": 1},
-    "tire_iron": {"damage": 1, "initiative": -3, "strength": 2, "size": 2, "tags": "guard, inaccurate", "range": "melee", "availability": 2},
-
-    # MELEE WEAPONS - POLEARMS
-    "spear": {"damage": 2, "initiative": -2, "strength": 2, "size": 4, "tags": "reach, two-handed", "range": "melee", "availability": 1},
-    "staff": {"damage": 1, "initiative": -1, "strength": 2, "size": 4, "tags": "knockdown, reach, two-handed", "range": "melee", "availability": 1},
-
-    # RANGED WEAPONS - ARCHERY
-    "short_bow": {"damage": 2, "range": "medium", "capacity": "low", "initiative": -3, "strength": 2, "size": 3, "availability": 2, "tags": ""},
-    "long_bow": {"damage": 3, "range": "medium", "capacity": "low", "initiative": -4, "strength": 3, "size": 4, "availability": 2, "tags": ""},
-    "crossbow": {"damage": 2, "range": "long", "capacity": "low", "initiative": -5, "strength": 3, "size": 3, "availability": 3, "tags": ""},
-
-    # RANGED WEAPONS - THROWN
-    "throwing_knife": {"damage": 0, "range": "close", "capacity": "single", "initiative": 0, "strength": 1, "size": 1, "availability": 1, "tags": "thrown"},
-
-    # RANGED WEAPONS - FIREARMS
-    "light_pistol": {"damage": 1, "range": "long", "capacity": "medium", "initiative": 0, "strength": 2, "size": 1, "availability": 2, "tags": ""},
-    "heavy_pistol": {"damage": 2, "range": "long", "capacity": "medium", "initiative": -2, "strength": 3, "size": 1, "availability": 3, "tags": ""},
-    "light_revolver": {"damage": 1, "range": "long", "capacity": "low", "initiative": 0, "strength": 2, "size": 2, "availability": 2, "tags": ""},
-    "heavy_revolver": {"damage": 2, "range": "long", "capacity": "low", "initiative": -2, "strength": 3, "size": 3, "availability": 2, "tags": ""},
-    "smg_small": {"damage": 1, "range": "medium", "capacity": "high", "initiative": -2, "strength": 2, "size": 1, "availability": 3, "tags": ""},
-    "smg_heavy": {"damage": 2, "range": "medium", "capacity": "high", "initiative": -3, "strength": 3, "size": 2, "availability": 3, "tags": ""},
-    "rifle": {"damage": 4, "range": "extreme", "capacity": "low", "initiative": -5, "strength": 2, "size": 3, "availability": 2, "tags": ""},
-    "big_game_rifle": {"damage": 5, "range": "extreme", "capacity": "low", "initiative": -5, "strength": 3, "size": 4, "availability": 5, "tags": "stun"},
-    "assault_rifle": {"damage": 3, "range": "long", "capacity": "high", "initiative": -3, "strength": 3, "size": 3, "availability": 3, "tags": "9-again"},
-    "shotgun": {"damage": 3, "range": "medium", "capacity": "low", "initiative": -4, "strength": 3, "size": 2, "availability": 2, "tags": "9-again"},
-
-    # RANGED WEAPONS - NONLETHAL
-    "pepper_spray": {"damage": 0, "range": "close", "capacity": "low", "initiative": 0, "strength": 1, "size": 1, "availability": 1, "tags": "slow"},
-    "stun_gun_ranged": {"damage": 0, "range": "close", "capacity": "medium", "initiative": -1, "strength": 1, "size": 1, "availability": 1, "tags": "slow, stun, no_bonus_damage"},
-
-    # EXPLOSIVES - GRENADES
-    "frag_grenade_standard": {"damage": 2, "range": "thrown", "capacity": "single", "initiative": 0, "strength": 2, "size": 1, "availability": 4, "tags": "knockdown, stun, blast_10, force_3"},
-    "frag_grenade_heavy": {"damage": 3, "range": "thrown", "capacity": "single", "initiative": -1, "strength": 2, "size": 1, "availability": 4, "tags": "knockdown, stun, blast_5, force_4"},
-    "molotov_cocktail": {"damage": 1, "range": "thrown", "capacity": "single", "initiative": -2, "strength": 2, "size": 2, "availability": 1, "tags": "incendiary, blast_3, force_2"},
-    "pipe_bomb": {"damage": 1, "range": "thrown", "capacity": "single", "initiative": -1, "strength": 2, "size": 1, "availability": 1, "tags": "inaccurate, stun, blast_5, force_2"},
-    "smoke_grenade": {"damage": 0, "range": "thrown", "capacity": "single", "initiative": 0, "strength": 2, "size": 1, "availability": 2, "tags": "concealment, blast_10"},
-    "stun_grenade": {"damage": 0, "range": "thrown", "capacity": "single", "initiative": 0, "strength": 2, "size": 1, "availability": 2, "tags": "knockdown, stun, blast_5, force_2"},
-    "thermite_grenade": {"damage": 3, "range": "thrown", "capacity": "single", "initiative": 0, "strength": 2, "size": 1, "availability": 4, "tags": "ap_8, incendiary, blast_5, force_4"},
-    "white_phosphorous": {"damage": 3, "range": "thrown", "capacity": "single", "initiative": 0, "strength": 2, "size": 1, "availability": 4, "tags": "ap_3, incendiary, concealment, blast_5, force_4"},
-
-    # EXPLOSIVES - GRENADE LAUNCHERS
-    "grenade_launcher_standalone": {"damage": "varies", "range": "long", "capacity": "low", "initiative": -5, "strength": 3, "size": 3, "availability": 4, "tags": "heavy_recoil"},
-    "grenade_launcher_underbarrel": {"damage": "varies", "range": "long", "capacity": "low", "initiative": -3, "strength": 2, "size": 2, "availability": 4, "tags": "attachment"},
-    "automatic_grenade_launcher": {"damage": "varies", "range": "extreme", "capacity": "high", "initiative": -6, "strength": 0, "size": 4, "availability": 5, "tags": "vehicle_mounted"},
-
-    # EXPLOSIVES - GRENADE AMMUNITION
-    "baton_round": {"damage": 1, "range": "long", "capacity": "single", "initiative": 0, "strength": 0, "size": 1, "availability": 2, "tags": "knockdown, stun, force_5"},
-    "buckshot_round": {"damage": 1, "range": "long", "capacity": "single", "initiative": 0, "strength": 0, "size": 1, "availability": 4, "tags": "knockdown, blast_10, force_4"},
-    "he_round": {"damage": 3, "range": "long", "capacity": "single", "initiative": 0, "strength": 0, "size": 1, "availability": 4, "tags": "knockdown, blast_10, force_4"},
-    "hedp_round": {"damage": 2, "range": "long", "capacity": "single", "initiative": 0, "strength": 0, "size": 1, "availability": 4, "tags": "knockdown, ap_4, blast_10, force_3"},
-
-    # HEAVY WEAPONS - FLAMETHROWERS
-    "flamethrower_civilian": {"damage": "special", "range": "short", "capacity": "high", "initiative": -4, "strength": 3, "size": 4, "availability": 3, "tags": "incendiary"},
-    "flamethrower_military": {"damage": "special", "range": "medium", "capacity": "high", "initiative": -5, "strength": 3, "size": 4, "availability": 5, "tags": "incendiary"},
-}
-
-# ARMOR DATABASE
-# Rating: First number is general armor (reduces total damage), second is ballistic armor (downgrades lethal to bashing)
-# Strength: Minimum Strength requirement. Lower Strength causes -1 to Brawl and Weaponry rolls
-# Defense: Defense penalty while wearing armor
-# Speed: Speed penalty while wearing armor  
-# Availability: Cost in Resources dots or appropriate Social Merit level
-# Coverage: Body areas protected by the armor
-
-ARMOR_DATA = {
-    # MODERN ARMOR
-    "reinforced_clothing": {
-        "general_armor": 1, 
-        "ballistic_armor": 0, 
-        "strength": 1, 
-        "defense": 0, 
-        "speed": 0, 
-        "availability": 1, 
-        "coverage": ["torso", "arms", "legs"]
-    },
-    "sports_gear": {
-        "general_armor": 2, 
-        "ballistic_armor": 0, 
-        "strength": 2, 
-        "defense": -1, 
-        "speed": -1, 
-        "availability": 1, 
-        "coverage": ["torso", "arms", "legs"]
-    },
-    "kevlar_vest": {
-        "general_armor": 1, 
-        "ballistic_armor": 3, 
-        "strength": 1, 
-        "defense": 0, 
-        "speed": 0, 
-        "availability": 1, 
-        "coverage": ["torso"]
-    },
-    "flak_jacket": {
-        "general_armor": 2, 
-        "ballistic_armor": 4, 
-        "strength": 1, 
-        "defense": -1, 
-        "speed": 0, 
-        "availability": 2, 
-        "coverage": ["torso", "arms"]
-    },
-    "full_riot_gear": {
-        "general_armor": 3, 
-        "ballistic_armor": 5, 
-        "strength": 2, 
-        "defense": -2, 
-        "speed": -1, 
-        "availability": 3, 
-        "coverage": ["torso", "arms", "legs"]
-    },
-    "bomb_suit": {
-        "general_armor": 4, 
-        "ballistic_armor": 6, 
-        "strength": 3, 
-        "defense": -5, 
-        "speed": -4, 
-        "availability": 5, 
-        "coverage": ["torso", "arms", "head"]
-    },
-    "helmet_modern": {
-        "general_armor": "special", 
-        "ballistic_armor": "special", 
-        "strength": 2, 
-        "defense": -1, 
-        "speed": 0, 
-        "availability": 3, 
-        "coverage": ["head"],
-        "notes": "Extends armor protection to head. Half of worn armor's normal ratings (rounded up). -1 to sight/hearing Perception rolls"
-    },
-
-    # ARCHAIC ARMOR
-    "leather_hard": {
-        "general_armor": 2, 
-        "ballistic_armor": 0, 
-        "strength": 2, 
-        "defense": -1, 
-        "speed": 0, 
-        "availability": 1, 
-        "coverage": ["torso", "arms"]
-    },
-    "lorica_segmentata": {
-        "general_armor": 2, 
-        "ballistic_armor": 2, 
-        "strength": 3, 
-        "defense": -2, 
-        "speed": -3, 
-        "availability": 4, 
-        "coverage": ["torso"]
-    },
-    "chainmail": {
-        "general_armor": 3, 
-        "ballistic_armor": 1, 
-        "strength": 3, 
-        "defense": -2, 
-        "speed": -2, 
-        "availability": 2, 
-        "coverage": ["torso", "arms"],
-        "notes": "Full suit can protect entire body at additional cost of one dot"
-    },
-    "plate_mail": {
-        "general_armor": 4, 
-        "ballistic_armor": 2, 
-        "strength": 3, 
-        "defense": -2, 
-        "speed": -3, 
-        "availability": 4, 
-        "coverage": ["torso", "arms", "legs"]
-    },
-    "helmet_archaic": {
-        "general_armor": "special", 
-        "ballistic_armor": "special", 
-        "strength": 2, 
-        "defense": -1, 
-        "speed": 0, 
-        "availability": 3, 
-        "coverage": ["head"],
-        "notes": "Extends armor protection to head. Half of worn armor's normal ratings (rounded up). -1 to sight/hearing Perception rolls"
-    }
-}
-
-# Armor mechanics notes
-armor_rules = {
-    "general_armor": "Reduces total damage taken by one point per level, starting with most severe damage type",
-    "ballistic_armor": "Each point downgrades one point of lethal damage from firearms to bashing damage",
-    "application_order": "Apply ballistic armor first, then general armor",
-    "minimum_damage": "Successful attack always inflicts at least one bashing damage to armored mortal target",
-    "supernatural_exception": "Vampires, spell-protected mages, and werewolves with thick hides are not subject to minimum damage rule",
-    "called_shots": "If attacker targets unarmored location, armor protection doesn't apply",
-    "riot_shields": "Sometimes come with large bulletproof shields (ballistic armor 2, stacks with armor ratings)"
-}
-
-# Coverage area definitions
-coverage_areas = {
-    "head": "Head and face protection",
-    "torso": "Chest, back, and vital organs", 
-    "arms": "Arms and shoulders",
-    "legs": "Legs and lower body"
-}
-
-# Capacity definitions
-capacity_types = {
-    "single": "Single use per scene",
-    "low": "Empties on short burst or failure",
-    "medium": "Empties on medium burst, two short bursts, or dramatic failure", 
-    "high": "Empties on long burst, two medium bursts, or three short bursts"
-}
-
-# Range definitions
-range_types = {
-    "melee": "Personal space (0-2 meters)",
-    "close": "0-5 meters", 
-    "short": "5-30 meters",
-    "medium": "30-100 meters", 
-    "long": "100-300 meters",
-    "extreme": "300+ meters",
-    "thrown": "Varies by Strength and weapon type"
-}
-
-# Availability definitions
-availability_costs = {
-    0: "Free/No cost",
-    1: "• (1 Resources dot or appropriate Social Merit)",
-    2: "•• (2 Resources dots or appropriate Social Merit)", 
-    3: "••• (3 Resources dots or appropriate Social Merit)",
-    4: "•••• (4 Resources dots or appropriate Social Merit)",
-    5: "••••• (5 Resources dots or appropriate Social Merit)"
-}
-
-# Tag definitions
-tag_descriptions = {
-    "9-again": "Re-roll 9s and 10s on attack rolls",
-    "8-again": "Re-roll 8s, 9s, and 10s on attack rolls", 
-    "accurate": "+1 to attack rolls",
-    "ap_3": "Armor Piercing 3 - reduces armor by 3",
-    "ap_4": "Armor Piercing 4 - reduces armor by 4", 
-    "ap_8": "Armor Piercing 8 - reduces armor by 8",
-    "bleed": "Doubles weapon bonus for Bleeding Tilt",
-    "blast_3": "3 meter blast radius",
-    "blast_5": "5 meter blast radius", 
-    "blast_10": "10 meter blast radius",
-    "brawl": "Uses Brawl skill, enhanced by unarmed bonuses",
-    "concealed": "Adds Size to Defense when used defensively",
-    "concealment": "Provides concealment modifier",
-    "dexterity_requirement": "-1 Damage and Initiative without Dexterity 3+",
-    "dexterity_weaponry": "Uses Dexterity + Weaponry to attack",
-    "enhance_crafts_survival": "Provides bonus to Crafts or Survival rolls",
-    "force_2": "Force rating 2 for explosive knockback",
-    "force_3": "Force rating 3 for explosive knockback",
-    "force_4": "Force rating 4 for explosive knockback", 
-    "force_5": "Force rating 5 for explosive knockback",
-    "fragile": "-1 to weapon's Durability",
-    "grapple": "Adds weapon dice to grapple rolls",
-    "guard": "+1 Defense when wielding",
-    "heavy_recoil": "Causes Knocked Down Tilt if not properly braced",
-    "inaccurate": "-1 penalty to attack rolls",
-    "incendiary": "Causes Burning Tilt",
-    "initiative_bonus_1": "+1 Initiative when wielding",
-    "knockdown": "Doubles weapon bonus for Knockdown Tilt",
-    "no_bonus_damage": "Bonus successes don't add to damage",
-    "piercing_1": "Armor Piercing 1 - reduces armor by 1",
-    "piercing_2": "Armor Piercing 2 - reduces armor by 2", 
-    "reach": "+1 Defense vs smaller weapons, -1 penalty in grapples",
-    "slow": "Target gains full Defense against attack",
-    "strength_firearms": "Uses Strength + Firearms to attack",
-    "stun": "Doubles weapon bonus for Stun Tilt", 
-    "thrown": "Can be thrown as ranged attack",
-    "two-handed": "Requires two hands, can use one-handed at +1 Strength requirement"
-}
 
 class CmdEquipment(MuxCommand):
     """
@@ -450,39 +140,41 @@ class CmdEquipment(MuxCommand):
             
         # Handle different equipment types
         if type_ == "weapon":
-            if name not in WEAPON_DATA:
+            weapon_key = name.lower().replace(" ", "_")
+            if weapon_key not in WEAPON_DATABASE:
                 self.caller.msg(f"Unknown weapon: {name}")
                 self.caller.msg("Use '+equipment/weapons' to see available weapons.")
                 return
-            weapon_stats = WEAPON_DATA[name]
-            self.caller.db.equipment[name] = {
+            weapon = WEAPON_DATABASE[weapon_key]
+            self.caller.db.equipment[weapon.name] = {
                 "type": "weapon",
-                "damage": weapon_stats["damage"],
-                "initiative": weapon_stats["initiative"],
-                "strength": weapon_stats["strength"],
-                "size": weapon_stats["size"],
-                "range": weapon_stats["range"],
-                "availability": weapon_stats["availability"],
-                "capacity": weapon_stats.get("capacity"),
-                "tags": weapon_stats.get("tags", "")
+                "damage": weapon.damage,
+                "initiative": weapon.initiative_mod,
+                "strength": weapon.strength_req,
+                "size": weapon.size,
+                "range": weapon.weapon_type,
+                "availability": weapon.availability,
+                "capacity": weapon.capacity,
+                "tags": weapon.tags
             }
             
         elif type_ == "armor":
-            if name not in ARMOR_DATA:
+            armor_key = name.lower().replace(" ", "_")
+            if armor_key not in ARMOR_DATABASE:
                 self.caller.msg(f"Unknown armor: {name}")
                 self.caller.msg("Use '+equipment/armor' to see available armor.")
                 return
-            armor_stats = ARMOR_DATA[name]
-            self.caller.db.equipment[name] = {
+            armor = ARMOR_DATABASE[armor_key]
+            self.caller.db.equipment[armor.name] = {
                 "type": "armor",
-                "general_armor": armor_stats["general_armor"],
-                "ballistic_armor": armor_stats["ballistic_armor"],
-                "strength": armor_stats["strength"],
-                "defense": armor_stats["defense"],
-                "speed": armor_stats["speed"],
-                "availability": armor_stats["availability"],
-                "coverage": armor_stats["coverage"],
-                "notes": armor_stats.get("notes", "")
+                "general_armor": armor.general_armor,
+                "ballistic_armor": armor.ballistic_armor,
+                "strength": armor.strength_req,
+                "defense": armor.defense_penalty,
+                "speed": armor.speed_penalty,
+                "availability": armor.availability,
+                "coverage": armor.coverage,
+                "notes": armor.notes
             }
             
         elif type_ == "equipment":
@@ -687,31 +379,33 @@ class CmdEquipment(MuxCommand):
             "Heavy Weapons": []
         }
         
-        for weapon_name, data in WEAPON_DATA.items():
-            weapon_str = f"{weapon_name} - Dam:{data['damage']} Init:{data['initiative']:+d} Str:{data['strength']} Size:{data['size']} Avail:{data['availability']}"
+        for weapon_key, weapon in WEAPON_DATABASE.items():
+            weapon_str = f"{weapon.name} - Dam:{weapon.damage} Init:{weapon.initiative_mod:+d} Str:{weapon.strength_req} Size:{weapon.size} Avail:{weapon.availability}"
+            if weapon.tags:
+                weapon_str += f" ({weapon.tags})"
             
             # Categorize weapons based on name patterns
-            if any(blade in weapon_name for blade in ["axe", "sword", "knife", "machete", "rapier", "hatchet"]):
+            if any(blade in weapon_key for blade in ["axe", "sword", "knife", "machete", "rapier", "hatchet"]):
                 categories["Melee - Bladed"].append(weapon_str)
-            elif any(blunt in weapon_name for blunt in ["brass_knuckles", "club", "nightstick", "nunchaku", "sap", "sledgehammer"]):
+            elif any(blunt in weapon_key for blunt in ["brass_knuckles", "club", "nightstick", "nunchaku", "sap", "sledgehammer"]):
                 categories["Melee - Blunt"].append(weapon_str)
-            elif any(exotic in weapon_name for exotic in ["chain", "whip", "tiger_claws", "shield", "stake", "stun_gun_melee"]):
+            elif any(exotic in weapon_key for exotic in ["chain", "whip", "tiger_claws", "shield", "stake", "stun_gun_melee", "kusari", "catchpole"]):
                 categories["Melee - Exotic"].append(weapon_str)
-            elif any(improv in weapon_name for improv in ["blowtorch", "board", "improvised", "nail_gun", "shovel", "tire_iron"]):
+            elif any(improv in weapon_key for improv in ["blowtorch", "board", "improvised", "nail_gun", "shovel", "tire_iron"]):
                 categories["Melee - Improvised"].append(weapon_str)
-            elif any(pole in weapon_name for pole in ["spear", "staff"]):
+            elif any(pole in weapon_key for pole in ["spear", "staff"]):
                 categories["Melee - Polearms"].append(weapon_str)
-            elif any(arch in weapon_name for arch in ["bow", "crossbow"]):
+            elif any(arch in weapon_key for arch in ["bow", "crossbow"]):
                 categories["Ranged - Archery"].append(weapon_str)
-            elif "throwing" in weapon_name:
+            elif weapon.weapon_type == "thrown" or "throwing" in weapon_key or "molotov" in weapon_key:
                 categories["Ranged - Thrown"].append(weapon_str)
-            elif any(firearm in weapon_name for firearm in ["pistol", "revolver", "smg", "rifle", "shotgun"]):
+            elif any(firearm in weapon_key for firearm in ["pistol", "revolver", "smg", "rifle", "shotgun"]):
                 categories["Ranged - Firearms"].append(weapon_str)
-            elif any(nonlethal in weapon_name for nonlethal in ["pepper_spray", "stun_gun_ranged"]):
+            elif any(nonlethal in weapon_key for nonlethal in ["pepper_spray", "stun_gun_ranged"]):
                 categories["Ranged - Nonlethal"].append(weapon_str)
-            elif any(explosive in weapon_name for explosive in ["grenade", "molotov", "bomb", "round"]):
+            elif any(explosive in weapon_key for explosive in ["grenade", "bomb", "round", "launcher"]):
                 categories["Explosives"].append(weapon_str)
-            elif "flamethrower" in weapon_name:
+            elif "flamethrower" in weapon_key:
                 categories["Heavy Weapons"].append(weapon_str)
         
         for category, weapons in categories.items():
@@ -733,10 +427,10 @@ class CmdEquipment(MuxCommand):
         modern_armor = []
         archaic_armor = []
         
-        for armor_name, data in ARMOR_DATA.items():
-            armor_str = f"{armor_name} - Armor:{data['general_armor']}/{data['ballistic_armor']} Str:{data['strength']} Def:{data['defense']:+d} Spd:{data['speed']:+d} Avail:{data['availability']}"
+        for armor_key, armor in ARMOR_DATABASE.items():
+            armor_str = f"{armor.name} - Armor:{armor.general_armor}/{armor.ballistic_armor} Str:{armor.strength_req} Def:{armor.defense_penalty:+d} Spd:{armor.speed_penalty:+d} Avail:{armor.availability}"
             
-            if any(modern in armor_name for modern in ["reinforced", "sports", "kevlar", "flak", "riot", "bomb", "helmet_modern"]):
+            if any(modern in armor_key for modern in ["reinforced", "sports", "kevlar", "flak", "riot", "bomb", "helmet_modern"]):
                 modern_armor.append(armor_str)
             else:
                 archaic_armor.append(armor_str)
@@ -755,4 +449,470 @@ class CmdEquipment(MuxCommand):
         output.append("General armor reduces total damage, Ballistic downgrades firearm lethal to bashing")
         output.append("Use '+equipment/add <armor_name> armor' to add armor.")
         output.append("Use '+equipment/view <armor_name>' for detailed information.")
-        self.caller.msg("\n".join(output)) 
+        self.caller.msg("\n".join(output))
+
+
+class CmdBuy(MuxCommand):
+    """
+    Purchase equipment using Resources merit.
+    
+    Usage:
+        +buy/list [category] - List available equipment
+        +buy/info <item> - Get detailed item information
+        +buy <item> - Purchase an item
+        +buy/status - Check your resource status
+        +buy/help - Show purchasing help
+        
+    Categories: weapons, armor, all
+    
+    Examples:
+        +buy/list weapons - Show available weapons
+        +buy/info sword - Get sword details
+        +buy sword - Purchase a sword
+        +buy/status - Check resource points/limits
+    """
+    
+    key = "+buy"
+    aliases = ["+purchase", "+shop"]
+    help_category = "Equipment and Resources"
+    
+    def func(self):
+        """Execute the command"""
+        if not self.switches:
+            if not self.args:
+                self.caller.msg("Usage: +buy <item>, +buy/list, +buy/status, or +buy/help")
+                return
+            else:
+                # Direct purchase
+                self.purchase_item()
+                return
+                
+        switch = self.switches[0].lower()
+        
+        if switch == "list":
+            self.list_equipment()
+        elif switch == "info":
+            self.item_info()
+        elif switch == "status":
+            self.resource_status()
+        elif switch == "help":
+            self.show_help()
+        else:
+            self.caller.msg("Invalid switch. Use: list, info, status, or help")
+    
+    def purchase_item(self):
+        """Purchase an item"""
+        item_name = self.args.strip().lower().replace(" ", "_")
+        
+        if not item_name:
+            self.caller.msg("Usage: +buy <item>")
+            return
+            
+        # Check if character has Resources merit
+        merits = self.caller.db.stats.get("merits", {})
+        if "resources" not in merits or merits["resources"].get("dots", 0) == 0:
+            self.caller.msg("You need the Resources merit to purchase equipment.")
+            return
+            
+        # Attempt purchase
+        success, message = purchase_equipment(self.caller, item_name)
+        
+        if success:
+            self.caller.msg(f"|gSUCCESS:|n {message}")
+            # Announce to location
+            available_equipment = get_available_equipment()
+            if item_name in available_equipment:
+                item_display_name = available_equipment[item_name]['name']
+                self.caller.location.msg_contents(
+                    f"{self.caller.name} acquires {item_display_name}.",
+                    exclude=[self.caller]
+                )
+        else:
+            self.caller.msg(f"|rFAILED:|n {message}")
+    
+    def list_equipment(self):
+        """List available equipment for purchase"""
+        category = self.args.strip().lower() if self.args else "all"
+        
+        available_equipment = get_available_equipment()
+        
+        # Filter by category
+        if category == "weapons":
+            items = {k: v for k, v in available_equipment.items() if v['type'] == 'weapon'}
+            title = "Available Weapons for Purchase"
+        elif category == "armor":
+            items = {k: v for k, v in available_equipment.items() if v['type'] == 'armor'}
+            title = "Available Armor for Purchase"
+        else:
+            items = available_equipment
+            title = "Available Equipment for Purchase"
+            
+        if not items:
+            self.caller.msg(f"No {category} available for purchase.")
+            return
+            
+        output = [f"|c{title}|n"]
+        output.append(f"Resource Mode: |y{PURCHASE_CONFIG.resource_mode.title()}|n")
+        output.append("")
+        
+        # Group by availability
+        by_availability = {}
+        for key, item in items.items():
+            avail = item['availability']
+            if avail not in by_availability:
+                by_availability[avail] = []
+            by_availability[avail].append((key, item))
+        
+        # Display by availability level
+        for availability in sorted(by_availability.keys()):
+            output.append(f"|yAvailability {availability}:|n")
+            
+            for key, item in sorted(by_availability[availability], key=lambda x: x[1]['name']):
+                # Check if character can afford
+                can_afford, _ = can_purchase_equipment(self.caller, key)
+                afford_indicator = "|g✓|n" if can_afford else "|r✗|n"
+                
+                # Add item details
+                if item['type'] == 'weapon':
+                    weapon = item['data']
+                    details = f"Dmg:{weapon.damage} Init:{weapon.initiative_mod:+d} Str:{weapon.strength_req}"
+                    if weapon.tags:
+                        details += f" ({weapon.tags})"
+                elif item['type'] == 'armor':
+                    armor = item['data']
+                    details = f"Armor:{armor.general_armor}/{armor.ballistic_armor} Str:{armor.strength_req} Def:{armor.defense_penalty:+d}"
+                else:
+                    details = ""
+                    
+                output.append(f"  {afford_indicator} |y{item['name']}|n - {details}")
+        
+        output.append("")
+        output.append("|yUsage:|n")
+        output.append("  +buy <item> - Purchase item")
+        output.append("  +buy/info <item> - Get detailed information")
+        output.append("  +buy/status - Check your resource status")
+        
+        self.caller.msg("\n".join(output))
+    
+    def item_info(self):
+        """Get detailed information about an item"""
+        if not self.args:
+            self.caller.msg("Usage: +buy/info <item>")
+            return
+            
+        item_name = self.args.strip().lower().replace(" ", "_")
+        available_equipment = get_available_equipment()
+        
+        if item_name not in available_equipment:
+            self.caller.msg(f"Unknown item: {item_name}")
+            return
+            
+        item = available_equipment[item_name]
+        
+        output = [f"|cEquipment Information: {item['name']}|n"]
+        output.append(f"Type: {item['type'].title()}")
+        output.append(f"Availability: {item['availability']}")
+        
+        # Check affordability
+        can_afford, afford_message = can_purchase_equipment(self.caller, item_name)
+        afford_status = "|gAffordable|n" if can_afford else f"|rNot Affordable|n ({afford_message})"
+        output.append(f"Status: {afford_status}")
+        output.append("")
+        
+        # Add type-specific details
+        if item['type'] == 'weapon':
+            weapon = item['data']
+            output.extend([
+                f"Damage: +{weapon.damage}",
+                f"Initiative Modifier: {weapon.initiative_mod:+d}",
+                f"Strength Requirement: {weapon.strength_req}",
+                f"Size: {weapon.size}",
+                f"Weapon Type: {weapon.weapon_type.title()}"
+            ])
+            
+            if weapon.capacity != "single":
+                output.append(f"Capacity: {weapon.capacity.title()}")
+                
+            if weapon.tags:
+                output.append(f"Special Tags: {weapon.tags}")
+                
+        elif item['type'] == 'armor':
+            armor = item['data']
+            output.extend([
+                f"General Armor: {armor.general_armor}",
+                f"Ballistic Armor: {armor.ballistic_armor}",
+                f"Strength Requirement: {armor.strength_req}",
+                f"Defense Penalty: {armor.defense_penalty:+d}",
+                f"Speed Penalty: {armor.speed_penalty:+d}",
+                f"Coverage: {', '.join(armor.coverage)}"
+            ])
+            
+            if armor.notes:
+                output.append(f"Notes: {armor.notes}")
+        
+        self.caller.msg("\n".join(output))
+    
+    def resource_status(self):
+        """Show character's resource status"""
+        status_info = PURCHASE_CONFIG.get_status_info(self.caller)
+        
+        output = [f"|cResource Status for {self.caller.name}|n"]
+        output.append(f"Mode: {status_info['mode']}")
+        output.append(f"Resources Merit Rating: {status_info['resource_rating']}")
+        
+        if status_info['mode'] == 'Absolute Value':
+            output.append(f"Maximum Item Availability: {status_info['max_availability']}")
+            output.append(f"Purchases This Period: {status_info['purchases_this_period']}/{status_info['max_purchases']}")
+        else:
+            output.append(f"Current Resource Pool: {status_info['current_pool']}")
+            output.append(f"Maximum Pool: {status_info['max_pool']}")
+            output.append(f"Next Refresh: {status_info['next_refresh'].strftime('%Y-%m-%d')}")
+            
+        # Show bonus merits
+        merits = self.caller.db.stats.get("merits", {})
+        bonus_sources = []
+        for merit_name, bonus_per_dot in PURCHASE_CONFIG.bonus_merits.items():
+            merit_dots = merits.get(merit_name, {}).get("dots", 0)
+            if merit_dots > 0:
+                bonus = int(merit_dots * bonus_per_dot)
+                if bonus > 0:
+                    bonus_sources.append(f"{merit_name.title()} {merit_dots} (+{bonus})")
+                    
+        if bonus_sources:
+            output.append(f"Resource Bonuses: {', '.join(bonus_sources)}")
+            
+        self.caller.msg("\n".join(output))
+    
+    def show_help(self):
+        """Show purchasing help"""
+        output = [
+            "|cEquipment Purchasing System|n",
+            "",
+            f"|yResource Mode:|n {PURCHASE_CONFIG.resource_mode.title()}",
+            f"|yRefresh Period:|n {PURCHASE_CONFIG.refresh_period_days} days",
+        ]
+        
+        if PURCHASE_CONFIG.resource_mode == "absolute":
+            output.extend([
+                "",
+                "|yAbsolute Mode:|n",
+                "- Your Resources merit rating determines maximum item availability",
+                "- Resources 3 can buy any Availability 3 or lower item",
+                "- Purchase limits may apply per period"
+            ])
+        else:
+            output.extend([
+                "",
+                "|yPool Mode:|n", 
+                "- Gain resource points equal to Resources merit each period",
+                "- Spend points to purchase items (Availability = cost)",
+                "- Can save up points for expensive items" if PURCHASE_CONFIG.allow_saving else "- Cannot save points between periods"
+            ])
+            
+        output.extend([
+            "",
+            "|yCommands:|n",
+            "+buy/list [category] - List available equipment",
+            "+buy/info <item> - Get item details",
+            "+buy <item> - Purchase item",
+            "+buy/status - Check resource status",
+            "",
+            "|yMerit Bonuses:|n"
+        ])
+        
+        for merit_name, bonus_per_dot in PURCHASE_CONFIG.bonus_merits.items():
+            output.append(f"  {merit_name.title()}: +{bonus_per_dot} per dot")
+            
+        self.caller.msg("\n".join(output))
+
+class CmdBuyConfig(MuxCommand, BuilderMixin):
+    """
+    Configure equipment purchasing system (Developer+ only).
+    
+    Usage:
+        +buyconfig/mode <pool|absolute> - Set resource mode
+        +buyconfig/period <days> - Set refresh period
+        +buyconfig/maxpurchases <number> - Set max purchases per period
+        +buyconfig/saving <on|off> - Allow saving resource points
+        +buyconfig/bonus <merit> <bonus_per_dot> - Set merit bonus
+        +buyconfig/status - Show current configuration
+        +buyconfig/reset - Reset to defaults
+        
+    Examples:
+        +buyconfig/mode pool - Use resource pool system
+        +buyconfig/period 14 - Refresh every 2 weeks
+        +buyconfig/maxpurchases 5 - Max 5 purchases per period
+        +buyconfig/bonus contacts 1 - Contacts merit gives +1 per dot
+    """
+    
+    key = "+buyconfig"
+    aliases = ["+purchaseconfig"]
+    help_category = "Admin and Building"
+    
+    def func(self):
+        """Execute the command"""
+        if not self.check_builder_access():
+            return
+            
+        if not self.switches:
+            self.caller.msg("Usage: +buyconfig/mode, +buyconfig/period, +buyconfig/status, etc. Use +buyconfig/help for full list.")
+            return
+            
+        switch = self.switches[0].lower()
+        
+        if switch == "mode":
+            self.set_mode()
+        elif switch == "period":
+            self.set_period()
+        elif switch == "maxpurchases":
+            self.set_max_purchases()
+        elif switch == "saving":
+            self.set_saving()
+        elif switch == "bonus":
+            self.set_bonus()
+        elif switch == "status":
+            self.show_config()
+        elif switch == "reset":
+            self.reset_config()
+        elif switch == "help":
+            self.show_config_help()
+        else:
+            self.caller.msg("Invalid switch. Use +buyconfig/help for available options.")
+    
+    def set_mode(self):
+        """Set resource mode"""
+        if not self.args:
+            self.caller.msg("Usage: +buyconfig/mode <pool|absolute>")
+            return
+            
+        mode = self.args.strip().lower()
+        if mode not in ["pool", "absolute"]:
+            self.caller.msg("Mode must be 'pool' or 'absolute'")
+            return
+            
+        PURCHASE_CONFIG.resource_mode = mode
+        self.caller.msg(f"Set resource mode to: {mode}")
+    
+    def set_period(self):
+        """Set refresh period"""
+        if not self.args:
+            self.caller.msg("Usage: +buyconfig/period <days>")
+            return
+            
+        try:
+            days = int(self.args.strip())
+            if days < 1:
+                self.caller.msg("Period must be at least 1 day")
+                return
+        except ValueError:
+            self.caller.msg("Period must be a number of days")
+            return
+            
+        PURCHASE_CONFIG.refresh_period_days = days
+        self.caller.msg(f"Set refresh period to: {days} days")
+    
+    def set_max_purchases(self):
+        """Set maximum purchases per period"""
+        if not self.args:
+            self.caller.msg("Usage: +buyconfig/maxpurchases <number|unlimited>")
+            return
+            
+        arg = self.args.strip().lower()
+        if arg in ["unlimited", "none", "0"]:
+            PURCHASE_CONFIG.max_purchases_per_period = None
+            self.caller.msg("Set maximum purchases to: unlimited")
+        else:
+            try:
+                max_purchases = int(arg)
+                if max_purchases < 1:
+                    self.caller.msg("Maximum purchases must be at least 1")
+                    return
+                PURCHASE_CONFIG.max_purchases_per_period = max_purchases
+                self.caller.msg(f"Set maximum purchases per period to: {max_purchases}")
+            except ValueError:
+                self.caller.msg("Maximum purchases must be a number or 'unlimited'")
+    
+    def set_saving(self):
+        """Set whether players can save resource points"""
+        if not self.args:
+            self.caller.msg("Usage: +buyconfig/saving <on|off>")
+            return
+            
+        setting = self.args.strip().lower()
+        if setting in ["on", "true", "yes", "1"]:
+            PURCHASE_CONFIG.allow_saving = True
+            self.caller.msg("Resource point saving: ENABLED")
+        elif setting in ["off", "false", "no", "0"]:
+            PURCHASE_CONFIG.allow_saving = False
+            self.caller.msg("Resource point saving: DISABLED")
+        else:
+            self.caller.msg("Setting must be 'on' or 'off'")
+    
+    def set_bonus(self):
+        """Set merit bonus for resources"""
+        args = self.args.split()
+        if len(args) != 2:
+            self.caller.msg("Usage: +buyconfig/bonus <merit_name> <bonus_per_dot>")
+            return
+            
+        merit_name = args[0].lower()
+        try:
+            bonus_per_dot = float(args[1])
+        except ValueError:
+            self.caller.msg("Bonus per dot must be a number")
+            return
+            
+        PURCHASE_CONFIG.bonus_merits[merit_name] = bonus_per_dot
+        self.caller.msg(f"Set {merit_name} bonus to: {bonus_per_dot} per dot")
+    
+    def show_config(self):
+        """Show current configuration"""
+        output = [
+            "|cEquipment Purchase Configuration|n",
+            f"Resource Mode: {PURCHASE_CONFIG.resource_mode.title()}",
+            f"Refresh Period: {PURCHASE_CONFIG.refresh_period_days} days",
+            f"Max Purchases: {PURCHASE_CONFIG.max_purchases_per_period or 'Unlimited'}",
+            f"Allow Saving: {'Yes' if PURCHASE_CONFIG.allow_saving else 'No'}",
+            "",
+            "|yMerit Bonuses:|n"
+        ]
+        
+        for merit_name, bonus in PURCHASE_CONFIG.bonus_merits.items():
+            output.append(f"  {merit_name.title()}: +{bonus} per dot")
+            
+        self.caller.msg("\n".join(output))
+    
+    def reset_config(self):
+        """Reset configuration to defaults"""
+        global PURCHASE_CONFIG
+        PURCHASE_CONFIG = EquipmentPurchasingConfig()
+        self.caller.msg("Reset equipment purchase configuration to defaults.")
+    
+    def show_config_help(self):
+        """Show configuration help"""
+        output = [
+            "|cEquipment Purchase Configuration Help|n",
+            "",
+            "|yAvailable Commands:|n",
+            "+buyconfig/mode <pool|absolute> - Set resource spending mode",
+            "+buyconfig/period <days> - Set how often resources refresh",
+            "+buyconfig/maxpurchases <number> - Limit purchases per period",
+            "+buyconfig/saving <on|off> - Allow saving resource points",
+            "+buyconfig/bonus <merit> <bonus> - Set merit resource bonus",
+            "+buyconfig/status - Show current settings",
+            "+buyconfig/reset - Reset to defaults",
+            "",
+            "|yResource Modes:|n",
+            "|yPool Mode:|n Characters gain resource points each period equal to their Resources merit.",
+            "They spend these points to buy items. Can save up for expensive items.",
+            "",
+            "|yAbsolute Mode:|n Characters can buy any item with Availability ≤ their Resources merit.",
+            "Purchase frequency is limited by max purchases per period setting.",
+            "",
+            "|yExamples:|n",
+            "+buyconfig/mode pool - Use resource pool system",
+            "+buyconfig/period 30 - Monthly refresh (default)",
+            "+buyconfig/bonus contacts 1 - Contacts merit adds +1 resource per dot"
+        ]
+        
+        self.caller.msg("\n".join(output))
