@@ -29,7 +29,7 @@ from .social import CmdSocial
 from .investigation import CmdInvestigation
 from .combat import CmdCombat, CmdEquippedGear, CmdCombatHelp
 from .integrity import CmdIntegrity
-from .equipment import CmdEquipment
+from .equipment import CmdEquipment, CmdBuyConfig, CmdBuy
 from .groups import CmdGroups, CmdRoster
 from .npc import CmdNPC
 from commands.diesiraecode.CmdPool import CmdPool
@@ -62,6 +62,7 @@ from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
 from .test_xp_integration import CmdTestXP
 from .CmdLegacy import CmdLegacy
 from .ooc_ic_commands import CmdOOC, CmdIC, CmdJoin
+from .bbs.bbs_cmdset import BBSCmdSet
 
 # Custom help command that escapes ANSI codes in help text
 from .help_custom import CmdHelp
@@ -102,7 +103,6 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdRecalc())
         self.add(CmdAspiration())
         self.add(CmdIntegrity())
-        self.add(CmdEquipment())
         self.add(CmdAlias())
         self.add(CmdAlts())
         self.add(CmdEmit())
@@ -123,7 +123,12 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdVote())
         self.add(CmdRecommend())
         self.add(CmdVoteAdmin())
-        
+
+        # Equipment commands
+        self.add(CmdEquipment())
+        self.add(CmdBuyConfig())
+        self.add(CmdBuy())
+
         # Testing (remove after verification)
         self.add(CmdTestXP())
         
@@ -165,6 +170,9 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         
         # Custom help command with ANSI stripping to prevent the color codes from breaking the help text
         self.add(CmdHelp())
+        
+        # Melteth BBS commands
+        self.add(BBSCmdSet())
 
         # TinyMUX commands
         # self.add(TinyMuxCmdSet())

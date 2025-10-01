@@ -37,6 +37,7 @@ All configuration is done in-game using the `+buyconfig` command (requires Build
 +buyconfig/period <days>            # Set refresh period (default: 30 days)
 +buyconfig/maxpurchases <number>    # Set max purchases per period (or "unlimited")
 +buyconfig/saving <on|off>          # Allow saving resource points (pool mode only)
++buyconfig/script <start|stop|status> # Manage automatic refresh script
 +buyconfig/status                   # View current configuration
 +buyconfig/reset                    # Reset to default settings
 ```
@@ -44,6 +45,7 @@ All configuration is done in-game using the `+buyconfig` command (requires Build
 ### Merit Bonus Configuration
 ```
 +buyconfig/bonus <merit_name> <bonus_per_dot>    # Set merit resource bonus
++buyconfig/remove <merit_name>                   # Remove merit resource bonus
 ```
 
 ### Example Configurations
@@ -88,6 +90,7 @@ Examples:
 +buyconfig/bonus mentor 1         # Mentor merit gives +1 resource per dot
 +buyconfig/bonus safe_place 0.5   # Safe Place gives +0.5 per dot (rounded down)
 +buyconfig/bonus retainer 1       # Retainer merit gives +1 per dot
++buyconfig/remove fame            # Remove fame merit bonus entirely
 ```
 
 #### Option 2: Code Modification
@@ -111,9 +114,14 @@ class EquipmentPurchasingConfig:
 
 ### Removing Merit Bonuses
 
-#### In-Game Removal:
+#### In-Game Removal (Recommended):
 ```
-+buyconfig/bonus <merit_name> 0    # Set bonus to 0 to effectively remove it
++buyconfig/remove <merit_name>     # Completely remove the merit bonus
+```
+
+#### Alternative Method:
+```
++buyconfig/bonus <merit_name> 0    # Set bonus to 0 to effectively disable it
 ```
 
 #### Code Removal:
@@ -289,6 +297,37 @@ Merit bonuses are stored in the `bonus_merits` dictionary. The key is the merit 
 - Resource pools are stored per-character and cannot be directly modified by players
 - Purchase history is tracked to prevent abuse
 - All purchases are logged and can be audited
+
+## Automatic Resource Refresh Script
+
+The system includes an automatic server script that refreshes character resource pools without requiring manual intervention.
+
+### Script Management
+```
++buyconfig/script start     # Start the automatic refresh script
++buyconfig/script stop      # Stop the automatic refresh script  
++buyconfig/script restart   # Restart the script (useful after config changes)
++buyconfig/script status    # Check if script is running
+```
+
+### How It Works
+- **Runs every hour** to check all characters
+- **Checks individual refresh periods** for each character
+- **Only refreshes** characters whose period has elapsed
+- **Notifies online players** when their resources refresh
+- **Survives server restarts** (persistent script)
+- **Error handling** prevents one character's issues from affecting others
+
+### Setting Up the Script
+1. Configure your desired settings with `+buyconfig` commands
+2. Start the script: `+buyconfig/script start`
+3. Verify it's running: `+buyconfig/script status`
+
+### Script Benefits
+- **Automatic operation** - no manual refresh needed
+- **Individual timing** - each character refreshes on their own schedule
+- **Online notifications** - players are informed when resources refresh
+- **Robust error handling** - continues working even if individual characters have issues
 
 ## Future Enhancements
 

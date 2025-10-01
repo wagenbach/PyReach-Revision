@@ -449,7 +449,7 @@ class CmdEquipment(MuxCommand):
         output.append("General armor reduces total damage, Ballistic downgrades firearm lethal to bashing")
         output.append("Use '+equipment/add <armor_name> armor' to add armor.")
         output.append("Use '+equipment/view <armor_name>' for detailed information.")
-        self.caller.msg("\n".join(output))
+        self.caller.msg("\n".join(output)) 
 
 
 class CmdBuy(MuxCommand):
@@ -735,6 +735,8 @@ class CmdBuyConfig(MuxCommand, BuilderMixin):
         +buyconfig/maxpurchases <number> - Set max purchases per period
         +buyconfig/saving <on|off> - Allow saving resource points
         +buyconfig/bonus <merit> <bonus_per_dot> - Set merit bonus
+        +buyconfig/remove <merit> - Remove merit bonus
+        +buyconfig/script <start|stop|restart|status> - Manage refresh script
         +buyconfig/status - Show current configuration
         +buyconfig/reset - Reset to defaults
         
@@ -743,6 +745,8 @@ class CmdBuyConfig(MuxCommand, BuilderMixin):
         +buyconfig/period 14 - Refresh every 2 weeks
         +buyconfig/maxpurchases 5 - Max 5 purchases per period
         +buyconfig/bonus contacts 1 - Contacts merit gives +1 per dot
+        +buyconfig/remove fame - Remove fame merit bonus
+        +buyconfig/script start - Start automatic refresh script
     """
     
     key = "+buyconfig"
@@ -770,12 +774,16 @@ class CmdBuyConfig(MuxCommand, BuilderMixin):
             self.set_saving()
         elif switch == "bonus":
             self.set_bonus()
+        elif switch == "remove":
+            self.remove_bonus()
         elif switch == "status":
             self.show_config()
         elif switch == "reset":
             self.reset_config()
         elif switch == "help":
             self.show_config_help()
+        elif switch == "script":
+            self.manage_refresh_script()
         else:
             self.caller.msg("Invalid switch. Use +buyconfig/help for available options.")
     
@@ -865,6 +873,24 @@ class CmdBuyConfig(MuxCommand, BuilderMixin):
         PURCHASE_CONFIG.bonus_merits[merit_name] = bonus_per_dot
         self.caller.msg(f"Set {merit_name} bonus to: {bonus_per_dot} per dot")
     
+    def remove_bonus(self):
+        """Remove a merit bonus"""
+        if not self.args:
+            self.caller.msg("Usage: +buyconfig/remove <merit_name>")
+            return
+            
+        merit_name = self.args.strip().lower()
+        
+        if merit_name not in PURCHASE_CONFIG.bonus_merits:
+            self.caller.msg(f"Merit '{merit_name}' does not have a resource bonus.")
+            available_merits = ", ".join(PURCHASE_CONFIG.bonus_merits.keys())
+            self.caller.msg(f"Available merit bonuses: {available_merits}")
+            return
+            
+        # Remove the merit bonus
+        del PURCHASE_CONFIG.bonus_merits[merit_name]
+        self.caller.msg(f"Removed resource bonus for {merit_name} merit.")
+    
     def show_config(self):
         """Show current configuration"""
         output = [
@@ -888,6 +914,61 @@ class CmdBuyConfig(MuxCommand, BuilderMixin):
         PURCHASE_CONFIG = EquipmentPurchasingConfig()
         self.caller.msg("Reset equipment purchase configuration to defaults.")
     
+    def manage_refresh_script(self):
+        """Manage the resource refresh script"""
+        if not self.args:
+            self.caller.msg("Usage: +buyconfig/script <start|stop|restart|status>")
+            return
+            
+        action = self.args.strip().lower()
+        
+        if action == "start":
+            try:
+                from world.scripts.resource_refresh_script import create_resource_refresh_script
+                script = create_resource_refresh_script()
+                self.caller.msg("Resource refresh script started successfully.")
+                self.caller.msg(f"Script will run every hour to check for resource refreshes.")
+            except Exception as e:
+                self.caller.msg(f"Error starting script: {e}")
+                
+        elif action == "stop":
+            try:
+                from world.scripts.resource_refresh_script import stop_resource_refresh_script
+                count = stop_resource_refresh_script()
+                if count > 0:
+                    self.caller.msg(f"Stopped {count} resource refresh script(s).")
+                else:
+                    self.caller.msg("No resource refresh scripts were running.")
+            except Exception as e:
+                self.caller.msg(f"Error stopping script: {e}")
+                
+        elif action == "restart":
+            try:
+                from world.scripts.resource_refresh_script import create_resource_refresh_script
+                script = create_resource_refresh_script()
+                self.caller.msg("Resource refresh script restarted successfully.")
+            except Exception as e:
+                self.caller.msg(f"Error restarting script: {e}")
+                
+        elif action == "status":
+            try:
+                from evennia import search_object
+                scripts = search_object("resource_refresh_script", 
+                                       typeclass="world.scripts.resource_refresh_script.ResourceRefreshScript")
+                if scripts:
+                    script = scripts[0]
+                    self.caller.msg(f"Resource refresh script is RUNNING.")
+                    self.caller.msg(f"Interval: {script.interval} seconds (every hour)")
+                    self.caller.msg(f"Next run: {script.time_until_next_repeat()} seconds")
+                else:
+                    self.caller.msg("Resource refresh script is NOT RUNNING.")
+                    self.caller.msg("Use '+buyconfig/script start' to start it.")
+            except Exception as e:
+                self.caller.msg(f"Error checking script status: {e}")
+                
+        else:
+            self.caller.msg("Invalid action. Use: start, stop, restart, or status")
+    
     def show_config_help(self):
         """Show configuration help"""
         output = [
@@ -899,6 +980,8 @@ class CmdBuyConfig(MuxCommand, BuilderMixin):
             "+buyconfig/maxpurchases <number> - Limit purchases per period",
             "+buyconfig/saving <on|off> - Allow saving resource points",
             "+buyconfig/bonus <merit> <bonus> - Set merit resource bonus",
+            "+buyconfig/remove <merit> - Remove merit resource bonus",
+            "+buyconfig/script <start|stop|status> - Manage automatic refresh script",
             "+buyconfig/status - Show current settings",
             "+buyconfig/reset - Reset to defaults",
             "",

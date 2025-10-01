@@ -4,18 +4,18 @@
 from evennia import default_cmds
 from evennia import create_object
 from typeclasses.bbs_controller import BBSController
-from world.wod20th.models import Roster, RosterMember
+from typeclasses.groups import Group, get_group_by_name, get_character_groups
 
 class CmdCreateBoard(default_cmds.MuxCommand):
     """
     Create a new board.
 
     Usage:
-      +bbs/create <name> = <description> / public | private [/roster=<roster_name1>,<roster_name2>...]
+      +bbs/create <name> = <description> / public | private [/group=<group_name1>,<group_name2>...]
       
     Examples:
       +bbs/create Announcements = Game announcements / public
-      +bbs/create Supernatural = Supernatural discussion / private /roster=Vampire,Werewolf
+      +bbs/create Supernatural = Supernatural discussion / private /group=Vampire,Werewolf
     """
     key = "+bbs/create"
     locks = "cmd:perm(Builder)"
@@ -23,35 +23,34 @@ class CmdCreateBoard(default_cmds.MuxCommand):
 
     def func(self):
         if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/create <name> = <description> / public | private [/roster=<roster_name1>,<roster_name2>...]")
+            self.caller.msg("Usage: +bbs/create <name> = <description> / public | private [/group=<group_name1>,<group_name2>...]")
             return
 
-        # Split into name_desc and privacy/roster parts
+        # Split into name_desc and privacy/group parts
         name_desc, remainder = self.args.split("=", 1)
         parts = remainder.split("/")
         
         if len(parts) < 2:
-            self.caller.msg("Usage: +bbs/create <name> = <description> / public | private [/roster=<roster_name1>,<roster_name2>...]")
+            self.caller.msg("Usage: +bbs/create <name> = <description> / public | private [/group=<group_name1>,<group_name2>...]")
             return
             
         description = parts[0].strip()
         privacy = parts[1].strip().lower()
         public = privacy == "public"
         
-        # Check for roster specification
-        roster_names = []
+        # Check for group specification
+        group_names = []
         if len(parts) > 2:
             for part in parts[2:]:
-                if part.strip().lower().startswith("roster="):
-                    roster_list = part.split("=")[1].strip()
-                    roster_names = [r.strip() for r in roster_list.split(",")]
+                if part.strip().lower().startswith("group="):
+                    group_list = part.split("=")[1].strip()
+                    group_names = [g.strip() for g in group_list.split(",")]
                     
-                    # Verify all rosters exist
-                    for roster_name in roster_names:
-                        try:
-                            Roster.objects.get(name=roster_name)
-                        except Roster.DoesNotExist:
-                            self.caller.msg(f"Error: Roster '{roster_name}' does not exist.")
+                    # Verify all groups exist
+                    for group_name in group_names:
+                        group = get_group_by_name(group_name)
+                        if not group:
+                            self.caller.msg(f"Error: Group '{group_name}' does not exist.")
                             return
 
         name = name_desc.strip()
@@ -65,10 +64,10 @@ class CmdCreateBoard(default_cmds.MuxCommand):
             self.caller.msg("BBSController created.")
 
         # Create the board
-        controller.create_board(name, description, public, roster_names=roster_names)
+        controller.create_board(name, description, public, group_names=group_names)
         msg = f"Board '{name}' created as {'public' if public else 'private'}"
-        if roster_names:
-            msg += f" (restricted to rosters: {', '.join(roster_names)})"
+        if group_names:
+            msg += f" (restricted to groups: {', '.join(group_names)})"
         msg += f" with description: {description}"
         self.caller.msg(msg)
 
@@ -166,25 +165,25 @@ class CmdListAccess(default_cmds.MuxCommand):
             
         output = []
         
-        # Show roster restrictions if any
-        roster_names = board.get('roster_names', [])
-        if roster_names:
-            output.append(f"Board '{board_name}' is restricted to members of the following rosters:")
+        # Show group restrictions if any
+        group_names = board.get('group_names', [])
+        if group_names:
+            output.append(f"Board '{board_name}' is restricted to members of the following groups:")
             
-            # Get current roster members for each roster
-            for roster_name in roster_names:
-                output.append(f"\nRoster: {roster_name}")
-                try:
-                    roster = Roster.objects.get(name=roster_name)
-                    members = roster.get_members()
+            # Get current group members for each group
+            for group_name in group_names:
+                output.append(f"\nGroup: {group_name}")
+                group = get_group_by_name(group_name)
+                if group:
+                    members = group.members
                     if members:
-                        output.append("Current roster members with access:")
+                        output.append("Current group members with access:")
                         for member in members:
-                            output.append(f"- {member.character.db_key}")
+                            output.append(f"- {member.name}")
                     else:
-                        output.append("No approved members in this roster.")
-                except Roster.DoesNotExist:
-                    output.append(f"Warning: Roster '{roster_name}' no longer exists!")
+                        output.append("No members in this group.")
+                else:
+                    output.append(f"Warning: Group '{group_name}' no longer exists!")
         
         # Show individual access list
         if board['public']:
@@ -378,28 +377,28 @@ class CmdEditBoard(default_cmds.MuxCommand):
         controller.save_board(board_name, board)
         self.caller.msg(f"Board '{board_name}' has been updated. {msg}.")
 
-class CmdEditBoardRosters(default_cmds.MuxCommand):
+class CmdEditBoardGroups(default_cmds.MuxCommand):
     """
-    Edit the roster restrictions of a board.
+    Edit the group restrictions of a board.
 
     Usage:
-      +bbs/editboard/rosters <board_name> = <roster_name1> [,<roster_name2>...]
-      +bbs/editboard/rosters <board_name> =    # Clear all roster restrictions
+      +bbs/editboard/groups <board_name> = <group_name1> [,<group_name2>...]
+      +bbs/editboard/groups <board_name> =    # Clear all group restrictions
 
     Examples:
-      +bbs/editboard/rosters Supernatural = Vampire,Werewolf,Mage
-      +bbs/editboard/rosters Supernatural =    # Remove all roster restrictions
+      +bbs/editboard/groups Supernatural = Vampire,Werewolf,Mage
+      +bbs/editboard/groups Supernatural =    # Remove all group restrictions
     """
-    key = "+bbs/editboard/rosters"
+    key = "+bbs/editboard/groups"
     locks = "cmd:perm(Builder)"
     help_category = "Event & Bulletin Board"
 
     def func(self):
         if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/editboard/rosters <board_name> = <roster_name1> [,<roster_name2>...]")
+            self.caller.msg("Usage: +bbs/editboard/groups <board_name> = <group_name1> [,<group_name2>...]")
             return
 
-        board_name, roster_list = [arg.strip() for arg in self.args.split("=", 1)]
+        board_name, group_list = [arg.strip() for arg in self.args.split("=", 1)]
         
         controller = BBSController.objects.get(db_key="BBSController")
         if not controller:
@@ -411,28 +410,27 @@ class CmdEditBoardRosters(default_cmds.MuxCommand):
             self.caller.msg(f"No board found with the name '{board_name}'.")
             return
 
-        # Handle empty value to clear roster restrictions
-        if not roster_list:
-            board['roster_names'] = []
+        # Handle empty value to clear group restrictions
+        if not group_list:
+            board['group_names'] = []
             controller.save_board(board_name, board)
-            self.caller.msg(f"Cleared all roster restrictions from board '{board_name}'.")
+            self.caller.msg(f"Cleared all group restrictions from board '{board_name}'.")
             return
 
-        # Process roster list
-        roster_names = [r.strip() for r in roster_list.split(",") if r.strip()]
+        # Process group list
+        group_names = [g.strip() for g in group_list.split(",") if g.strip()]
         
-        # Verify all rosters exist
-        for roster_name in roster_names:
-            try:
-                Roster.objects.get(name=roster_name)
-            except Roster.DoesNotExist:
-                self.caller.msg(f"Error: Roster '{roster_name}' does not exist.")
+        # Verify all groups exist
+        for group_name in group_names:
+            group = get_group_by_name(group_name)
+            if not group:
+                self.caller.msg(f"Error: Group '{group_name}' does not exist.")
                 return
 
-        # Update board with new roster list
-        board['roster_names'] = roster_names
+        # Update board with new group list
+        board['group_names'] = group_names
         controller.save_board(board_name, board)
-        self.caller.msg(f"Updated roster restrictions for board '{board_name}' to: {', '.join(roster_names)}")
+        self.caller.msg(f"Updated group restrictions for board '{board_name}' to: {', '.join(group_names)}")
 
 class CmdGrantAccess(default_cmds.MuxCommand):
     """
@@ -476,72 +474,72 @@ class CmdGrantAccess(default_cmds.MuxCommand):
         access_type = "read-only" if access_level == "read_only" else "full access"
         self.caller.msg(f"Granted {access_type} to {character_name} for board '{board_name}'.")
 
-class CmdAddRoster(default_cmds.MuxCommand):
+class CmdAddGroup(default_cmds.MuxCommand):
     """
-    Add a roster restriction to a board.
+    Add a group restriction to a board.
 
     Usage:
-      +bbs/addroster <board_name> = <roster_name>
+      +bbs/addgroup <board_name> = <group_name>
     """
-    key = "+bbs/addroster"
+    key = "+bbs/addgroup"
     locks = "cmd:perm(Builder)"
     help_category = "Event & Bulletin Board"
 
     def func(self):
         if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/addroster <board_name> = <roster_name>")
+            self.caller.msg("Usage: +bbs/addgroup <board_name> = <group_name>")
             return
             
-        board_name, roster_name = [arg.strip() for arg in self.args.split("=", 1)]
+        board_name, group_name = [arg.strip() for arg in self.args.split("=", 1)]
         
         controller = BBSController.objects.get(db_key="BBSController")
         if not controller:
             self.caller.msg("BBSController not found.")
             return
             
-        result = controller.add_roster_to_board(board_name, roster_name)
+        result = controller.add_group_to_board(board_name, group_name)
         self.caller.msg(result)
 
-class CmdRemoveRoster(default_cmds.MuxCommand):
+class CmdRemoveGroup(default_cmds.MuxCommand):
     """
-    Remove a roster restriction from a board.
+    Remove a group restriction from a board.
 
     Usage:
-      +bbs/removeroster <board_name> = <roster_name>
+      +bbs/removegroup <board_name> = <group_name>
     """
-    key = "+bbs/removeroster"
+    key = "+bbs/removegroup"
     locks = "cmd:perm(Builder)"
     help_category = "Event & Bulletin Board"
 
     def func(self):
         if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/removeroster <board_name> = <roster_name>")
+            self.caller.msg("Usage: +bbs/removegroup <board_name> = <group_name>")
             return
             
-        board_name, roster_name = [arg.strip() for arg in self.args.split("=", 1)]
+        board_name, group_name = [arg.strip() for arg in self.args.split("=", 1)]
         
         controller = BBSController.objects.get(db_key="BBSController")
         if not controller:
             self.caller.msg("BBSController not found.")
             return
             
-        result = controller.remove_roster_from_board(board_name, roster_name)
+        result = controller.remove_group_from_board(board_name, group_name)
         self.caller.msg(result)
 
-class CmdListRosters(default_cmds.MuxCommand):
+class CmdListGroups(default_cmds.MuxCommand):
     """
-    List all rosters associated with a board.
+    List all groups associated with a board.
 
     Usage:
-      +bbs/listrosters <board_name>
+      +bbs/listgroups <board_name>
     """
-    key = "+bbs/listrosters"
+    key = "+bbs/listgroups"
     locks = "cmd:perm(Builder)"
     help_category = "Event & Bulletin Board"
 
     def func(self):
         if not self.args:
-            self.caller.msg("Usage: +bbs/listrosters <board_name>")
+            self.caller.msg("Usage: +bbs/listgroups <board_name>")
             return
             
         board_name = self.args.strip()
@@ -556,15 +554,15 @@ class CmdListRosters(default_cmds.MuxCommand):
             self.caller.msg(f"No board found with the name '{board_name}'.")
             return
             
-        roster_names = controller.get_board_rosters(board_name)
-        if not roster_names:
-            self.caller.msg(f"Board '{board_name}' has no roster restrictions.")
+        group_names = controller.get_board_groups(board_name)
+        if not group_names:
+            self.caller.msg(f"Board '{board_name}' has no group restrictions.")
         else:
-            self.caller.msg(f"Board '{board_name}' is restricted to the following rosters:")
-            for roster_name in roster_names:
-                try:
-                    roster = Roster.objects.get(name=roster_name)
-                    member_count = roster.get_members().count()
-                    self.caller.msg(f"- {roster_name} ({member_count} approved members)")
-                except Roster.DoesNotExist:
-                    self.caller.msg(f"- {roster_name} (WARNING: Roster no longer exists!)")
+            self.caller.msg(f"Board '{board_name}' is restricted to the following groups:")
+            for group_name in group_names:
+                group = get_group_by_name(group_name)
+                if group:
+                    member_count = group.get_member_count()
+                    self.caller.msg(f"- {group_name} ({member_count} members)")
+                else:
+                    self.caller.msg(f"- {group_name} (WARNING: Group no longer exists!)")

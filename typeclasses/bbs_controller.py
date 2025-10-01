@@ -1,7 +1,7 @@
 from evennia import DefaultObject, evennia
 from evennia.utils.utils import datetime_format
 from datetime import datetime
-from world.wod20th.models import RosterMember
+from typeclasses.groups import Group, get_group_by_name, get_character_groups
 
 class BBSController(DefaultObject):
     """
@@ -52,14 +52,14 @@ class BBSController(DefaultObject):
         # If no gaps found, return next number after highest
         return existing_ids[-1] + 1
 
-    def create_board(self, name, description, read_only=False, roster_names=None):
+    def create_board(self, name, description, read_only=False, group_names=None):
         """
         Create a new board.
         Args:
             name (str): Name of the board
             description (str): Board description
             read_only (bool): Whether the board is read-only
-            roster_names (list, optional): List of roster names this board is restricted to
+            group_names (list, optional): List of group names this board is restricted to
         """
         if any(board['name'].lower() == name.lower() for board in self.db.boards.values()):
             raise ValueError("A board with this name already exists.")
@@ -72,7 +72,7 @@ class BBSController(DefaultObject):
             'description': description,
             'read_only': read_only,
             'posts': [],
-            'roster_names': roster_names or [],  # Store as list of roster names
+            'group_names': group_names or [],  # Store as list of group names
         }
         self.db.boards[board_id] = board
         self.db.next_board_id = self._find_next_available_board_id()
@@ -205,26 +205,31 @@ class BBSController(DefaultObject):
         if board and character_name in board['access_list']:
             del board['access_list'][character_name]
 
-    def has_roster_access(self, board, character_name):
+    def has_group_access(self, board, character_name):
         """
-        Check if a character has access through roster membership.
+        Check if a character has access through group membership.
         Args:
             board (dict): The board to check
             character_name (str): The character's name
         Returns:
-            bool: Whether the character has roster access
+            bool: Whether the character has group access
         """
-        if not board.get('roster_names'):
-            return True  # No roster restriction
+        if not board.get('group_names'):
+            return True  # No group restriction
             
         try:
-            # Check if character is a member of any of the required rosters
-            for roster_name in board['roster_names']:
-                member = RosterMember.objects.filter(
-                    character__db_key=character_name,
-                    roster__name=roster_name,
-                    approved=True
-                ).exists()
+            # Check if character is a member of any of the required groups
+            for group_name in board['group_names']:
+                group = get_group_by_name(group_name)
+                if group:
+                    # Find character by name
+                    character = evennia.search_object(character_name, typeclass="typeclasses.characters.Character")
+                    if character:
+                        member = group.is_member(character[0])
+                    else:
+                        member = False
+                else:
+                    member = False
                 if member:
                     return True
             return False
@@ -245,11 +250,11 @@ class BBSController(DefaultObject):
         except:
             pass
             
-        # If board has roster restrictions, check roster access
-        if board.get('roster_names'):
-            return self.has_roster_access(board, character_name)
+        # If board has group restrictions, check group access
+        if board.get('group_names'):
+            return self.has_group_access(board, character_name)
             
-        # If no roster restrictions, everyone has access
+        # If no group restrictions, everyone has access
         return True
 
     def has_write_access(self, board_id, character_name):
@@ -270,11 +275,11 @@ class BBSController(DefaultObject):
         if board.get('read_only', False):
             return False
             
-        # If board has roster restrictions, check roster access
-        if board.get('roster_names'):
-            return self.has_roster_access(board, character_name)
+        # If board has group restrictions, check group access
+        if board.get('group_names'):
+            return self.has_group_access(board, character_name)
             
-        # If no roster restrictions, everyone has write access unless read-only
+        # If no group restrictions, everyone has write access unless read-only
         return True
 
     def delete_board(self, board_reference):
@@ -389,12 +394,12 @@ class BBSController(DefaultObject):
                 unread.append(i + 1)  # Convert to 1-based index
         return unread
 
-    def add_roster_to_board(self, board_reference, roster_name):
+    def add_group_to_board(self, board_reference, group_name):
         """
-        Add a roster restriction to a board.
+        Add a group restriction to a board.
         Args:
             board_reference (str or int): The board to modify
-            roster_name (str): The name of the roster to add
+            group_name (str): The name of the group to add
         Returns:
             str: Status message
         """
@@ -402,28 +407,26 @@ class BBSController(DefaultObject):
         if not board:
             return "Board not found"
             
-        # Verify roster exists
-        from world.wod20th.models import Roster
-        try:
-            Roster.objects.get(name=roster_name)
-        except Roster.DoesNotExist:
-            return f"Error: Roster '{roster_name}' does not exist"
+        # Verify group exists
+        group = get_group_by_name(group_name)
+        if not group:
+            return f"Error: Group '{group_name}' does not exist"
             
-        if 'roster_names' not in board:
-            board['roster_names'] = []
+        if 'group_names' not in board:
+            board['group_names'] = []
             
-        if roster_name in board['roster_names']:
-            return f"Roster '{roster_name}' is already associated with this board"
+        if group_name in board['group_names']:
+            return f"Group '{group_name}' is already associated with this board"
             
-        board['roster_names'].append(roster_name)
-        return f"Added roster '{roster_name}' to board '{board['name']}'"
+        board['group_names'].append(group_name)
+        return f"Added group '{group_name}' to board '{board['name']}'"
 
-    def remove_roster_from_board(self, board_reference, roster_name):
+    def remove_group_from_board(self, board_reference, group_name):
         """
-        Remove a roster restriction from a board.
+        Remove a group restriction from a board.
         Args:
             board_reference (str or int): The board to modify
-            roster_name (str): The name of the roster to remove
+            group_name (str): The name of the group to remove
         Returns:
             str: Status message
         """
@@ -431,25 +434,25 @@ class BBSController(DefaultObject):
         if not board:
             return "Board not found"
             
-        if 'roster_names' not in board or roster_name not in board['roster_names']:
-            return f"Roster '{roster_name}' is not associated with this board"
+        if 'group_names' not in board or group_name not in board['group_names']:
+            return f"Group '{group_name}' is not associated with this board"
             
-        board['roster_names'].remove(roster_name)
-        return f"Removed roster '{roster_name}' from board '{board['name']}'"
+        board['group_names'].remove(group_name)
+        return f"Removed group '{group_name}' from board '{board['name']}'"
 
-    def get_board_rosters(self, board_reference):
+    def get_board_groups(self, board_reference):
         """
-        Get all rosters associated with a board.
+        Get all groups associated with a board.
         Args:
             board_reference (str or int): The board to check
         Returns:
-            list: List of roster names
+            list: List of group names
         """
         board = self.get_board(board_reference)
         if not board:
             return []
             
-        return board.get('roster_names', [])
+        return board.get('group_names', [])
 
     def set_read_only(self, board_name, read_only=True):
         """Set a board to read-only mode."""

@@ -14,7 +14,7 @@ from evennia.server.sessionhandler import SESSION_HANDLER
 # Local Imports
 from typeclasses.bbs_controller import BBSController
 from world.utils.bbs_utils import get_or_create_bbs_controller
-from world.groups.models import Roster
+from typeclasses.groups import Group, get_group_by_name, get_character_groups
 import pytz
 from world.utils.time_utils import TIME_MANAGER
 
@@ -37,19 +37,19 @@ class CmdBBS(default_cmds.MuxCommand):
       +bbs/subscribe <board>     - Resubscribe to a board you previously unsubscribed from
       
     Admin/Builder commands:
-      +bbs/create <name> = <description>[/roster=<roster1>,<roster2>...]
+      +bbs/create <name> = <description>[/group=<group1>,<group2>...]
                                 - Create a new board
-                                - Optional roster restrictions can be specified
+                                - Optional group restrictions can be specified
       +bbs/editboard <board> = <field>, <value>
                                 - Edit board settings (description)
-      +bbs/editboard/rosters <board> = <roster1>[,<roster2>...]
-                                - Set roster restrictions for a board
+      +bbs/editboard/groups <board> = <group1>[,<group2>...]
+                                - Set group restrictions for a board
                                 - Use empty value to clear all restrictions
-      +bbs/addroster <board> = <roster>
-                                - Add a roster restriction to a board
-      +bbs/removeroster <board> = <roster>
-                                - Remove a roster restriction
-      +bbs/listrosters <board>  - List all rosters on a board
+      +bbs/addgroup <board> = <group>
+                                - Add a group restriction to a board
+      +bbs/removegroup <board> = <group>
+                                - Remove a group restriction
+      +bbs/listgroups <board>   - List all groups on a board
       +bbs/lock <board>         - Lock a board to prevent new posts
       +bbs/pin <board>/<post>   - Pin a post to the top
       +bbs/unpin <board>/<post> - Unpin a post
@@ -68,9 +68,9 @@ class CmdBBS(default_cmds.MuxCommand):
     Board Permissions:
       Boards can have multiple permission settings that interact:
       
-      1. Roster Restrictions:
-         - When a board has roster restrictions:
-           * Only members of the specified rosters can see and post
+      1. Group Restrictions:
+         - When a board has group restrictions:
+           * Only members of the specified groups can see and post
            * This is indicated by a * after the board name
            * Admins/Builders can always see and post
       
@@ -81,8 +81,8 @@ class CmdBBS(default_cmds.MuxCommand):
            * This is indicated by a * before the board name
       
       Examples:
-        - A board with roster restrictions:
-          * Only roster members can see and post
+        - A board with group restrictions:
+          * Only group members can see and post
           * Admins/Builders have full access
           * Shows as "BoardName*" in listings
       
@@ -91,8 +91,8 @@ class CmdBBS(default_cmds.MuxCommand):
           * Only Admins/Builders can post
           * Shows as "* BoardName" in listings
       
-        - A read-only board with roster restrictions:
-          * Only roster members can read
+        - A read-only board with group restrictions:
+          * Only group members can read
           * Only Admins/Builders can post
           * Shows as "* BoardName*" in listings
       
@@ -104,10 +104,7 @@ class CmdBBS(default_cmds.MuxCommand):
       +bbs/edit 1/1 = This is the corrected message.
       +bbs/delete 1/1
       +bbs/create Staff = Staff Discussion
-      +bbs/create IC = In Character/roster=Vampire,Werewolf
-      +bbs/editboard/rosters IC = Vampire,Werewolf,Mage
-      +bbs/addroster IC = Hunter
-      +bbs/removeroster IC = Vampire
+      +bbs/create IC = In Character / private /group=Vampire,Werewolf
       +bbs/readonly Announcements
     """
     key = "+bbs"
@@ -265,7 +262,7 @@ class CmdBBS(default_cmds.MuxCommand):
                 self.do_subscribe()
             
             # Admin/Builder commands
-            elif switch in ["create", "editboard", "editboard/rosters", "addroster", "removeroster", "listrosters", "lock", "pin", "unpin", "deleteboard", "readonly", "viewas"]:
+            elif switch in ["create", "editboard", "lock", "pin", "unpin", "deleteboard", "readonly", "viewas"]:
                 if not (self.check_admin_access() or self.check_builder_access()):
                     self.caller.msg("You don't have permission to use this command.")
                     return
@@ -274,14 +271,6 @@ class CmdBBS(default_cmds.MuxCommand):
                     self.do_create()
                 elif switch == "editboard":
                     self.do_editboard()
-                elif switch == "editboard/rosters":
-                    self.do_editboard_rosters()
-                elif switch == "addroster":
-                    self.do_addroster()
-                elif switch == "removeroster":
-                    self.do_removeroster()
-                elif switch == "listrosters":
-                    self.do_listrosters()
                 elif switch == "lock":
                     self.do_lock()
                 elif switch == "pin":
@@ -439,42 +428,49 @@ class CmdBBS(default_cmds.MuxCommand):
     def do_create(self):
         """Handle the create switch"""
         if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/create <name> = <description>[/roster=<roster1>,<roster2>...]")
+            self.caller.msg("Usage: +bbs/create <name> = <description> / public | private [/group=<group1>,<group2>...]")
             return
             
-        # Split into name_desc and description/roster parts
+        # Split into name_desc and description/privacy/group parts
         name_desc, remainder = self.args.split("=", 1)
         parts = remainder.split("/")
         
-        if len(parts) < 1:
-            self.caller.msg("Usage: +bbs/create <name> = <description>[/roster=<roster1>,<roster2>...]")
+        if len(parts) < 2:
+            self.caller.msg("Usage: +bbs/create <name> = <description> / public | private [/group=<group1>,<group2>...]")
             return
             
         description = parts[0].strip()
+        privacy = parts[1].strip().lower()
         
-        # Check for roster specification
-        roster_names = []
-        if len(parts) > 1:
-            for part in parts[1:]:
-                if part.strip().lower().startswith("roster="):
-                    roster_list = part.split("=")[1].strip()
-                    roster_names = [r.strip() for r in roster_list.split(",")]
+        # Validate privacy setting
+        if privacy not in ["public", "private"]:
+            self.caller.msg("Privacy setting must be 'public' or 'private'")
+            return
+            
+        is_public = privacy == "public"
+        
+        # Check for group specification
+        group_names = []
+        if len(parts) > 2:
+            for part in parts[2:]:
+                if part.strip().lower().startswith("group="):
+                    group_list = part.split("=")[1].strip()
+                    group_names = [g.strip() for g in group_list.split(",")]
                     
-                    # Verify all rosters exist
-                    for roster_name in roster_names:
-                        try:
-                            Roster.objects.get(name=roster_name)
-                        except Roster.DoesNotExist:
-                            self.caller.msg(f"Error: Roster '{roster_name}' does not exist.")
+                    # Verify all groups exist
+                    for group_name in group_names:
+                        group = get_group_by_name(group_name)
+                        if not group:
+                            self.caller.msg(f"Error: Group '{group_name}' does not exist.")
                             return
 
         name = name_desc.strip()
         controller = get_or_create_bbs_controller()
-        controller.create_board(name, description, roster_names=roster_names)
+        controller.create_board(name, description, not is_public, group_names=group_names)
         
-        msg = f"Board '{name}' created"
-        if roster_names:
-            msg += f" (restricted to rosters: {', '.join(roster_names)})"
+        msg = f"Board '{name}' created as {'public' if is_public else 'private'}"
+        if group_names:
+            msg += f" (restricted to groups: {', '.join(group_names)})"
         msg += f" with description: {description}"
         self.caller.msg(msg)
 
@@ -503,83 +499,6 @@ class CmdBBS(default_cmds.MuxCommand):
             
         controller.edit_board(board_name, field, value)
         self.caller.msg(f"Board '{board_name}' has been updated. {field} set to {value}.")
-
-    def do_editboard_rosters(self):
-        """Handle the editboard/rosters switch"""
-        if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/editboard/rosters <board> = <roster1>[,<roster2>...]")
-            return
-            
-        board_name, rosters = self.args.split("=", 1)
-        roster_list = [arg.strip() for arg in rosters.split(",")]
-
-        controller = get_or_create_bbs_controller()
-        board = controller.get_board(board_name)
-        if not board:
-            self.caller.msg(f"No board found with the name '{board_name}'.")
-            return
-            
-        controller.edit_board_rosters(board_name, roster_list)
-        self.caller.msg(f"Roster restrictions for board '{board_name}' have been updated.")
-
-    def do_addroster(self):
-        """Handle the addroster switch"""
-        if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/addroster <board> = <roster>")
-            return
-            
-        board_name, roster = self.args.split("=", 1)
-        controller = get_or_create_bbs_controller()
-        board = controller.get_board(board_name)
-        if not board:
-            self.caller.msg(f"No board found with the name '{board_name}'.")
-            return
-            
-        result = controller.add_roster_to_board(board_name, roster)
-        self.caller.msg(result)
-
-    def do_removeroster(self):
-        """Handle the removeroster switch"""
-        if not self.args or "=" not in self.args:
-            self.caller.msg("Usage: +bbs/removeroster <board> = <roster>")
-            return
-            
-        board_name, roster = self.args.split("=", 1)
-        controller = get_or_create_bbs_controller()
-        board = controller.get_board(board_name)
-        if not board:
-            self.caller.msg(f"No board found with the name '{board_name}'.")
-            return
-            
-        controller.remove_roster(board_name, roster)
-        self.caller.msg(f"Roster restriction '{roster}' removed from board '{board_name}'.")
-
-    def do_listrosters(self):
-        """Handle the listrosters switch"""
-        if not self.args:
-            self.caller.msg("Usage: +bbs/listrosters <board>")
-            return
-            
-        board_name = self.args.strip()
-        controller = get_or_create_bbs_controller()
-        board = controller.get_board(board_name)
-        if not board:
-            self.caller.msg(f"No board found with the name '{board_name}'.")
-            return
-            
-        roster_names = board.get('roster_names', [])
-        if not roster_names:
-            self.caller.msg(f"Board '{board_name}' has no roster restrictions.")
-            return
-            
-        self.caller.msg(f"Rosters on board '{board_name}':")
-        for roster_name in roster_names:
-            try:
-                roster = Roster.objects.get(name=roster_name)
-                member_count = roster.get_members().count()
-                self.caller.msg(f"- {roster_name} ({member_count} approved members)")
-            except Roster.DoesNotExist:
-                self.caller.msg(f"- {roster_name} (WARNING: Roster no longer exists!)")
 
     def do_lock(self):
         """Handle the lock switch"""
@@ -730,7 +649,7 @@ class CmdBBS(default_cmds.MuxCommand):
             
             # Get board access type indicators
             access_type = ""
-            if board.get('roster_names'):  # If board has roster restrictions
+            if board.get('group_names'):  # If board has group restrictions
                 access_type = "*"  # restricted
             elif not controller.has_write_access(board_id, self.caller.key):
                 access_type = "-"  # read only
@@ -826,8 +745,8 @@ class CmdBBS(default_cmds.MuxCommand):
             read_only = "*" if not has_write else " "
             
             # Determine access type
-            if board.get('roster_names'):
-                access_type = "Ros"
+            if board.get('group_names'):
+                access_type = "Grp"
             elif not board.get('public', True):  # Default to public if not specified
                 access_type = "Priv"
             else:
@@ -885,23 +804,23 @@ class CmdBBS(default_cmds.MuxCommand):
         output.append(f"{'|b=|n'*78}")
         output.append(f"{'|y*|n' * 15} |w{board['name']}|n {'|y*|n' * 15}")
         
-        # Add roster information if any, but only for admins and builders
-        roster_names = board.get('roster_names', [])
-        if roster_names and (self.check_admin_access() or self.check_builder_access()):
-            output.append("Restricted to rosters:")
-            for roster_name in roster_names:
-                try:
-                    roster = Roster.objects.get(name=roster_name)
-                    member_count = roster.get_members().count()
-                    output.append(f"- {roster_name}(ref: {roster.id}, members: {member_count})")
-                except Roster.DoesNotExist:
-                    output.append(f"- {roster_name} (WARNING: Roster no longer exists!)")
+        # Add group information if any, but only for admins and builders
+        group_names = board.get('group_names', [])
+        if group_names and (self.check_admin_access() or self.check_builder_access()):
+            output.append("Restricted to groups:")
+            for group_name in group_names:
+                group = get_group_by_name(group_name)
+                if group:
+                    member_count = group.get_member_count()
+                    output.append(f"- {group_name}(ref: {group.group_id}, members: {member_count})")
+                else:
+                    output.append(f"- {group_name} (WARNING: Group no longer exists!)")
 
         # Add board access information
         if not board.get('public', True):
             output.append("|rThis is a private board|n")
-        elif roster_names:
-            output.append("|yThis board is restricted to specific rosters|n")
+        elif group_names:
+            output.append("|yThis board is restricted to specific groups|n")
 
         output.append("|w{:<5} {:<1} {:<30} {:<15} {:<15}|n".format("ID", "", "Message", "Posted", "By"))
         output.append(f"{'|b-|n'*78}")
@@ -1005,24 +924,24 @@ class CmdBBS(default_cmds.MuxCommand):
         self.caller.msg(f"Access: {'|gYes|n' if has_access else '|rNo|n'}")
         self.caller.msg(f"Write Access: {'|gYes|n' if has_write else '|rNo|n'}")
         
-        # Check roster access if applicable
-        roster_names = board.get('roster_names', [])
-        if roster_names:
-            self.caller.msg(f"Roster Restrictions: {', '.join(roster_names)}")
-            roster_access = False
-            for roster_name in roster_names:
-                try:
-                    roster = Roster.objects.get(name=roster_name)
-                    if roster.is_member(target_player):
-                        roster_access = True
-                        self.caller.msg(f"|gPlayer is a member of roster: {roster_name}|n")
+        # Check group access if applicable
+        group_names = board.get('group_names', [])
+        if group_names:
+            self.caller.msg(f"Group Restrictions: {', '.join(group_names)}")
+            group_access = False
+            for group_name in group_names:
+                group = get_group_by_name(group_name)
+                if group:
+                    if group.is_member(target_player):
+                        group_access = True
+                        self.caller.msg(f"|gPlayer is a member of group: {group_name}|n")
                     else:
-                        self.caller.msg(f"|rPlayer is NOT a member of roster: {roster_name}|n")
-                except Roster.DoesNotExist:
-                    self.caller.msg(f"|yWARNING: Roster '{roster_name}' no longer exists!|n")
+                        self.caller.msg(f"|rPlayer is NOT a member of group: {group_name}|n")
+                else:
+                    self.caller.msg(f"|yWARNING: Group '{group_name}' no longer exists!|n")
             
-            if not roster_access and roster_names:
-                self.caller.msg("|rPlayer is not a member of any required roster|n")
+            if not group_access and group_names:
+                self.caller.msg("|rPlayer is not a member of any required group|n")
         
         # Check public/private status
         if not board.get('public', True):
@@ -1061,8 +980,8 @@ class CmdBBS(default_cmds.MuxCommand):
         # Add board access information
         if not board.get('public', True):
             output.append("|rThis is a private board|n")
-        elif board.get('roster_names'):
-            output.append("|yThis board is restricted to specific rosters|n")
+        elif board.get('group_names'):
+            output.append("|yThis board is restricted to specific groups|n")
 
         output.append("|w{:<5} {:<1} {:<30} {:<15} {:<15}|n".format("ID", "", "Message", "Posted", "By"))
         output.append(f"{'|b-|n'*78}")
@@ -1115,8 +1034,8 @@ class CmdBBS(default_cmds.MuxCommand):
             read_only = "*" if not has_write else " "
             
             # Determine access type
-            if board.get('roster_names'):
-                access_type = "Ros"
+            if board.get('group_names'):
+                access_type = "Grp"
             elif not board.get('public', True):  # Default to public if not specified
                 access_type = "Priv"
             else:
@@ -1202,7 +1121,7 @@ class CmdBBS(default_cmds.MuxCommand):
             
             # Get board access type indicators
             access_type = ""
-            if board.get('roster_names'):  # If board has roster restrictions
+            if board.get('group_names'):  # If board has group restrictions
                 access_type = "*"  # restricted
             elif not controller.has_write_access(board_id, target_player.key):
                 access_type = "-"  # read only

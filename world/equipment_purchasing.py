@@ -38,6 +38,7 @@ class EquipmentPurchasingConfig:
     def can_afford(self, character, availability_cost):
         """Check if character can afford an item"""
         if self.resource_mode == "absolute":
+            # In absolute mode, Resources rating must be >= item availability
             return self.get_resource_limit(character) >= availability_cost
         else:  # pool mode
             current_pool = self.get_current_resource_pool(character)
@@ -45,14 +46,25 @@ class EquipmentPurchasingConfig:
     
     def get_current_resource_pool(self, character):
         """Get character's current resource pool points"""
-        if not hasattr(character.db, 'resource_pool'):
+        resource_limit = self.get_resource_limit(character)
+        
+        if not hasattr(character.db, 'resource_pool') or character.db.resource_pool is None:
+            # First time initialization - give them their starting points
             character.db.resource_pool = {
-                'points': 0,
+                'points': resource_limit,  # Start with full resource points
                 'last_refresh': time.time(),
                 'purchases_this_period': 0
             }
             
         pool_data = character.db.resource_pool
+        
+        # Ensure all required fields exist and are valid
+        if 'last_refresh' not in pool_data or pool_data['last_refresh'] is None:
+            pool_data['last_refresh'] = time.time()
+        if 'points' not in pool_data:
+            pool_data['points'] = resource_limit  # Give them starting points
+        if 'purchases_this_period' not in pool_data:
+            pool_data['purchases_this_period'] = 0
         
         # Check if it's time to refresh
         last_refresh = datetime.fromtimestamp(pool_data['last_refresh'])
@@ -78,7 +90,7 @@ class EquipmentPurchasingConfig:
         """Spend resource points"""
         if self.resource_mode == "absolute":
             # Absolute mode doesn't spend points, just tracks purchases
-            if not hasattr(character.db, 'resource_pool'):
+            if not hasattr(character.db, 'resource_pool') or character.db.resource_pool is None:
                 character.db.resource_pool = {
                     'points': 0,
                     'last_refresh': time.time(),
@@ -86,6 +98,12 @@ class EquipmentPurchasingConfig:
                 }
             
             pool_data = character.db.resource_pool
+            
+            # Ensure all required fields exist
+            if 'last_refresh' not in pool_data or pool_data['last_refresh'] is None:
+                pool_data['last_refresh'] = time.time()
+            if 'purchases_this_period' not in pool_data:
+                pool_data['purchases_this_period'] = 0
             
             # Check purchase limit
             if (self.max_purchases_per_period and 
@@ -108,10 +126,14 @@ class EquipmentPurchasingConfig:
     
     def get_next_refresh_date(self, character):
         """Get when character's resources will next refresh"""
-        if not hasattr(character.db, 'resource_pool'):
+        if not hasattr(character.db, 'resource_pool') or character.db.resource_pool is None:
             return datetime.now()
             
-        last_refresh = datetime.fromtimestamp(character.db.resource_pool['last_refresh'])
+        pool_data = character.db.resource_pool
+        if 'last_refresh' not in pool_data or pool_data['last_refresh'] is None:
+            return datetime.now()
+            
+        last_refresh = datetime.fromtimestamp(pool_data['last_refresh'])
         return last_refresh + timedelta(days=self.refresh_period_days)
     
     def get_status_info(self, character):
@@ -119,22 +141,31 @@ class EquipmentPurchasingConfig:
         resource_limit = self.get_resource_limit(character)
         
         if self.resource_mode == "absolute":
+            purchases_this_period = 0
+            if hasattr(character.db, 'resource_pool') and character.db.resource_pool is not None:
+                purchases_this_period = character.db.resource_pool.get('purchases_this_period', 0)
+                
             info = {
                 'mode': 'Absolute Value',
                 'resource_rating': resource_limit,
                 'max_availability': resource_limit,
                 'current_pool': 'N/A',
-                'purchases_this_period': character.db.resource_pool.get('purchases_this_period', 0) if hasattr(character.db, 'resource_pool') else 0,
+                'purchases_this_period': purchases_this_period,
                 'max_purchases': self.max_purchases_per_period or 'Unlimited'
             }
         else:  # pool mode
             current_pool = self.get_current_resource_pool(character)
+            
+            purchases_this_period = 0
+            if hasattr(character.db, 'resource_pool') and character.db.resource_pool is not None:
+                purchases_this_period = character.db.resource_pool.get('purchases_this_period', 0)
+                
             info = {
                 'mode': 'Resource Pool',
                 'resource_rating': resource_limit,
                 'current_pool': current_pool,
                 'max_pool': resource_limit * 2 if self.allow_saving else resource_limit,
-                'purchases_this_period': character.db.resource_pool.get('purchases_this_period', 0) if hasattr(character.db, 'resource_pool') else 0,
+                'purchases_this_period': purchases_this_period,
                 'next_refresh': self.get_next_refresh_date(character)
             }
             
