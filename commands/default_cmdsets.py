@@ -26,7 +26,6 @@ from .CmdSheet import CmdSheet
 from .stats import CmdStat, CmdRecalc
 from .aspirations import CmdAspiration
 from .social import CmdSocial
-from .investigation import CmdInvestigation
 from .combat import CmdCombat, CmdEquippedGear, CmdCombatHelp
 from .integrity import CmdIntegrity
 from .equipment import CmdEquipment, CmdBuyConfig, CmdBuy
@@ -41,12 +40,13 @@ from .admin_commands import CmdMigrate
 from .admin import CmdConfigOOCIC
 from .building import (CmdAreaManage, CmdRoomSetup, CmdPlaces, CmdRoomInfo, CmdMap)
 from .admin_area_init import CmdInitAreaManager
-from .mystery_admin import CmdMysteryAdmin, CmdClueObject
+from .mystery_commands import CmdMystery
 from .storyteller_admin import CmdStoryteller, CmdStorytellerWho
 from .jobs.jobs_commands import CmdJobs
 from commands.diesiraecode.CmdAlias import CmdAlias
 from commands.diesiraecode.CmdAlts import CmdAlts
 from commands.diesiraecode.CmdEmit import CmdEmit
+from commands.CmdFinger import CmdFinger
 from commands.diesiraecode.CmdPose import CmdPose
 from commands.diesiraecode.CmdLanguage import CmdLanguage
 from commands.diesiraecode.CmdSay import CmdSay
@@ -57,6 +57,7 @@ from commands.diesiraecode.CmdTxt import CmdText
 from commands.diesiraecode.CmdWatch import CmdWatch
 from commands.diesiraecode.CmdWeather import CmdWeather
 from commands.diesiraecode.CmdWho import CmdWho, CmdCensus
+from commands.diesiraecode.CmdLanguage import CmdLanguage
 from .lookup import CmdLookup
 from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
 from .test_xp_integration import CmdTestXP
@@ -106,6 +107,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdAlias())
         self.add(CmdAlts())
         self.add(CmdEmit())
+        self.add(CmdFinger())
         self.add(CmdPose())
         self.add(CmdLanguage())
         self.add(CmdSay())
@@ -134,7 +136,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         
         # Social and investigation
         self.add(CmdSocial())
-        self.add(CmdInvestigation())
+        self.add(CmdMystery())
         self.add(CmdGroups())
         self.add(CmdRoster())
 
@@ -150,8 +152,6 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdMigrate())
         self.add(CmdTemplate())
         self.add(CmdInitAreaManager())
-        self.add(CmdMysteryAdmin())
-        self.add(CmdClueObject())
         self.add(CmdStoryteller())
         self.add(CmdStorytellerWho())
         self.add(CmdConfigOOCIC())
