@@ -14,7 +14,7 @@ class CmdHealth(MuxCommand):
         +health/damage <amount> [type] - Take damage (bashing/lethal/aggravated)
         +health/heal <amount> [type] - Heal damage 
         +health/set <health_level> <type> - Set specific health box
-        +health/clear - Clear all damage (staff only)
+        +health/clear - Clear all damage 
         +health/max <amount> - Set maximum health (staff only)
         
     Damage Types:
@@ -305,11 +305,7 @@ class CmdHealth(MuxCommand):
             self.caller.msg(f"Health: {display}")
         
         elif "clear" in self.switches:
-            # Staff only
-            if not check_builder_permission(self.caller):
-                self.caller.msg("You don't have permission to clear all damage.")
-                return
-            
+           
             self.caller.db.health_damage = {}
             self.caller.msg("All damage cleared.")
             

@@ -247,16 +247,19 @@ class CmdRoll(MuxCommand):
             return None
             
         # Check attributes
-        if stat_name in self.caller.db.stats.get("attributes", {}):
-            return self.caller.db.stats["attributes"][stat_name]
+        attributes = self.caller.db.stats.get("attributes", {})
+        if stat_name in attributes:
+            return attributes.get(stat_name)
         
         # Check skills
-        if stat_name in self.caller.db.stats.get("skills", {}):
-            return self.caller.db.stats["skills"][stat_name]
+        skills = self.caller.db.stats.get("skills", {})
+        if stat_name in skills:
+            return skills.get(stat_name)
         
         # Check advantages
-        if stat_name in self.caller.db.stats.get("advantages", {}):
-            return self.caller.db.stats["advantages"][stat_name]
+        advantages = self.caller.db.stats.get("advantages", {})
+        if stat_name in advantages:
+            return advantages.get(stat_name)
             
         return None
 
