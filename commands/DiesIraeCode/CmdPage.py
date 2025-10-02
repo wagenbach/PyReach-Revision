@@ -33,6 +33,7 @@ class CmdPage(DefaultCmdPage):
     key = "page"
     aliases = ["tell", "p"]
     help_category = "Comms"
+    arg_regex = r"\s|$"  # Allow arguments to follow immediately or with spaces
     # Add idle to the allowed switches
     switch_options = ("last", "list", "idle")
 
@@ -190,9 +191,15 @@ class CmdPage(DefaultCmdPage):
             return
 
         # Get caller's character name if available
-        caller_name = caller.name
+        # Check if caller is an account with a puppeted character
+        if hasattr(caller, 'puppet') and caller.puppet:
+            caller_char = caller.puppet
+        else:
+            caller_char = caller
+        
+        caller_name = caller_char.name
         # Get caller's alias if available
-        caller_alias = caller.attributes.get("alias", None)
+        caller_alias = caller_char.attributes.get("alias", None)
         caller_display = f"{caller_name}({caller_alias})" if caller_alias else caller_name
 
         # Tell the accounts they got a message

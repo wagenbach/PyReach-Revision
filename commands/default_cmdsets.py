@@ -31,9 +31,6 @@ from .integrity import CmdIntegrity
 from .equipment import CmdEquipment, CmdBuyConfig, CmdBuy
 from .groups import CmdGroups, CmdRoster
 from .npc import CmdNPC
-from commands.diesiraecode.CmdPool import CmdPool
-from commands.diesiraecode.CmdSpend import CmdSpend
-from commands.diesiraecode.CmdGain import CmdGain  
 from .CmdHealth import CmdHealth
 from .template_admin import CmdTemplate
 from .admin_commands import CmdMigrate
@@ -43,27 +40,16 @@ from .admin_area_init import CmdInitAreaManager
 from .mystery_commands import CmdMystery
 from .storyteller_admin import CmdStoryteller, CmdStorytellerWho
 from .jobs.jobs_commands import CmdJobs
-from commands.diesiraecode.CmdAlias import CmdAlias
-from commands.diesiraecode.CmdAlts import CmdAlts
-from commands.diesiraecode.CmdEmit import CmdEmit
 from commands.CmdFinger import CmdFinger
-from commands.diesiraecode.CmdPose import CmdPose
-from commands.diesiraecode.CmdLanguage import CmdLanguage
-from commands.diesiraecode.CmdSay import CmdSay
-from commands.diesiraecode.CmdShortDesc import CmdShortDesc
-from commands.diesiraecode.CmdStaff import CmdStaff
-from commands.diesiraecode.CmdTableTalk import CmdTableTalk
-from commands.diesiraecode.CmdTxt import CmdText
-from commands.diesiraecode.CmdWatch import CmdWatch
-from commands.diesiraecode.CmdWeather import CmdWeather
-from commands.diesiraecode.CmdWho import CmdWho, CmdCensus
-from commands.diesiraecode.CmdLanguage import CmdLanguage
+from commands.diesiraecode.diesiraecode_cmdset import DiesIraeCmdSet
 from .lookup import CmdLookup
 from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
 from .test_xp_integration import CmdTestXP
 from .CmdLegacy import CmdLegacy
 from .ooc_ic_commands import CmdOOC, CmdIC, CmdJoin
+from .hangouts import CmdHangouts, CmdHangoutAdmin
 from .bbs.bbs_cmdset import BBSCmdSet
+from commands.diesiraecode.CmdPage import CmdPage
 
 # Custom help command that escapes ANSI codes in help text
 from .help_custom import CmdHelp
@@ -94,9 +80,6 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdJobs())
         # Sheet management and stat views
         self.add(CmdSheet())
-        self.add(CmdPool())
-        self.add(CmdSpend())
-        self.add(CmdGain())
         self.add(CmdHealth())
         
         # Character management
@@ -104,21 +87,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdRecalc())
         self.add(CmdAspiration())
         self.add(CmdIntegrity())
-        self.add(CmdAlias())
-        self.add(CmdAlts())
-        self.add(CmdEmit())
         self.add(CmdFinger())
-        self.add(CmdPose())
-        self.add(CmdLanguage())
-        self.add(CmdSay())
-        self.add(CmdShortDesc())
-        self.add(CmdStaff())
-        self.add(CmdTableTalk())
-        self.add(CmdText())
-        self.add(CmdWatch())
-        self.add(CmdWeather())
-        self.add(CmdWho())
-        self.add(CmdCensus())
         self.add(CmdLookup())
         self.add(CmdLegacy())
         # Voting and recommendations
@@ -168,8 +137,15 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdIC())
         self.add(CmdJoin())
         
+        # Hangout commands
+        self.add(CmdHangouts())
+        self.add(CmdHangoutAdmin())
+        
         # Custom help command with ANSI stripping to prevent the color codes from breaking the help text
         self.add(CmdHelp())
+        
+        # Dies Irae custom commands
+        self.add(DiesIraeCmdSet())
         
         # Melteth BBS commands
         self.add(BBSCmdSet())
@@ -197,6 +173,8 @@ class AccountCmdSet(default_cmds.AccountCmdSet):
         # any commands you add below will overload the default ones.
         #
         self.add(mail.CmdMail())
+        # Override default page command with our custom one
+        self.add(CmdPage())
 
 class UnloggedinCmdSet(default_cmds.UnloggedinCmdSet):
     """
