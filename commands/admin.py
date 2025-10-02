@@ -492,6 +492,8 @@ class CmdConfigOOCIC(MuxCommand):
         +config/ooc/clear
         +config/ic/clear
         +config/list
+        +config/theme <color1>,<color2>,<color3>  - Set theme colors (header, text, dividers)
+        +config/theme/clear                       - Clear theme colors (use defaults)
     
     Switches:
         ooc - Set or view the OOC room setting
@@ -514,7 +516,7 @@ class CmdConfigOOCIC(MuxCommand):
     aliases = ["config"]
     locks = "cmd:perm(developer)"
     help_category = "Admin Configuration"
-    switch_options = ("ooc", "ic", "clear", "list")
+    switch_options = ("ooc", "ic", "clear", "list", "theme")
     
     def func(self):
         """Execute the command"""
@@ -537,8 +539,10 @@ class CmdConfigOOCIC(MuxCommand):
                 self.clear_setting("OOC_ROOM_DBREF", "OOC room")
             elif "ic" in self.switches:
                 self.clear_setting("IC_STARTING_ROOM_DBREF", "IC starting room")
+            elif "theme" in self.switches:
+                self.clear_setting("ROOM_THEME_COLORS", "theme colors")
             else:
-                caller.msg("Usage: +config/ooc/clear or +config/ic/clear")
+                caller.msg("Usage: +config/ooc/clear, +config/ic/clear, or +config/theme/clear")
             return
         
         # Handle setting configuration
@@ -552,8 +556,13 @@ class CmdConfigOOCIC(MuxCommand):
                 self.show_setting("IC_STARTING_ROOM_DBREF", "IC starting room")
             else:
                 self.set_room_setting("IC_STARTING_ROOM_DBREF", "IC starting room", args)
+        elif "theme" in self.switches:
+            if not args:
+                self.show_theme_colors()
+            else:
+                self.set_theme_colors(args)
         else:
-            caller.msg("Usage: +config/ooc <room> or +config/ic <room>")
+            caller.msg("Usage: +config/ooc <room>, +config/ic <room>, or +config/theme <colors>")
     
     def show_current_settings(self):
         """Show all current OOC/IC configuration settings"""
@@ -583,8 +592,16 @@ class CmdConfigOOCIC(MuxCommand):
         else:
             caller.msg("IC Starting Room: Not set")
         
+        # Get theme colors setting
+        theme_colors = ServerConfig.objects.conf("ROOM_THEME_COLORS")
+        if theme_colors:
+            caller.msg(f"Theme Colors: {theme_colors}")
+        else:
+            caller.msg("Theme Colors: Not set (using defaults)")
+        
         caller.msg("\nUse '+config/ooc <room>' or '+config/ic <room>' to set these values.")
-        caller.msg("Use '+config/ooc/clear' or '+config/ic/clear' to clear them.")
+        caller.msg("Use '+config/theme <color1>,<color2>,<color3>' to set theme colors.")
+        caller.msg("Use '+config/ooc/clear', '+config/ic/clear', or '+config/theme/clear' to clear them.")
     
     def show_setting(self, setting_key, setting_name):
         """Show a specific setting"""
@@ -655,4 +672,74 @@ class CmdConfigOOCIC(MuxCommand):
         evennia.logger.log_info(f"Config Change: {caller.name} (#{caller.id}) cleared {setting_key} (was: {current_value})")
         
         caller.msg(f"Cleared {setting_name} setting.")
-        caller.msg(f"The {setting_name.lower()} commands will no longer work until this is set again.")
+        if "ROOM" not in setting_key:
+            caller.msg(f"The {setting_name.lower()} commands will no longer work until this is set again.")
+    
+    def set_theme_colors(self, colors_input):
+        """Set theme colors for room display."""
+        caller = self.caller
+        
+        # Parse colors
+        colors = [c.strip().lower() for c in colors_input.split(",")]
+        
+        if len(colors) != 3:
+            caller.msg("Usage: +config/theme <color1>,<color2>,<color3>")
+            caller.msg("Colors: header, header_text, dividers")
+            caller.msg("Example: +config/theme red,yellow,blue")
+            caller.msg("Valid colors: r, g, b, m, c, y, w, x (or full names like red, green, etc.)")
+            return
+        
+        # Validate colors
+        valid_colors = {
+            'r': 'red', 'red': 'red',
+            'g': 'green', 'green': 'green', 
+            'b': 'blue', 'blue': 'blue',
+            'm': 'magenta', 'magenta': 'magenta',
+            'c': 'cyan', 'cyan': 'cyan',
+            'y': 'yellow', 'yellow': 'yellow',
+            'w': 'white', 'white': 'white',
+            'x': 'black', 'black': 'black'
+        }
+        
+        normalized_colors = []
+        for color in colors:
+            if color not in valid_colors:
+                caller.msg(f"Invalid color: {color}")
+                caller.msg("Valid colors: r, g, b, m, c, y, w, x (or red, green, blue, magenta, cyan, yellow, white, black)")
+                return
+            # Store the single-letter code for consistency
+            normalized_colors.append(color if len(color) == 1 else color[0])
+        
+        # Store as comma-separated string
+        theme_string = ",".join(normalized_colors)
+        ServerConfig.objects.conf("ROOM_THEME_COLORS", theme_string)
+        
+        # Log the change
+        evennia.logger.log_info(f"Config Change: {caller.name} (#{caller.id}) set ROOM_THEME_COLORS to {theme_string}")
+        
+        color_names = [valid_colors[c] for c in normalized_colors]
+        caller.msg(f"Set theme colors to: {', '.join(color_names)}")
+        caller.msg(f"  Header/Footer: |{normalized_colors[0]}████|n {color_names[0]}")
+        caller.msg(f"  Header Text: |{normalized_colors[1]}████|n {color_names[1]}")
+        caller.msg(f"  Dividers: |{normalized_colors[2]}████|n {color_names[2]}")
+        caller.msg("\nReload rooms or reconnect to see the changes.")
+    
+    def show_theme_colors(self):
+        """Show current theme colors."""
+        caller = self.caller
+        
+        theme_colors = ServerConfig.objects.conf("ROOM_THEME_COLORS")
+        if theme_colors:
+            colors = theme_colors.split(",")
+            color_map = {'r': 'red', 'g': 'green', 'b': 'blue', 'm': 'magenta', 
+                        'c': 'cyan', 'y': 'yellow', 'w': 'white', 'x': 'black'}
+            
+            caller.msg("Current theme colors:")
+            if len(colors) >= 3:
+                caller.msg(f"  Header/Footer: |{colors[0]}████|n {color_map.get(colors[0], colors[0])}")
+                caller.msg(f"  Header Text: |{colors[1]}████|n {color_map.get(colors[1], colors[1])}")
+                caller.msg(f"  Dividers: |{colors[2]}████|n {color_map.get(colors[2], colors[2])}")
+            else:
+                caller.msg(f"  {theme_colors} (invalid format)")
+        else:
+            caller.msg("Theme colors not set (using defaults: green for all)")

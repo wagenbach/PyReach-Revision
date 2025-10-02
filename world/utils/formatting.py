@@ -1,85 +1,72 @@
-from evennia.utils.ansi import ANSIString
-from collections import defaultdict
+"""
+Formatting utility functions for consistent display across the game.
+"""
 
-def format_stat(name: str, value: int, default: int = 0, tempvalue: int = None, width: int = 25, allow_zero: bool = False) -> str:
+from evennia.utils.ansi import ANSIString
+
+
+def header(text, width=78, color="|b"):
     """
-    Format a stat for display on a character sheet.
+    Create a centered header line.
     
     Args:
-        name: The name of the stat
-        value: The permanent value of the stat
-        default: The default value if none is set
-        tempvalue: The temporary value of the stat (if different from permanent)
-        width: The width to pad the output to
-        allow_zero: Whether to allow zero values (default False)
+        text (str): The header text
+        width (int): Total width of the header
+        color (str): ANSI color code
         
     Returns:
-        A formatted string representing the stat
+        str: Formatted header string
     """
-    # Handle None values
-    if value is None:
-        value = default
-    if tempvalue is None:
-        tempvalue = value
+    # Strip existing ANSI codes for length calculation
+    clean_text = ANSIString(text).clean()
+    text_length = len(clean_text)
+    
+    # Calculate padding
+    padding = (width - text_length - 4) // 2  # -4 for "< >" decorations
+    
+    return f"{color}{'-' * padding}< |w{text}|n {color}>{'-' * (width - padding - text_length - 4)}|n"
 
-    # Format the value part
-    if not allow_zero and value == 0:
-        value_str = "0"
-    else:
-        value_str = str(value)
 
-    # If temporary value differs from permanent, show both
-    if tempvalue != value:
-        value_str = f"{value}({tempvalue})"
-        # Add yellow highlighting for boosted stats
-        return f"|y {name}|x{'.' * (width - len(name) - len(value_str) - 2)} |y{value_str}|n"
-
-    # Format the full string with padding
-    return f" {name}{'.' * (width - len(name) - len(value_str) - 2)} {value_str}"
-
-def header(title, width=78, color="|y", fillchar="-", bcolor="|b"):
-    """Create a header with consistent width."""
-    # Ensure the title has proper spacing
-    title = f" {title} "
-    left_dashes = bcolor + fillchar * ((width - len(ANSIString(title).clean()) - 2) // 2) + "|n"
-    right_dashes = bcolor + fillchar * (width - len(ANSIString(title).clean()) - 2 - len(ANSIString(left_dashes).clean())) + "|n"
-    return f"{left_dashes}{color}{title}|n{right_dashes}\n"
-
-def footer(width=78, fillchar="-"):
-    """Create a footer with consistent width."""
-    return "|b" + fillchar * width + "|n\n"
-
-def divider(title, width=78, fillchar="-", color="|b", text_color="|y"):
-    """Create a divider with consistent width."""
-    if isinstance(fillchar, ANSIString):
-        fillchar = fillchar[0]
-    else:
-        fillchar = fillchar[0]
-
-    if title:
-        # Calculate the width of the title text without color codes
-        title_width = len(ANSIString(title).clean())
+def footer(width=78, color="|b"):
+    """
+    Create a footer line.
+    
+    Args:
+        width (int): Total width of the footer
+        color (str): ANSI color code
         
-        # For column headers, center the title
-        if width <= 25:  # Column headers
-            padding = (width - title_width) // 2
-            title_str = title.center(width)
-            return f"{color}{title_str}|n"
-        else:  # Full-width dividers
-            # Calculate padding on each side of the title
-            padding = (width - title_width - 2) // 2  # -2 for spaces around the title
-            
-            # Create the divider with title
-            left_part = color + fillchar * padding + "|n"
-            right_part = color + fillchar * (width - padding - title_width - 2) + "|n"
-            return f"{left_part} {text_color}{title}|n {right_part}"
-    else:
-        # If no title, just create a line of fillchars
-        return color + fillchar * width + "|n"
+    Returns:
+        str: Formatted footer string
+    """
+    return f"{color}{'-' * width}|n"
 
-def dots(value, max_value=5, filled="●", empty="○"):
-    """Return a string of filled and empty dots for a stat."""
-    return filled * value + empty * (max_value - value)
 
-def boxes(value, max_value=10, filled="■", empty="□"):
-    return filled * value + empty * (max_value - value)
+def divider(width=78, char="-", color="|b"):
+    """
+    Create a divider line.
+    
+    Args:
+        width (int): Total width of the divider
+        char (str): Character to use for the divider
+        color (str): ANSI color code
+        
+    Returns:
+        str: Formatted divider string
+    """
+    return f"{color}{char * width}|n"
+
+
+def format_stat(name, value, width=40):
+    """
+    Format a stat name and value for display.
+    
+    Args:
+        name (str): Stat name
+        value: Stat value
+        width (int): Total width for the stat line
+        
+    Returns:
+        str: Formatted stat string
+    """
+    dots = "." * (width - len(name) - len(str(value)))
+    return f"{name}{dots}{value}"

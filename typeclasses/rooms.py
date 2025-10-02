@@ -9,6 +9,7 @@ Room typeclass with formatted displays for the game.
 from evennia.objects.objects import DefaultRoom
 from evennia.utils import utils, evtable
 from evennia.utils.ansi import ANSIString
+from evennia.server.models import ServerConfig
 import time
 
 from .objects import ObjectParent
@@ -95,12 +96,25 @@ class Room(ObjectParent, DefaultRoom):
             
         return "\n".join(appearance_parts)
 
+    def get_theme_colors(self):
+        """Get theme colors from server config or defaults."""
+        theme_colors = ServerConfig.objects.conf("ROOM_THEME_COLORS")
+        if theme_colors:
+            colors = theme_colors.split(",")
+            if len(colors) >= 3:
+                return colors[0], colors[1], colors[2]
+        # Default colors (green)
+        return 'g', 'g', 'g'
+    
     def get_display_header(self, looker, **kwargs):
         """
         Get the formatted header for the room display.
         
         Format: ===> Room Name - Area1 - Area2 - Area3 <===
         """
+        # Get theme colors
+        header_color, text_color, divider_color = self.get_theme_colors()
+        
         room_name = self.get_display_name(looker)
         hierarchy = self.db.location_hierarchy or ["Unknown", "Unknown"]
         
@@ -117,12 +131,12 @@ class Room(ObjectParent, DefaultRoom):
         # Build the location string
         location_string = " - ".join([room_name] + hierarchy)
         
-        # Create the header with proper centering
+        # Create the header with proper centering and theme colors
         header_content = f" {location_string} "
         total_width = 80
         equals_per_side = (total_width - len(header_content) - 4) // 2  # -4 for the arrows
         
-        header = "=" * equals_per_side + ">" + header_content + "<" + "=" * equals_per_side
+        header = f"|{header_color}" + "=" * equals_per_side + ">" + f"|{text_color}" + header_content + f"|{header_color}" + "<" + "=" * equals_per_side + "|n"
         
         return header
 
@@ -180,32 +194,43 @@ class Room(ObjectParent, DefaultRoom):
         
         Format: Name                     IdleTime Description
         """
-        # Get all characters in the room
-        characters = [obj for obj in self.contents if obj.has_account and obj != looker]
+        # Get all characters in the room (including the looker)
+        characters = [obj for obj in self.contents if obj.has_account]
         
         if not characters:
             return ""
             
-        char_lines = []
-        char_lines.append("----> Characters <" + "-" * 62)
+        # Get theme colors
+        header_color, text_color, divider_color = self.get_theme_colors()
         
-        for char in characters:
-            # Get character name
-            name = char.get_display_name(looker)
+        char_lines = []
+        char_lines.append(f"|{divider_color}----> Characters <" + "-" * 62 + "|n")
+        
+        # Display characters in two columns with dot leaders
+        for i in range(0, len(characters), 2):
+            left_char = characters[i]
+            right_char = characters[i + 1] if i + 1 < len(characters) else None
             
-            # Get idle time
-            idle_time = self.get_character_idle_time(char)
+            # Left column
+            left_name = left_char.get_display_name(looker)
+            left_idle = self.get_character_idle_time(left_char)
+            # Create dot leader between name and idle time (total width 28 chars)
+            left_dots = "." * (35 - len(left_name) - len(left_idle))
+            left_text = f"{left_name}{left_dots}{left_idle}"
             
-            # Get shortdesc
-            shortdesc = char.db.shortdesc or ""
+            # Right column (if exists)
+            if right_char:
+                right_name = right_char.get_display_name(looker)
+                right_idle = self.get_character_idle_time(right_char)
+                # Create dot leader between name and idle time (total width 28 chars)
+                right_dots = "." * (35 - len(right_name) - len(right_idle))
+                right_text = f"{right_name}{right_dots}{right_idle}"
+            else:
+                right_text = ""
             
-            # Format the line (name is left-aligned, idle is right-aligned before shortdesc)
-            name_field = f"{name:<25}"
-            idle_field = f"{idle_time:>3}"
-            desc_field = f" {shortdesc}"
-            
-            char_line = name_field + idle_field + desc_field
-            char_lines.append(char_line)
+            # Combine columns with proper spacing (left column is 39 chars total)
+            line = f"{left_text:<39} {right_text}"
+            char_lines.append(line.rstrip())
             
         return "\n" + "\n".join(char_lines)
 
@@ -290,9 +315,12 @@ class Room(ObjectParent, DefaultRoom):
         if not directions:
             return ""
             
+        # Get theme colors
+        header_color, text_color, divider_color = self.get_theme_colors()
+        
         # Format directions section
         dir_lines = []
-        dir_lines.append("----> Directions <" + "-" * 62)
+        dir_lines.append(f"|{divider_color}----> Directions <" + "-" * 62 + "|n")
         
         # Display directions in groups of 3 per line
         for i in range(0, len(directions), 3):
@@ -346,9 +374,12 @@ class Room(ObjectParent, DefaultRoom):
         if not other_exits:
             return ""
             
+        # Get theme colors
+        header_color, text_color, divider_color = self.get_theme_colors()
+        
         # Format exits section
         exit_lines = []
-        exit_lines.append("----> Exits <" + "-" * 67)
+        exit_lines.append(f"|{divider_color}----> Exits <" + "-" * 67 + "|n")
         
         # Display exits in groups of 3 per line
         for i in range(0, len(other_exits), 3):
@@ -366,6 +397,9 @@ class Room(ObjectParent, DefaultRoom):
         
         Format: ======> IC Area - AREACODE <====
         """
+        # Get theme colors
+        header_color, text_color, divider_color = self.get_theme_colors()
+        
         area_name = self.db.area_name or "Unknown Area"
         area_code = self.db.area_code or "XX00"
         
@@ -373,7 +407,7 @@ class Room(ObjectParent, DefaultRoom):
         total_width = 80
         equals_per_side = (total_width - len(footer_content) - 4) // 2  # -4 for the arrows
         
-        footer = "=" * equals_per_side + ">" + footer_content + "<" + "=" * equals_per_side
+        footer = f"|{header_color}" + "=" * equals_per_side + ">" + f"|{text_color}" + footer_content + f"|{header_color}" + "<" + "=" * equals_per_side + "|n"
         
         return "\n" + footer
 

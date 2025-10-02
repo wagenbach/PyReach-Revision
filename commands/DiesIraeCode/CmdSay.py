@@ -27,10 +27,12 @@ class CmdSay(PoseBreakMixin, MuxCommand):
         """
         caller = self.caller
 
-        # Check if the room is a Quiet Room
-        if hasattr(caller.location, 'db') and caller.location.db.roomtype == "Quiet Room":
-            caller.msg("|rYou are in a Quiet Room and cannot speak.|n")
-            return
+        # Check if the room is a Quiet Room (by tag or roomtype)
+        if hasattr(caller.location, 'db'):
+            room_tags = getattr(caller.location.db, 'tags', []) or []
+            if 'quiet' in room_tags or caller.location.db.roomtype == "Quiet Room":
+                caller.msg("|rYou are in a Quiet Room and cannot speak.|n")
+                return
 
         if not self.args:
             caller.msg("Say what?")
@@ -61,10 +63,22 @@ class CmdSay(PoseBreakMixin, MuxCommand):
             if not obj.has_account:
                 continue
             
+            # Check reality layer tags
+            caller_in_umbra = caller.tags.get("in_umbra", category="state")
+            caller_in_material = caller.tags.get("in_material", category="state")
+            caller_in_dreaming = caller.tags.get("in_dreaming", category="state")
+            
+            obj_in_umbra = obj.tags.get("in_umbra", category="state")
+            obj_in_material = obj.tags.get("in_material", category="state")
+            obj_in_dreaming = obj.tags.get("in_dreaming", category="state")
+            
             # Check if they share the same reality layer
-            if (caller.tags.get("in_umbra", category="state") and obj.tags.get("in_umbra", category="state")) or \
-               (caller.tags.get("in_material", category="state") and obj.tags.get("in_material", category="state")) or \
-               (caller.tags.get("in_dreaming", category="state") and obj.tags.get("in_dreaming", category="state")):
+            # If neither has any tags, assume they're both in normal reality
+            if (caller_in_umbra and obj_in_umbra) or \
+               (caller_in_material and obj_in_material) or \
+               (caller_in_dreaming and obj_in_dreaming) or \
+               (not any([caller_in_umbra, caller_in_material, caller_in_dreaming]) and 
+                not any([obj_in_umbra, obj_in_material, obj_in_dreaming])):
                 filtered_receivers.append(obj)
 
         # Send messages to receivers

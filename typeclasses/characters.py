@@ -609,3 +609,149 @@ class Character(ObjectParent, DefaultCharacter):
             int: The wound penalty (0, -1, -2, or -3)
         """
         return calculate_wound_penalty(self)
+    
+    # Language System Methods
+    
+    def get_languages(self):
+        """
+        Get the list of languages this character knows.
+        
+        Returns:
+            list: List of language names
+        """
+        if not hasattr(self.db, 'languages') or self.db.languages is None:
+            # Initialize with English as default
+            self.db.languages = ["English"]
+        return self.db.languages
+    
+    def set_speaking_language(self, language):
+        """
+        Set the language the character is currently speaking.
+        
+        Args:
+            language (str): Language name, or None to clear
+            
+        Raises:
+            ValueError: If the character doesn't know the language
+        """
+        if language is None:
+            self.db.speaking_language = None
+            return
+        
+        # Normalize language name
+        language = language.title()
+        
+        # Check if character knows this language
+        known_languages = self.get_languages()
+        if language not in known_languages:
+            raise ValueError(f"You don't know {language}. Use +language/add to learn it first.")
+        
+        self.db.speaking_language = language
+    
+    def get_speaking_language(self):
+        """
+        Get the language the character is currently speaking.
+        
+        Returns:
+            str or None: Current speaking language, or None if speaking English/default
+        """
+        return getattr(self.db, 'speaking_language', None)
+    
+    def prepare_say(self, speech, viewer=None, language_only=False, skip_english=False):
+        """
+        Prepare a speech message, handling language obfuscation.
+        
+        Args:
+            speech (str): The speech text
+            viewer (Character): Who is viewing the speech (None = self)
+            language_only (bool): If True, only return the processed speech text
+            skip_english (bool): If True, skip English and use current language
+            
+        Returns:
+            tuple: (msg_self, msg_understand, msg_not_understand, language)
+                   Or just (understood_text, obfuscated_text) if language_only=True
+        """
+        viewer = viewer or self
+        speaking_language = self.get_speaking_language()
+        
+        # If no language is set or it's English, return normal speech
+        if not speaking_language or speaking_language == "English":
+            if language_only:
+                return ("", speech, "", None)
+            msg_self = f'You say, "{speech}"'
+            msg_others = f'{self.name} says, "{speech}"'
+            return (msg_self, msg_others, msg_others, None)
+        
+        # Generate obfuscated version of the speech
+        obfuscated = self._obfuscate_language(speech, speaking_language)
+        
+        if language_only:
+            return ("", speech, obfuscated, speaking_language)
+        
+        # Create the three message versions
+        msg_self = f'You say in {speaking_language}, "{speech}"'
+        msg_understand = f'{self.name} says in {speaking_language}, "{speech}"'
+        msg_not_understand = f'{self.name} says something in {speaking_language}, but you don\'t understand.'
+        
+        return (msg_self, msg_understand, msg_not_understand, speaking_language)
+    
+    def _obfuscate_language(self, text, language):
+        """
+        Obfuscate text to look like a foreign language.
+        
+        Args:
+            text (str): The text to obfuscate
+            language (str): The language name (for context)
+            
+        Returns:
+            str: Obfuscated text
+        """
+        # Simple obfuscation: replace letters with similar-looking characters
+        # Keep punctuation and spacing intact
+        import random
+        
+        # Common phonemes/patterns for different language families
+        patterns = {
+            "European": ["aei", "ous", "tion", "ch", "sch", "au"],
+            "Asian": ["ng", "zh", "shi", "ka", "ko", "wa"],
+            "Middle Eastern": ["kh", "sh", "ah", "al", "ibn"],
+            "default": ["ah", "eh", "oh", "um", "en"]
+        }
+        
+        # Simple word obfuscation
+        words = text.split()
+        obfuscated_words = []
+        
+        for word in words:
+            if len(word) <= 2:
+                obfuscated_words.append(word)
+            else:
+                # Replace with similar-length gibberish
+                obfuscated = ''.join(
+                    random.choice('aeiou') if c.lower() in 'aeiou' else 
+                    random.choice('bcdfghjklmnprstvwxyz') if c.isalpha() else c
+                    for c in word
+                )
+                # Preserve capitalization
+                if word[0].isupper():
+                    obfuscated = obfuscated.capitalize()
+                obfuscated_words.append(obfuscated)
+        
+        return ' '.join(obfuscated_words)
+    
+    def record_scene_activity(self):
+        """
+        Record that this character has been active in a scene.
+        This can be used for tracking RP activity, logs, etc.
+        
+        Currently a placeholder for future functionality.
+        """
+        # Update last activity timestamp
+        from django.utils import timezone
+        self.db.last_rp_activity = timezone.now()
+        
+        # Could expand this to:
+        # - Log scene participation
+        # - Track for XP rewards
+        # - Scene logging system
+        pass

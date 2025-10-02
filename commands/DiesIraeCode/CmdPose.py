@@ -9,9 +9,11 @@ class PoseBreakMixin:
     def send_pose_break(self, exclude=None):
         caller = self.caller
         
-        # Check if the room is an OOC Area
-        if hasattr(caller.location, 'db') and caller.location.db.roomtype == 'OOC Area':
-            return  # Don't send pose breaks in OOC Areas
+        # Check if the room is an OOC Area (by tag or roomtype)
+        if hasattr(caller.location, 'db'):
+            room_tags = getattr(caller.location.db, 'tags', []) or []
+            if 'ooc' in room_tags or caller.location.db.roomtype == 'OOC Area':
+                return  # Don't send pose breaks in OOC Areas
             
         pose_break = f"\n|y{'=' * 30}> |w{caller.name}|n |y<{'=' * 30}|n"
         
@@ -21,10 +23,22 @@ class PoseBreakMixin:
             if not obj.has_account:
                 continue
             
+            # Check reality layer tags
+            caller_in_umbra = caller.tags.get("in_umbra", category="state")
+            caller_in_material = caller.tags.get("in_material", category="state")
+            caller_in_dreaming = caller.tags.get("in_dreaming", category="state")
+            
+            obj_in_umbra = obj.tags.get("in_umbra", category="state")
+            obj_in_material = obj.tags.get("in_material", category="state")
+            obj_in_dreaming = obj.tags.get("in_dreaming", category="state")
+            
             # Check if they share the same reality layer
-            if (caller.tags.get("in_umbra", category="state") and obj.tags.get("in_umbra", category="state")) or \
-               (caller.tags.get("in_material", category="state") and obj.tags.get("in_material", category="state")) or \
-               (caller.tags.get("in_dreaming", category="state") and obj.tags.get("in_dreaming", category="state")):
+            # If neither has any tags, assume they're both in normal reality
+            if (caller_in_umbra and obj_in_umbra) or \
+               (caller_in_material and obj_in_material) or \
+               (caller_in_dreaming and obj_in_dreaming) or \
+               (not any([caller_in_umbra, caller_in_material, caller_in_dreaming]) and 
+                not any([obj_in_umbra, obj_in_material, obj_in_dreaming])):
                 filtered_receivers.append(obj)
         
         for receiver in filtered_receivers:
@@ -38,11 +52,13 @@ class PoseBreakMixin:
         """
         Custom msg_contents that adds a pose break before the message.
         """
-        # Check if the room is an OOC Area
-        if hasattr(self.caller.location, 'db') and self.caller.location.db.roomtype == 'OOC Area':
-            # Call the original msg_contents without pose break
-            super().msg_contents(message, exclude=exclude, from_obj=from_obj, **kwargs)
-            return
+        # Check if the room is an OOC Area (by tag or roomtype)
+        if hasattr(self.caller.location, 'db'):
+            room_tags = getattr(self.caller.location.db, 'tags', []) or []
+            if 'ooc' in room_tags or self.caller.location.db.roomtype == 'OOC Area':
+                # Call the original msg_contents without pose break
+                super().msg_contents(message, exclude=exclude, from_obj=from_obj, **kwargs)
+                return
             
         # Add the pose break
         self.send_pose_break(exclude=exclude)
@@ -85,10 +101,12 @@ class CmdPose(PoseBreakMixin, default_cmds.MuxCommand):
     def func(self):
         caller = self.caller
         
-        # Check if the room is a Quiet Room
-        if hasattr(caller.location, 'db') and caller.location.db.roomtype == "Quiet Room":
-            caller.msg("|rYou are in a Quiet Room and cannot pose.|n")
-            return
+        # Check if the room is a Quiet Room (by tag or roomtype)
+        if hasattr(caller.location, 'db'):
+            room_tags = getattr(caller.location.db, 'tags', []) or []
+            if 'quiet' in room_tags or caller.location.db.roomtype == "Quiet Room":
+                caller.msg("|rYou are in a Quiet Room and cannot pose.|n")
+                return
             
         if not self.args:
             caller.msg("Pose what?")
@@ -119,10 +137,22 @@ class CmdPose(PoseBreakMixin, default_cmds.MuxCommand):
             if not obj.has_account:
                 continue
             
+            # Check reality layer tags
+            caller_in_umbra = caller.tags.get("in_umbra", category="state")
+            caller_in_material = caller.tags.get("in_material", category="state")
+            caller_in_dreaming = caller.tags.get("in_dreaming", category="state")
+            
+            obj_in_umbra = obj.tags.get("in_umbra", category="state")
+            obj_in_material = obj.tags.get("in_material", category="state")
+            obj_in_dreaming = obj.tags.get("in_dreaming", category="state")
+            
             # Check if they share the same reality layer
-            if (caller.tags.get("in_umbra", category="state") and obj.tags.get("in_umbra", category="state")) or \
-               (caller.tags.get("in_material", category="state") and obj.tags.get("in_material", category="state")) or \
-               (caller.tags.get("in_dreaming", category="state") and obj.tags.get("in_dreaming", category="state")):
+            # If neither has any tags, assume they're both in normal reality
+            if (caller_in_umbra and obj_in_umbra) or \
+               (caller_in_material and obj_in_material) or \
+               (caller_in_dreaming and obj_in_dreaming) or \
+               (not any([caller_in_umbra, caller_in_material, caller_in_dreaming]) and 
+                not any([obj_in_umbra, obj_in_material, obj_in_dreaming])):
                 filtered_receivers.append(obj)
 
         # Process the pose for each receiver

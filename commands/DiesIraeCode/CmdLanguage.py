@@ -5,7 +5,6 @@ from evennia.utils.search import search_object
 from world.utils.formatting import header, footer, divider, format_stat
 from world.utils.ansi_utils import wrap_ansi
 from evennia.utils.ansi import ANSIString
-from world.utils.permission_utils import check_staff_permission
 
 # This dictionary should be populated with all available languages
 class CmdLanguage(MuxCommand):
@@ -169,17 +168,14 @@ class CmdLanguage(MuxCommand):
         language_merit_points = 0
         native_language = self.caller.db.native_language or "English"  # Default to English if not set
         
-        # Calculate total available language points
+        # Calculate total available language points from Language merit (1-5 dots)
         for category in merits:
             category_merits = merits[category]
             for merit_name, merit_data in category_merits.items():
-                if merit_name.lower() == 'multilingual':
-                    # Multilingual gives 2 points, can only be taken once
-                    language_merit_points += 2
-                elif merit_name.lower() == 'language':
-                    # Language gives 1 point per dot, can be taken multiple times
-                    base_points = merit_data.get('perm', 0)
-                    language_merit_points += base_points
+                if merit_name.lower() == 'language':
+                    # Language merit: each dot gives 1 language point
+                    dots = merit_data.get('perm', 0)
+                    language_merit_points += dots
 
         if language_merit_points > 0:
             # Calculate used languages, excluding English and native language
@@ -249,17 +245,14 @@ class CmdLanguage(MuxCommand):
         merits = self.caller.db.stats.get('merits', {})
         language_merit_points = 0
 
-        # Calculate total available language points
+        # Calculate total available language points from Language merit (1-5 dots)
         for category in merits:
             category_merits = merits[category]
             for merit_name, merit_data in category_merits.items():
-                if merit_name.lower() == 'multilingual':
-                    # Multilingual gives 2 points, can only be taken once
-                    language_merit_points += 2
-                elif merit_name.lower() == 'language':
-                    # Language gives 1 point per dot, can be taken multiple times
-                    base_points = merit_data.get('perm', 0)
-                    language_merit_points += base_points
+                if merit_name.lower() == 'language':
+                    # Language merit: each dot gives 1 language point
+                    dots = merit_data.get('perm', 0)
+                    language_merit_points += dots
 
         if used_languages >= language_merit_points:
             self.caller.msg("You don't have enough language points remaining.")
@@ -282,7 +275,9 @@ class CmdLanguage(MuxCommand):
         Usage: +language/set <character>=<language1>,<language2>,...
         Adds specified languages to character's existing languages.
         """
-        if not check_staff_permission(self.caller):
+        if not (self.caller.check_permstring("builders") or 
+                self.caller.check_permstring("admin") or 
+                self.caller.check_permstring("staff")):
             self.caller.msg("You don't have permission to set languages.")
             return
             
@@ -337,9 +332,9 @@ class CmdLanguage(MuxCommand):
         """Display all available languages organized by region."""
         # Define categories and their languages
         categories = {
-            "San Diego Common Languages": [
-                "English", "Spanish", "Tagalog", "Chinese", "Vietnamese", "Korean", "Japanese", 
-                "Khmer", "Hmong", "Thai", "Lao"
+            "Common Languages": [
+                "English", "Spanish", "French", "German", "Italian", "Portuguese", "Mandarin",
+                "Cantonese", "Japanese", "Korean", "Arabic", "Hindi", "Russian"
             ],
             "African Languages": [
                 "Amharic", "Hausa", "Igbo", "Lingala", "Oromo", "Somali",
@@ -372,10 +367,13 @@ class CmdLanguage(MuxCommand):
             "Pacific Languages": [
                 "Hawaiian", "Maori", "Samoan", "Tahitian", "Tongan", "Fijian"
             ],
-            "Supernatural & Ancient Languages": [
-                "Animal", "Spirit", "Enochian", "Old English", "Old Norse", "Latin",
-                "Ancient Greek", "Ancient Egyptian", "Akkadian", "Sanskrit", "Babylonian", 
-                "Sumerian", "Elamite", "Hittite", "Phoenician", "Minoan", "Mycenaean"
+            "Ancient Languages": [
+                "Latin", "Ancient Greek", "Ancient Egyptian", "Old English", "Old Norse",
+                "Sanskrit", "Akkadian", "Sumerian", "Babylonian", "Phoenician", "Aramaic",
+                "Coptic", "Elamite", "Hittite", "Minoan", "Mycenaean"
+            ],
+            "Supernatural Languages": [
+                "Enochian", "Spirit Speech", "First Tongue", "High Speech", "Animal Speech"
             ]
         }
         
@@ -486,8 +484,10 @@ class CmdLanguage(MuxCommand):
         Staff command to view a character's languages.
         Usage: +language/view <character>
         """
-        if not check_staff_permission(self.caller):
-            self.caller.msg("You don't have permission to set languages.")
+        if not (self.caller.check_permstring("builders") or 
+                self.caller.check_permstring("admin") or 
+                self.caller.check_permstring("staff")):
+            self.caller.msg("You don't have permission to view character languages.")
             return
 
         if not self.args:
@@ -545,17 +545,14 @@ class CmdLanguage(MuxCommand):
         language_merit_points = 0
         native_language = target.db.native_language or "English"  # Default to English if not set
         
-        # Calculate total available language points
+        # Calculate total available language points from Language merit (1-5 dots)
         for category in merits:
             category_merits = merits[category]
             for merit_name, merit_data in category_merits.items():
-                if merit_name.lower() == 'multilingual':
-                    # Multilingual gives 2 points, can only be taken once
-                    language_merit_points += 2
-                elif merit_name.lower() == 'language':
-                    # Language gives 1 point per dot, can be taken multiple times
-                    base_points = merit_data.get('perm', 0)
-                    language_merit_points += base_points
+                if merit_name.lower() == 'language':
+                    # Language merit: each dot gives 1 language point
+                    dots = merit_data.get('perm', 0)
+                    language_merit_points += dots
 
         if language_merit_points > 0:
             # Calculate used languages, excluding English and native language
@@ -598,17 +595,14 @@ class CmdLanguage(MuxCommand):
         merits = target.db.stats.get('merits', {})
         language_merit_points = 0
         
-        # Calculate total available language points
+        # Calculate total available language points from Language merit (1-5 dots)
         for category in merits:
             category_merits = merits[category]
             for merit_name, merit_data in category_merits.items():
-                if merit_name.lower() == 'multilingual':
-                    # Multilingual gives 2 points, can only be taken once
-                    language_merit_points += 2
-                elif merit_name.lower() == 'language':
-                    # Language gives 1 point per dot, can be taken multiple times
-                    base_points = merit_data.get('perm', 0)
-                    language_merit_points += base_points
+                if merit_name.lower() == 'language':
+                    # Language merit: each dot gives 1 language point
+                    dots = merit_data.get('perm', 0)
+                    language_merit_points += dots
         
         # Calculate how many languages we can keep
         # Always keep English and native language
@@ -648,9 +642,8 @@ class CmdLanguage(MuxCommand):
         # Store old values for comparison
         old_value = self.db.stats.get('merits', {}).get(merit_name, {}).get('perm', 0)
         
-        # If it's a language-related merit and the value decreased, validate languages
-        if ((merit_name.lower() == 'language' and new_value < old_value) or
-            (merit_name.lower() == 'multilingual' and new_value < old_value)):
+        # If Language merit value decreased, validate languages
+        if merit_name.lower() == 'language' and new_value < old_value:
             # Avoid circular import by calling validation directly
             if self.validate_languages():
                 self.list_languages()  # Only show if changes were made

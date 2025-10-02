@@ -195,6 +195,8 @@ class CmdRoomSetup(MuxCommand):
       +room/hierarchy <target>=<location1>,<location2>
       +room/places here=on/off
       +room/places <target>=on/off
+      +room/tag <target>=<tag1>,<tag2>,...  - Set room tags (comma-separated)
+      +room/tags <target>                   - View room tags
       
     Target must be specified:
       - 'here' for current room
@@ -214,6 +216,37 @@ class CmdRoomSetup(MuxCommand):
       +room/coords here=10,5           - Set current room coordinates for mapping
       +room/hierarchy here=The Square,New Redoubt
       +room/places here=on
+      +room/tag here=library,research          - Tag room for investigation purposes
+      +room/tags here                          - View current room tags
+    
+    Common Room Tags:
+      Research & Knowledge:
+        library, occult_library, archive, computer, research, scriptorium,
+        museum, university, laboratory, observatory, clinic, morgue
+      
+      Social & Gathering:
+        bar, nightclub, restaurant, cafe, theater, church, synagogue, mosque,
+        gathering_hall, marketplace, stadium, playground, park
+      
+      Supernatural:
+        locus, consecrated, desecrated, hollow, verge, nexus, ley_line,
+        haunted, possessed, tainted, blessed, cursed, warded, elysium,
+        shadow, underworld, arcadia, hedge, supernal, freehold, consilium,
+        sanctum, avernian_gate, dead_road, goblin_market, 
+      
+      Investigation:
+        crime_scene, evidence_room, interrogation, surveillance, safe_house,
+        black_market, underground, hidden, secret, restricted
+      
+      Functional:
+        workshop, forge, armory, vault, treasury, stable, garage, warehouse,
+        storage, kitchen, infirmary, training_ground, ritual_chamber
+      
+      Time Period Specific:
+        ancient (ruins, catacombs, temple, amphitheater, stadium, bathhouse, forum, agora)
+        medieval (castle, monastery, scriptorium, dungeon, keep, bailey)
+        victorian (parlor, ballroom, gentlemens_club, opium_den, factory)
+        modern (office, apartment, penthouse, parking_garage, server_room)
     """
     
     key = "+room"
@@ -331,11 +364,33 @@ class CmdRoomSetup(MuxCommand):
         if self.switches:
             switch = self.switches[0].lower()
             
-            # Check if target and value are properly specified
-            if not self.target_room or not self.switch_value:
+            # Check if target and value are properly specified (except for /tags which doesn't need value)
+            if switch != "tags" and (not self.target_room or not self.switch_value):
                 caller.msg(f"Usage: +room/{switch} <target>=<value>")
                 caller.msg("Target must be 'here', a room name, or #dbref")
                 caller.msg(f"Example: +room/{switch} here=<value>")
+                return
+            
+            # Handle /tags separately since it doesn't use = syntax
+            if switch == "tags":
+                if not self.target_room and self.args:
+                    # Format: +room/tags here (no = sign)
+                    self.target_room = self.args.strip()
+                elif not self.target_room:
+                    self.target_room = "here"
+                
+                # Get the target room
+                target_room = self.get_target_room(self.target_room)
+                if not target_room:
+                    caller.msg(f"Room '{self.target_room}' not found.")
+                    return
+                
+                room_info = f"#{target_room.id}" if target_room != caller.location else "here"
+                tags = getattr(target_room.db, 'tags', []) or []
+                if tags:
+                    caller.msg(f"Room tags for {target_room.name} ({room_info}): {', '.join(tags)}")
+                else:
+                    caller.msg(f"No tags set for room {target_room.name} ({room_info})")
                 return
             
             value = self.switch_value
@@ -454,9 +509,21 @@ class CmdRoomSetup(MuxCommand):
                     caller.msg(f"Places system disabled for room {location.name} ({room_info})")
                 else:
                     caller.msg("Places setting must be 'on' or 'off'.")
+            
+            elif switch == "tag":
+                # Set room tags
+                tags = [tag.strip() for tag in value.split(",") if tag.strip()]
+                if not hasattr(location.db, 'tags') or location.db.tags is None:
+                    location.db.tags = []
+                location.db.tags = tags
+                room_info = f"#{location.id}" if location != caller.location else "here"
+                if tags:
+                    caller.msg(f"Room tags set to: {', '.join(tags)} for room {location.name} ({room_info})")
+                else:
+                    caller.msg(f"Room tags cleared for room {location.name} ({room_info})")
                     
             else:
-                caller.msg("Valid switches: /area, /code, /coords, /hierarchy, /places")
+                caller.msg("Valid switches: /area, /code, /coords, /hierarchy, /places, /tag, /tags")
         else:
             # Old syntax fallback for backwards compatibility
             if "=" not in self.args:
@@ -777,6 +844,14 @@ class CmdRoomInfo(MuxCommand):
         if places is None:
             places = {}
         caller.msg(f"Places Defined: {len(places)}")
+        
+        # Tags info
+        caller.msg(f"\n|cRoom Tags:|n")
+        tags = getattr(location.db, 'tags', []) or []
+        if tags:
+            caller.msg(f"Tags: {', '.join(tags)}")
+        else:
+            caller.msg("Tags: None")
         
         # Exits info
         caller.msg(f"\n|cExits:|n")
