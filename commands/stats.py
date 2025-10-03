@@ -788,48 +788,9 @@ class CmdStat(MuxCommand):
             target.db.stats["specialties"][skill_name].append(value.strip().title())
             stat_set = True
         
-        # Check for semantic power syntax (key:beasts, ceremony:pass_on, etc.)
-        elif ":" in stat:
-            power_type, power_name = stat.split(":", 1)
-            return self._handle_semantic_power(target, power_type, power_name, value)
-        
-        # Check powers (template-specific supernatural abilities)
-        else:
-            # Get character's template to determine valid powers
-            character_template = target.db.stats.get("other", {}).get("template", "Mortal")
-            template_powers = self._get_template_powers(character_template)
-            
-            if stat in template_powers:
-                # Validate power value
-                if not isinstance(value, int):
-                    try:
-                        value = int(value)
-                    except ValueError:
-                        self.caller.msg("Power dots must be a number.")
-                        return
-                
-                # Validate power range (0-5 dots)
-                if not 0 <= value <= 5:
-                    self.caller.msg("Powers must be between 0 and 5 dots.")
-                    return
-                
-                # Ensure powers category exists
-                if "powers" not in target.db.stats:
-                    target.db.stats["powers"] = {}
-                
-                # Set the power
-                target.db.stats["powers"][stat] = value
-                stat_set = True
-                
-                # Message about power setting
-                power_display = stat.replace('_', ' ').title()
-                if value == 0:
-                    self.caller.msg(f"Removed {power_display} from {target.name}.")
-                else:
-                    self.caller.msg(f"Set {target.name}'s {power_display} to {value} dots.")
-        
-        # Check merits (allow setting for unapproved characters, redirect approved to XP system)
+        # Check merits FIRST (allow setting for unapproved characters, redirect approved to XP system)
         # Also handle instanced merits with colon syntax (e.g., unseen_sense:ghosts)
+        # This must come before semantic power check since both use colons
         if not stat_set:
             try:
                 from world.cofd.merits.general_merits import merits_dict
@@ -868,6 +829,47 @@ class CmdStat(MuxCommand):
             except ImportError:
                 # If merit system not available, fall through to custom stat
                 pass
+        
+        # Check for semantic power syntax (key:beasts, ceremony:pass_on, etc.)
+        # This comes after merit check since both use colons
+        if not stat_set and ":" in stat:
+            power_type, power_name = stat.split(":", 1)
+            return self._handle_semantic_power(target, power_type, power_name, value)
+        
+        # Check powers (template-specific supernatural abilities)
+        if not stat_set:
+            # Get character's template to determine valid powers
+            character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+            template_powers = self._get_template_powers(character_template)
+            
+            if stat in template_powers:
+                # Validate power value
+                if not isinstance(value, int):
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        self.caller.msg("Power dots must be a number.")
+                        return
+                
+                # Validate power range (0-5 dots)
+                if not 0 <= value <= 5:
+                    self.caller.msg("Powers must be between 0 and 5 dots.")
+                    return
+                
+                # Ensure powers category exists
+                if "powers" not in target.db.stats:
+                    target.db.stats["powers"] = {}
+                
+                # Set the power
+                target.db.stats["powers"][stat] = value
+                stat_set = True
+                
+                # Message about power setting
+                power_display = stat.replace('_', ' ').title()
+                if value == 0:
+                    self.caller.msg(f"Removed {power_display} from {target.name}.")
+                else:
+                    self.caller.msg(f"Set {target.name}'s {power_display} to {value} dots.")
         
         # Custom stat handling
         if not stat_set:
