@@ -101,6 +101,20 @@ class CmdLookup(MuxCommand):
             self.show_embeds()
         elif args == "exploits":
             self.show_exploits()
+        elif args == "transmutations":
+            self.show_transmutations()
+        elif args == "alembics":
+            self.show_alembics()
+        elif args == "bestowments":
+            self.show_bestowments()
+        elif args == "lineages":
+            self.show_lineages()
+        elif args == "athanors":
+            self.show_athanors()
+        elif args == "specialties" or args.startswith("specialties"):
+            parts = args.split()
+            skill = parts[1] if len(parts) > 1 else None
+            self.show_specialties(skill)
         else:
             # Try to find specific stat
             self.show_stat_details(args)
@@ -127,6 +141,13 @@ class CmdLookup(MuxCommand):
         msg += "  |yagendas|n          - List demon agendas\n"
         msg += "  |yembeds|n           - List demon embeds\n"
         msg += "  |yexploits|n         - List demon exploits\n"
+        msg += "  |ytransmutations|n   - List promethean transmutations\n"
+        msg += "  |yalembics|n         - List promethean alembics (by transmutation)\n"
+        msg += "  |ybestowments|n      - List promethean bestowments\n"
+        msg += "  |ylineages|n         - List promethean lineages\n"
+        msg += "  |yathanors|n         - List promethean athanors (by lineage)\n"
+        msg += "  |yspecialties|n      - List all skill specialties\n"
+        msg += "  |yspecialties <skill>|n - List specialties for a specific skill\n"
         msg += "  |ytemplates|n        - List character templates\n\n"
         msg += "|cSpecial Commands:|n\n"
         msg += "  |y+lookup <stat>|n       - Get details on specific stat\n"
@@ -406,6 +427,171 @@ class CmdLookup(MuxCommand):
             msg += f"|cDescription:|n Core personality trait that defines the character\n"
         
         self.caller.msg(msg)
+    
+    def show_transmutations(self):
+        """Show promethean transmutations."""
+        table = evtable.EvTable("|wTransmutation|n", "|wDescription|n", border="cells", width=78)
+        
+        transmutation_descriptions = {
+            "alchemicus": "Mastery over matter and transformation",
+            "benefice": "Powers of the Throng - cooperative abilities",
+            "contamination": "Powers of emotional and social corruption",
+            "corporeum": "Physical enhancement and athletic prowess",
+            "deception": "Powers of concealment and disguise",
+            "disquietism": "Mastery over Disquiet and Flux",
+            "electrification": "Control over electricity and lightning",
+            "flux": "Dark powers of the Wasteland (dangerous)",
+            "luciferus": "Powers of radiance and inspiration",
+            "metamorphosis": "Shapeshifting and physical transformation",
+            "mesmerism": "Powers of emotional manipulation",
+            "saturninus": "Powers of Azothic memory and Pyros",
+            "sensorium": "Enhanced senses and perception",
+            "spiritus": "Powers against supernatural threats",
+            "vitality": "Powers of endurance and strength",
+            "vulcanus": "Powers of the Divine Fire"
+        }
+        
+        for transmutation in sorted(LOOKUP_DATA.promethean_data['transmutations']):
+            desc = transmutation_descriptions.get(transmutation, "Promethean supernatural power")
+            table.add_row(f"|g{transmutation.title()}|n", desc)
+        
+        self.caller.msg(f"|wPromethean Transmutations|n\n{table}")
+        self.caller.msg(f"\n|cNote:|n Use |y+lookup alembics|n to see individual Alembics within each Transmutation.")
+    
+    def show_alembics(self):
+        """Show promethean alembics organized by transmutation."""
+        msg = f"|wPromethean Alembics (by Transmutation)|n\n\n"
+        
+        alembics_dict = LOOKUP_DATA.promethean_data['alembics']
+        
+        for transmutation in sorted(alembics_dict.keys()):
+            alembics = sorted(alembics_dict[transmutation])
+            msg += f"|g{transmutation.title()}:|n\n"
+            msg += "  " + ", ".join([a.replace('_', ' ').title() for a in alembics]) + "\n\n"
+        
+        msg += f"|cTotal:|n {sum(len(a) for a in alembics_dict.values())} individual Alembics\n"
+        msg += f"\n|cNote:|n Alembics are individual powers, not rated by dots. Set with:\n"
+        msg += "|y+stat alembic=<alembic_name>|n (e.g., +stat alembic=human_flesh)"
+        
+        self.caller.msg(msg)
+    
+    def show_bestowments(self):
+        """Show promethean bestowments."""
+        msg = f"|wPromethean Bestowments|n\n\n"
+        msg += "Bestowments are unique gifts tied to a Promethean's Lineage:\n\n"
+        
+        bestowments = sorted([b.lower().replace(" ", "_") for b in LOOKUP_DATA.promethean_data['bestowments']])
+        
+        # Display in columns
+        col_width = 30
+        for i in range(0, len(bestowments), 3):
+            row = bestowments[i:i+3]
+            msg += "  " + "".join([f"|y{b.replace('_', ' ').title():<{col_width}}|n" for b in row]) + "\n"
+        
+        msg += f"\n|cTotal:|n {len(bestowments)} Bestowments\n"
+        msg += f"\n|cNote:|n Set with: |y+stat bestowment=<name>|n (e.g., +stat bestowment=spare_parts)"
+        
+        self.caller.msg(msg)
+    
+    def show_lineages(self):
+        """Show promethean lineages."""
+        table = evtable.EvTable("|wLineage|n", "|wDescription|n", border="cells", width=78)
+        
+        lineage_descriptions = {
+            "frankenstein": "Created from corpses, the Wretched, driven by loneliness",
+            "galatea": "Sculpted from unblemished forms, the Muses, seekers of beauty",
+            "osiris": "Assembled from disparate parts, the Redeemed, guardians of the dead",
+            "tammuz": "Formed from clay or earth, the Golem, seeking purpose",
+            "ulgan": "Crafted from the remains of shamans, the Pilgrims, spiritual travelers",
+            "extempore": "Spontaneously created Prometheans, rare and unpredictable",
+            "unfleshed": "Prometheans without physical form, ethereal and strange",
+            "zeka": "Created from metal and machine parts, the Manufactured"
+        }
+        
+        for lineage in sorted(LOOKUP_DATA.promethean_data['lineages']):
+            desc = lineage_descriptions.get(lineage, "Promethean lineage")
+            table.add_row(f"|g{lineage.title()}|n", desc)
+        
+        self.caller.msg(f"|wPromethean Lineages|n\n{table}")
+        self.caller.msg(f"\n|cNote:|n Set with: |y+stat lineage=<name>|n")
+    
+    def show_athanors(self):
+        """Show promethean athanors organized by lineage."""
+        msg = f"|wPromethean Athanors (by Lineage)|n\n\n"
+        msg += "Athanors are the spiritual engines that drive the Pilgrimage:\n\n"
+        
+        athanors_dict = LOOKUP_DATA.promethean_data['athanors']
+        
+        for lineage in sorted(athanors_dict.keys()):
+            athanors = sorted(athanors_dict[lineage])
+            msg += f"|g{lineage.title()}:|n\n"
+            msg += "  " + ", ".join([a.replace('_', ' ').title() for a in athanors]) + "\n\n"
+        
+        msg += f"\n|cNote:|n Set with: |y+stat athanor=<name>|n (requires matching Lineage)\n"
+        msg += "Example: |y+stat lineage=Frankenstein|n then |y+stat athanor=Basilisk|n"
+        
+        self.caller.msg(msg)
+    
+    def show_specialties(self, skill=None):
+        """Show skill specialties, optionally filtered by skill."""
+        if skill:
+            # Show specialties for a specific skill
+            skill = skill.lower().replace(" ", "_")
+            if skill not in LOOKUP_DATA.specialties:
+                self.caller.msg(f"No specialties found for '{skill}'.")
+                self.caller.msg(f"Use |y+lookup specialties|n to see all available skills with specialties.")
+                return
+            
+            specialties = LOOKUP_DATA.specialties[skill]
+            msg = f"|w{skill.title().replace('_', ' ')} Specialties|n\n\n"
+            msg += f"|cSuggested Specialties:|n\n"
+            msg += "  " + ", ".join(specialties) + "\n\n"
+            msg += f"|cUsage:|n |y+stat specialty/{skill}=<specialty name>|n\n"
+            msg += f"|cExample:|n |y+stat specialty/{skill}={specialties[0]}|n"
+            
+            self.caller.msg(msg)
+        else:
+            # Show all specialties organized by skill type
+            msg = f"|wSkill Specialties|n\n\n"
+            msg += "Specialties add depth and focus to your skills. Set them with:\n"
+            msg += "|y+stat specialty/<skill>=<specialty name>|n\n\n"
+            
+            # Organize by skill type
+            mental_skills = ['academics', 'computer', 'crafts', 'investigation', 'medicine', 'occult', 'politics', 'science']
+            physical_skills = ['athletics', 'brawl', 'drive', 'firearms', 'larceny', 'stealth', 'survival', 'weaponry']
+            social_skills = ['animal_ken', 'empathy', 'expression', 'intimidation', 'persuasion', 'socialize', 'streetwise', 'subterfuge']
+            
+            msg += "|cMental Skills:|n\n"
+            for skill in mental_skills:
+                if skill in LOOKUP_DATA.specialties:
+                    specialties = LOOKUP_DATA.specialties[skill]
+                    msg += f"  |y{skill.title().replace('_', ' ')}:|n {', '.join(specialties[:3])}"
+                    if len(specialties) > 3:
+                        msg += f", ... ({len(specialties)} total)"
+                    msg += "\n"
+            
+            msg += "\n|cPhysical Skills:|n\n"
+            for skill in physical_skills:
+                if skill in LOOKUP_DATA.specialties:
+                    specialties = LOOKUP_DATA.specialties[skill]
+                    msg += f"  |y{skill.title().replace('_', ' ')}:|n {', '.join(specialties[:3])}"
+                    if len(specialties) > 3:
+                        msg += f", ... ({len(specialties)} total)"
+                    msg += "\n"
+            
+            msg += "\n|cSocial Skills:|n\n"
+            for skill in social_skills:
+                if skill in LOOKUP_DATA.specialties:
+                    specialties = LOOKUP_DATA.specialties[skill]
+                    msg += f"  |y{skill.title().replace('_', ' ')}:|n {', '.join(specialties[:3])}"
+                    if len(specialties) > 3:
+                        msg += f", ... ({len(specialties)} total)"
+                    msg += "\n"
+            
+            msg += f"\n|cUse:|n |y+lookup specialties <skill>|n to see all specialties for a specific skill\n"
+            msg += f"|cExample:|n |y+lookup specialties athletics|n"
+            
+            self.caller.msg(msg)
     
     def search_stats(self):
         """Search for stats containing the given term."""

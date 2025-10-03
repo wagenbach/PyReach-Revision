@@ -38,6 +38,35 @@ LEGACY_PROMETHEAN_TRANSMUTATIONS = [
     # Vulcanus
     "vulcanus"
 ]
+# Athanor mappings - athanors accessible by Lineage
+ATHANORS_BY_LINEAGE = {
+    "frankenstein": [
+        "basilisk", "caladrius", "griffon", "lion", "manticore"
+    ],
+    "galatea": [
+        "dove", "gorgon", "unicorn", "seraph", "swan"
+    ],
+    "osiris": [
+        "ant", "eel", "dragon", "eagle", "honeybee", "owl", "scorpion", "sphinx"
+    ],
+    "tammuz": [
+        "cerberus", "crab", "humbaba", "pelican", "phoenix"
+    ],
+    "ulgan": [
+        "chimera", "crane", "dragon", "fox", "la llorona", "raven", "salamander", "toad"
+    ],
+    "unfleshed": [
+        "caucasian eagle", "chi wiou", "golden maiden"
+    ],
+    "zeka": [
+        "cockroach", "machine"
+    ]
+}
+
+# All valid athanors (for validation)
+ALL_ATHANORS = list(set(
+    [athanor for athanors in ATHANORS_BY_LINEAGE.values() for athanor in athanors]
+))
 
 # Legacy Promethean template definition
 LEGACY_PROMETHEAN_TEMPLATE = {
@@ -61,6 +90,9 @@ LEGACY_PROMETHEAN_TEMPLATE = {
         },
         "refinement": {
             "valid_values": LEGACY_PROMETHEAN_REFINEMENTS
+        },
+        "athanor": {
+            "valid_values": ALL_ATHANORS
         }
     },
     "legacy_mode": True,  # Flag to indicate this is a legacy template

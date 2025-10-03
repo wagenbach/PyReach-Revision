@@ -10,11 +10,15 @@ from world.cofd.stat_dictionary import (
 from world.cofd.merits.general_merits import all_merits as general_merits
 from world.cofd.merits.vampire_merits import vampire_merits
 from world.cofd.templates.vampire import VAMPIRE_CLANS, VAMPIRE_COVENANTS, VAMPIRE_DISCIPLINES
-from world.cofd.templates.mage import MAGE_PATHS, MAGE_ORDERS, MAGE_ARCANA
+from world.cofd.templates.mage import MAGE_PATHS, MAGE_ORDERS, MAGE_ARCANA, LEGACIES_BY_PATH, LEGACIES_BY_ORDER, UNLINKED_LEGACIES, ALL_LEGACIES
 from world.cofd.templates.demon import DEMON_INCARNATIONS, DEMON_AGENDAS, DEMON_EMBEDS, DEMON_EXPLOITS
 from world.cofd.templates.mortal_plus import ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS, THAUMATURGE_TRADITIONS
-from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES
-from world.cofd.templates.changeling import CHANGELING_SEEMINGS, CHANGELING_COURTS
+from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_LODGES
+from world.cofd.templates.changeling import CHANGELING_SEEMINGS, CHANGELING_COURTS, CHANGELING_KITHS, CHANGELING_ENTITLEMENTS
+from world.cofd.templates.promethean import (
+    PROMETHEAN_TRANSMUTATIONS, PROMETHEAN_ALEMBICS, 
+    PROMETHEAN_BESTOWMENTS, ATHANORS_BY_LINEAGE, PROMETHEAN_LINEAGES
+)
 import re
 
 
@@ -80,6 +84,46 @@ class LookupData:
                 'seemings': ['beast', 'darkling', 'elemental', 'fairest', 'ogre', 'wizened'],
                 'courts': ['spring', 'summer', 'autumn', 'winter', 'courtless']
             }
+        
+        # Promethean data
+        self.promethean_data = {
+            'transmutations': PROMETHEAN_TRANSMUTATIONS,
+            'alembics': PROMETHEAN_ALEMBICS,
+            'bestowments': PROMETHEAN_BESTOWMENTS,
+            'lineages': PROMETHEAN_LINEAGES,
+            'athanors': ATHANORS_BY_LINEAGE
+        }
+        
+        # Skill specialties
+        self.specialties = {
+            # Mental Skills
+            'academics': ['Anthropology', 'Art History', 'English', 'History', 'Law', 'Literature', 'Religion', 'Research', 'Translation'],
+            'computer': ['Data Retrieval', 'Graphics', 'Hacking', 'Internet', 'Programming', 'Security', 'Social Media'],
+            'crafts': ['Automotive', 'Cosmetics', 'Fashion', 'Forging', 'Graffiti', 'Jury-Rigging', 'Painting', 'Perfumery', 'Repair', 'Sculpting'],
+            'investigation': ['Artifacts', 'Autopsy', 'Body Language', 'Crime Scenes', 'Cryptography', 'Dreams', 'Lab Work', 'Riddles'],
+            'medicine': ['First Aid', 'Pathology', 'Pharmaceuticals', 'Physical Therapy', 'Surgery'],
+            'occult': ['Angels', 'Alchemy', 'Mystic Places', 'Casting Lots', 'Phrenology', 'Sorcery', 'Supernatural Being (specify)', 'Superstition', 'Witchcraft'],
+            'politics': ['Bureaucracy', 'Church', 'Democratic', 'Invictus', 'Local', 'Organized Crime', 'Scandals'],
+            'science': ['Physics', 'Chemistry', 'Neuroscience', 'Virology', 'Alchemy', 'Genetics', 'Hematology'],
+            # Physical Skills
+            'athletics': ['Acrobatics', 'Archery', 'Climbing', 'Jumping', 'Parkour', 'Swimming', 'Throwing'],
+            'brawl': ['Biting', 'Boxing', 'Dirty Fighting', 'Grappling', 'Martial Arts', 'Threats', 'Throws'],
+            'drive': ['Defensive Driving', 'Evasion', 'Off-Road Driving', 'Motorcycles', 'Pursuit', 'Stunts'],
+            'firearms': ['Handguns', 'Rifles', 'Shotguns', 'Trick Shots'],
+            'larceny': ['Breaking and Entering', 'Concealment', 'Lockpicking', 'Pickpocketing', 'Safecracking', 'Security Systems', 'Sleight of Hand'],
+            'stealth': ['Camouflage', 'Crowds', 'In Plain Sight', 'Rural', 'Shadowing', 'Stakeout', 'Staying Motionless'],
+            'survival': ['Foraging', 'Hunting', 'Navigation', 'Shelter', 'Weather'],
+            'weaponry': ['Chains', 'Clubs', 'Improvised Weapons', 'Spears', 'Swords'],
+            # Social Skills
+            'animal_ken': ['Animalism', 'Canines', 'Felines', 'Reptiles', 'Threatening', 'Training'],
+            'empathy': ['Calming', 'Emotion', 'Lies', 'Motives', 'Personalities'],
+            'expression': ['Dance', 'Drama', 'Journalism', 'Musical Instrument', 'Performance Art', 'Singing', 'Speeches'],
+            'intimidation': ['Direct Threats', 'Interrogation', 'Stare Down', 'Torture', 'Veiled Threats'],
+            'persuasion': ['Confidence Scam', 'Fast Talking', 'Inspiring', 'Sales Pitch', 'Seduction', 'Sermon'],
+            'socialize': ['Bar Hopping', 'Church Lock-in', 'Dress Balls', 'Formal Events', 'Frat Parties', 'Political Fundraisers', 'the Club'],
+            'streetwise': ['Black Market', 'Gangs', 'Navigation', 'Rumors', 'Undercover'],
+            'subterfuge': ['Detecting Lies', 'Doublespeak', 'Hiding Emotion', 'Little White Lies', 'Misdirection']
+        }
     
     def find_stat(self, stat_name):
         """Find a stat by name across all categories."""
@@ -265,47 +309,18 @@ LOOKUP_DATA = LookupData()
 
 def get_attribute_description(attr_name):
     """Get description for an attribute."""
-    descriptions = {
-        "strength": "Raw physical power, muscle, and brute force",
-        "dexterity": "Agility, speed, and hand-eye coordination", 
-        "stamina": "Endurance, health, and resistance to harm",
-        "presence": "Bearing, magnetism, and force of personality",
-        "manipulation": "Persuasion, deception, and social cunning",
-        "composure": "Poise, dignity, and emotional control",
-        "intelligence": "Reasoning, memory, and analytical ability",
-        "wits": "Cunning, awareness, and quick thinking",
-        "resolve": "Focus, determination, and mental fortitude"
-    }
-    return descriptions.get(attr_name, "Core character attribute")
+    # Pull directly from the attribute dictionary
+    if attr_name in attribute_dictionary:
+        return attribute_dictionary[attr_name].description
+    return "Core character attribute"
 
 
 def get_skill_description(skill_name):
     """Get description for a skill."""
-    descriptions = {
-        "crafts": "Creating, building, and repairing objects",
-        "investigation": "Solving mysteries and finding clues",
-        "medicine": "Healing, anatomy, and medical knowledge",
-        "occult": "Hidden knowledge and supernatural lore",
-        "politics": "Government, law, and bureaucracy",
-        "science": "Physical sciences and research methods",
-        "athletics": "Running, jumping, climbing, and sports",
-        "brawl": "Unarmed combat and martial arts",
-        "drive": "Operating vehicles and high-speed maneuvers",
-        "firearms": "Shooting and maintaining guns",
-        "larceny": "Theft, lockpicking, and security systems",
-        "stealth": "Moving unseen and remaining hidden",
-        "survival": "Wilderness skills and tracking",
-        "weaponry": "Melee combat with weapons",
-        "animal_ken": "Understanding and training animals",
-        "empathy": "Understanding emotions and motivations",
-        "expression": "Artistic expression and performance",
-        "intimidation": "Threatening and coercing others",
-        "persuasion": "Convincing others through reason",
-        "socialize": "Etiquette, networking, and social graces",
-        "streetwise": "Urban survival and criminal contacts",
-        "subterfuge": "Deception, misdirection, and lies"
-    }
-    return descriptions.get(skill_name, "Character skill")
+    # Pull directly from the skill dictionary
+    if skill_name in skill_dictionary:
+        return skill_dictionary[skill_name].description
+    return "Character skill"
 
 
 def get_discipline_description(discipline_name):

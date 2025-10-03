@@ -133,99 +133,6 @@ class CmdSheet(MuxCommand):
         # Fallback to default mortal fields if template not found
         return ["virtue", "vice"]
 
-    def _migrate_legacy_stats(self, target):
-        """
-        Migrate legacy stats from individual attributes to new stats dictionary format.
-        Silent migration that only migrates if legacy data is found.
-        
-        Args:
-            target: Character object to migrate
-            
-        Returns:
-            bool: True if migration was performed, False if no legacy data found
-        """
-        legacy_attrs = [
-            # Attributes
-            "strength", "dexterity", "stamina", "presence", "manipulation", 
-            "composure", "intelligence", "wits", "resolve",
-            # Skills  
-            "crafts", "investigation", "medicine", "occult", "politics", "science",
-            "athletics", "brawl", "drive", "firearms", "larceny", "stealth", 
-            "survival", "weaponry", "animal_ken", "empathy", "expression", 
-            "intimidation", "persuasion", "socialize", "streetwise", "subterfuge",
-            # Advantages
-            "health", "willpower", "speed", "defense", "initiative",
-            # Bio fields
-            "fullname", "full_name", "birthdate", "concept", "virtue", "vice",
-            # Other
-            "integrity", "size", "beats", "experience", "template",
-            # Power stats
-            "gnosis", "blood_potency", "primal_urge", "wyrd", "synergy", "azoth", 
-            "primum", "satiety", "deviation"
-        ]
-        
-        # Check for legacy data
-        migrated_data = {}
-        has_legacy_data = False
-        for attr_name in legacy_attrs:
-            if hasattr(target.db, attr_name):
-                value = getattr(target.db, attr_name)
-                if value is not None:
-                    migrated_data[attr_name] = value
-                    has_legacy_data = True
-        
-        if not has_legacy_data:
-            return False
-        
-        # Initialize modern stats structure if needed
-        if not target.db.stats:
-            target.db.stats = {
-                "attributes": {},
-                "skills": {},
-                "advantages": {},
-                "anchors": {},
-                "bio": {},
-                "other": {}
-            }
-        
-        # Migrate data to appropriate categories
-        attributes = ["strength", "dexterity", "stamina", "presence", "manipulation", 
-                     "composure", "intelligence", "wits", "resolve"]
-        skills = ["crafts", "investigation", "medicine", "occult", "politics", "science",
-                 "athletics", "brawl", "drive", "firearms", "larceny", "stealth", 
-                 "survival", "weaponry", "animal_ken", "empathy", "expression", 
-                 "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"]
-        advantages = ["health", "willpower", "speed", "defense", "initiative",
-                     "gnosis", "blood_potency", "primal_urge", "wyrd", "synergy", 
-                     "azoth", "primum", "satiety", "deviation"]
-        bio_fields = ["fullname", "full_name", "birthdate", "concept", "virtue", "vice"]
-        other_fields = ["integrity", "size", "beats", "experience", "template"]
-        
-        for attr_name, value in migrated_data.items():
-            if attr_name in attributes:
-                target.db.stats["attributes"][attr_name] = value
-            elif attr_name in skills:
-                target.db.stats["skills"][attr_name] = value
-            elif attr_name in advantages:
-                target.db.stats["advantages"][attr_name] = value
-            elif attr_name in bio_fields:
-                bio_key = "full_name" if attr_name in ["fullname", "full_name"] else attr_name
-                target.db.stats["bio"][bio_key] = value
-                if attr_name in ["virtue", "vice"]:
-                    target.db.stats["anchors"][attr_name] = value
-            elif attr_name in other_fields:
-                target.db.stats["other"][attr_name] = value
-            else:
-                target.db.stats["other"][attr_name] = value
-            
-            # Clean up the old attribute
-            try:
-                delattr(target.db, attr_name)
-            except AttributeError:
-                pass
-        
-        return True
-
     def _format_section_header(self, section_name):
         """
         Create an arrow-style section header that spans 78 characters.
@@ -712,7 +619,7 @@ class CmdSheet(MuxCommand):
             output.append(self._format_section_header("|wSKILLS|n"))
             
             # Mental Skills
-            mental_skills = ["crafts", "investigation", "medicine", "occult", "politics", "science"]
+            mental_skills = ["academics", "computer", "crafts", "investigation", "medicine", "occult", "politics", "science"]
             mental_display = []
             mental_specialties = []
             for skill in mental_skills:

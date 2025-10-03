@@ -38,10 +38,10 @@ DEVIANT_TEMPLATE = {
     "bio_fields": ["virtue", "vice", "origin", "clade", "scar", "conspiracy", "touchstone"],
     "integrity_name": "Loyalty",
     "starting_integrity": 7,
-    "supernatural_power_stat": "deviation",
+    "supernatural_power_stat": "acclimation",
     "starting_power_stat": 1,
     "resource_pool": "willpower",
-    "power_systems": DEVIANT_VARIATIONS + DEVIANT_ADAPTATIONS,
+    "power_systems": DEVIANT_VARIATIONS + DEVIANT_ADAPTATIONS + DEVIANT_SCARS,
     "anchors": ["virtue", "vice"],
     "merit_categories": ["physical", "social", "mental", "supernatural", "fighting", "style", "deviant"],
     "field_validations": {
@@ -50,9 +50,6 @@ DEVIANT_TEMPLATE = {
         },
         "clade": {
             "valid_values": DEVIANT_CLADES
-        },
-        "scar": {
-            "valid_values": DEVIANT_SCARS
         }
     },
     "version": "2.0",

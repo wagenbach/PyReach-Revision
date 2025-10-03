@@ -29,23 +29,23 @@ self.add(DiesIraeCmdSet())
 - **CmdPose** - Pose/emote actions
 - **CmdSay** - Say something in character
 - **CmdShortDesc** - Set a short description for your character
-- **CmdTableTalk** - OOC table talk during RP
+- **CmdTableTalk** - OOC/IC table talk during RP
 
 ### Communication Commands
-- **CmdPage** - Send private messages to other players (by account or character name)
+- **CmdPage** - Send private messages to other players (by character name)
 - **CmdText** - Text/SMS-style messages
 
 ### Information & Social Commands
 - **CmdStaff** - Display staff roster
-- **CmdWatch** - Watch/monitor channels or players
+- **CmdWatch** - Watch/monitor players
 - **CmdWeather** - Display or set weather information
 - **CmdWho** - List connected players
 - **CmdCensus** - Display player census information
 
 ### Game Mechanics Commands
-- **CmdPool** - Manage dice pools
-- **CmdSpend** - Spend points/resources
-- **CmdGain** - Gain points/resources
+- **CmdPool** - Manage power point pools
+- **CmdSpend** - Spend pool points
+- **CmdGain** - Gain pool points
 - **CmdLanguage** - Handle multi-language communication
 
 ## File Structure

@@ -44,12 +44,23 @@ WEREWOLF_RITES = [
     "devour", "forge_alliance", "urfarahs_bane", "veil", "great_hunt", "shadow_distortion", "unleash_shadow"
 ]
 
+WEREWOLF_LODGES = [
+    "Cull", "Cherufe", "Dream Eaters", "Dreaming", "Eaters of the Dead", "Hollow Rivers",
+    "Jaw Hags", "Arms", "Blue Moon", "Cage", "Chronicle", "Clocktower", "Crows", "Death",
+    "Einherjar", "Embers", "Field", "Firefly", "Gargoyles", "Garm", "Harbingers", "Harmony",
+    "Hook Hand", "Hundred Days", "Irkalla", "Lightning", "Muspell", "Prophecy", "Roman Ritual",
+    "Screaming Moon", "Seasons", "Seven Venoms", "Shield", "Sleepless Earth", "Swords",
+    "Throne", "Thunder", "Unmasked", "Voices", "Wires", "Wrath", "Matagot",
+    "Prince Bishop's Wolves", "Temple of Apollo", "Tenders of the Fang",
+    "Thousand Steel Teeth", "Tindalosi", "Wendigo", "Wily Crows"
+]
+
 # Werewolf template definition
 WEREWOLF_TEMPLATE = {
     "name": "werewolf",
     "display_name": "Werewolf",
     "description": "Werewolves are spirit-touched shapeshifters who hunt in the border between flesh and spirit, driven by Rage and bound by ancient codes.",
-    "bio_fields": ["bone", "blood", "tribe", "auspice", "pack", "totem", "deed_name"],
+    "bio_fields": ["bone", "blood", "tribe", "auspice", "pack", "totem", "deed_name", "lodge"],
     "integrity_name": "Harmony",
     "starting_integrity": 7,
     "supernatural_power_stat": "primal_urge",
@@ -64,12 +75,15 @@ WEREWOLF_TEMPLATE = {
         },
         "auspice": {
             "valid_values": WEREWOLF_AUSPICES
+        },
+        "lodge": {
+            "valid_values": WEREWOLF_LODGES
         }
     },
     "version": "2.0",
     "author": "Chronicles of Darkness",
     "game_line": "Werewolf: The Forsaken",
-    "notes": "Enhanced Werewolf template with Primal Urge, Gifts, Rites, and Essence pool"
+    "notes": "Werewolf the Forsaken template from Chronicles of Darkness 2nd edition"
 }
 
 # Register the template

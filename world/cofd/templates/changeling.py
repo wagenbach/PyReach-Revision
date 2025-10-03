@@ -16,20 +16,45 @@ CHANGELING_COURTS = [
     "dawn", "day", "dusk", "night"
 ]
 
-# Valid kiths for Changeling characters (extensive list)
+# Valid kiths for Changeling characters (2nd Edition)
 CHANGELING_KITHS = [
-    # Darkling kiths
-    "shadowsoul", "tunnelgrub", "leechfinger", "gravewight", "mirrorskin", "razorhand",
-    # Beast kiths
-    "hunterheart", "skitterskulk", "steepscrambler", "venombite", "windwing", "truefriend",
-    # Elemental kiths  
-    "airtouched", "earthbones", "fireheart", "manikin", "snowskin", "waterskin",
-    # Fairest kiths
-    "flowering", "bright one", "dancer", "draconic", "muse", "telluric",
-    # Ogre kiths
-    "gargantuan", "render", "stonebones", "watersense", "witchtooth", "bloodbrute",
-    # Wizened kiths
-    "artifice", "brewer", "chatelaine", "chirurgeon", "oracle", "soldier"
+    # Base Changeling: The Lost 2nd Edition kiths
+    "artist", "bright_one", "chatelaine", "gristlegrinder", "helldiver", "hunterheart", 
+    "leechfinger", "mirrorskin", "nightsinger", "notary", "playmate", "snowskin",
+    
+    # Kith & Kin - Crown kiths
+    "absinthial", "climacteric", "concubus", "draconic", "flowering", "ghostheart", 
+    "moonborn", "uttervoice",
+    
+    # Kith & Kin - Jewels kiths
+    "delver", "glimmerwisp", "manikin", "oculus", "polychromatic", "veneficus", "witchtooth",
+    
+    # Kith & Kin - Mirror kiths
+    "bricoleur", "cloakskin", "doppelganger", "lethipomp", "lullescent", "riddleseeker", 
+    "sideromancer", "spiegelbild",
+    
+    # Kith & Kin - Shield kiths
+    "asclepian", "bridgeguard", "librorum", "liminal", "reborn", "stoneflesh", "wisewitch",
+    
+    # Kith & Kin - Steed kiths
+    "airtouched", "chalomot", "chevalier", "farwalker", "flickerflash", "levinquick", 
+    "swarmflight", "swimmerskin",
+    
+    # Kith & Kin - Sword kiths
+    "bearskin", "beastcaller", "cyclopean", "plaguesmith", "razorhand", "sandharrowed", 
+    "valkyrie", "venombite",
+    
+    # Kith & Kin - Additional kiths
+    "apoptosome", "becquerel", "blightbent", "enkrateia", "gravewight", "shadowsoul", 
+    "telluric", "whisperwisp",
+    
+    # Dark Eras 2 kiths
+    "nymph", "dryad", "cleverquick"
+]
+
+# Valid entitlements for Changeling characters
+CHANGELING_ENTITLEMENTS = [ 
+    "Baron of the Lesser Ones", "Dauphines of Wayward Children", "Master of Keys", "Modiste of Elfhame", "Thorn Dancer", "Sibylline Fishers", "Spiderborn Riders"
 ]
 
 # Valid changeling contracts (2nd Edition) - Individual contract powers
@@ -111,7 +136,7 @@ CHANGELING_TEMPLATE = {
     "description": ("Changelings are humans who were taken to the realm of the True Fae and "
                    "transformed, eventually escaping back to the mortal world. They are organized "
                    "by their Seemings (what they became) and Courts (seasonal affiliations)."),
-    "bio_fields": ["needle", "thread", "seeming", "court", "kith", "keeper", "motley"],
+    "bio_fields": ["needle", "thread", "seeming", "court", "kith", "keeper", "motley", "entitlement"],
     "integrity_name": "Clarity",
     "starting_integrity": 7,
     "supernatural_power_stat": "wyrd",
@@ -129,6 +154,9 @@ CHANGELING_TEMPLATE = {
         },
         "kith": {
             "valid_values": CHANGELING_KITHS
+        },
+        "entitlement": {
+            "valid_values": CHANGELING_ENTITLEMENTS
         }
     },
     "version": "2.0",

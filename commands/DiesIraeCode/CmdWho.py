@@ -336,7 +336,7 @@ class CmdCensus(COMMAND_DEFAULT_CLASS):
         characters = self.get_all_characters()
         counts = {}
         
-        # Template-specific field mappings
+        # Template-specific field mappings - PRIMARY field comes first
         template_fields = {
             'Vampire': ['clan', 'covenant'],
             'Mage': ['path', 'order', 'legacy'],
@@ -360,20 +360,74 @@ class CmdCensus(COMMAND_DEFAULT_CLASS):
                 continue
                 
             bio = char.db.stats.get("bio", {})
-            other = char.db.stats.get("other", {})
             
-            # Check each relevant field for this template
-            found_category = False
-            for field in fields_to_check:
-                value = bio.get(field) or other.get(field)
-                if value and value != "<not set>" and value.strip():
-                    category_name = f"{field.title()}: {value}"
+            # Try to build a meaningful category string from available fields
+            # For most templates, we'll use the primary field (first in list)
+            primary_field = fields_to_check[0] if fields_to_check else None
+            
+            if primary_field:
+                value = bio.get(primary_field)
+                
+                # Check if value is valid
+                if value and value != "<not set>" and str(value).strip():
+                    # For some templates, combine multiple fields for better categorization
+                    if template == 'Changeling' and len(fields_to_check) >= 3:
+                        # For Changeling: Show "Seeming (Court)" format
+                        seeming = bio.get('seeming', '')
+                        court = bio.get('court', '')
+                        
+                        if seeming and seeming != "<not set>" and str(seeming).strip():
+                            if court and court != "<not set>" and str(court).strip():
+                                category_name = f"{seeming} ({court})"
+                            else:
+                                category_name = f"{seeming}"
+                        else:
+                            category_name = "Unspecified"
+                    elif template == 'Vampire' and len(fields_to_check) >= 2:
+                        # For Vampire: Show "Clan (Covenant)" format
+                        clan = bio.get('clan', '')
+                        covenant = bio.get('covenant', '')
+                        
+                        if clan and clan != "<not set>" and str(clan).strip():
+                            if covenant and covenant != "<not set>" and str(covenant).strip():
+                                category_name = f"{clan} ({covenant})"
+                            else:
+                                category_name = f"{clan}"
+                        else:
+                            category_name = "Unspecified"
+                    elif template == 'Werewolf' and len(fields_to_check) >= 2:
+                        # For Werewolf: Show "Tribe (Auspice)" format
+                        tribe = bio.get('tribe', '')
+                        auspice = bio.get('auspice', '')
+                        
+                        if tribe and tribe != "<not set>" and str(tribe).strip():
+                            if auspice and auspice != "<not set>" and str(auspice).strip():
+                                category_name = f"{tribe} ({auspice})"
+                            else:
+                                category_name = f"{tribe}"
+                        else:
+                            category_name = "Unspecified"
+                    elif template == 'Mage' and len(fields_to_check) >= 2:
+                        # For Mage: Show "Path (Order)" format
+                        path = bio.get('path', '')
+                        order = bio.get('order', '')
+                        
+                        if path and path != "<not set>" and str(path).strip():
+                            if order and order != "<not set>" and str(order).strip():
+                                category_name = f"{path} ({order})"
+                            else:
+                                category_name = f"{path}"
+                        else:
+                            category_name = "Unspecified"
+                    else:
+                        # Default: just use primary field with label
+                        category_name = f"{value}"
+                    
                     counts[category_name] = counts.get(category_name, 0) + 1
-                    found_category = True
-                    break
-            
-            # If no specific category found, count as "Unspecified"
-            if not found_category:
+                else:
+                    counts["Unspecified"] = counts.get("Unspecified", 0) + 1
+            else:
+                # No fields defined for this template
                 counts["Unspecified"] = counts.get("Unspecified", 0) + 1
         
         return counts
