@@ -820,8 +820,8 @@ class CmdStat(MuxCommand):
                     
                     # Set the merit using utility
                     success, message = set_merit(target, stat, merit, value, self.caller)
+                    self.caller.msg(message)
                     if not success:
-                        self.caller.msg(message)
                         return
                     
                     # Merit was set successfully
