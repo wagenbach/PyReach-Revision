@@ -134,4 +134,20 @@ MAGE_TEMPLATE = {
 }
 
 # Register the template
-register_template(MAGE_TEMPLATE) 
+register_template(MAGE_TEMPLATE)
+
+
+# Power list helper functions
+def get_primary_powers():
+    """Get list of primary mage powers (arcana rated 1-5)."""
+    return MAGE_ARCANA.copy()
+
+
+def get_secondary_powers():
+    """Get list of secondary mage powers (none - mages only have arcana)."""
+    return []
+
+
+def get_all_powers():
+    """Get all mage powers for validation."""
+    return MAGE_ARCANA.copy() 

@@ -392,6 +392,41 @@ vampire_merits = [
         description="Fighting style for using Beast while riding the wave. (•) Ravage: Fangs become 1L weapons. (••) Primal Strength: Double Strength bonus for instant strength actions. (•••) In the Zone: Willpower for riding wave gives +3 dice to actions. (••••) Unyielding: Recover Willpower spent to initiate ride after successful scene. (•••••) Animal Grace: When spending Willpower to attack or defend, gain both +2 Defense and +3 attack.",
         merit_type="physical",
         prerequisite="composure:3,resolve:3"
+    ),
+    # Location-based Merits
+    Merit(
+        name="Burrow",
+        min_value=1,
+        max_value=5,
+        description="Replaces Haven. You share a hideout with other revenants. Add Burrow as bonus dice to stir from daysleep and stay awake in the daytime. In combat, intruders and unfamiliar guests are Distracted for one turn per dot of Burrow.",
+        merit_type="social",
+        prerequisite="safe_place:1"
+    ),
+    Merit(
+        name="Mandragora Garden",
+        min_value=1,
+        max_value=5,
+        description="Your Safe Place grows ghouled plants, which you must feed Vitae equal to your Merit dots each month, but which produce twice that quantity in Vitae's worth of sap and nectar. Their magical sympathy empowers Crúac cast there and receives it from afar, but can rile the Beast when attacked.",
+        merit_type="supernatural",
+        prerequisite="cruac:1,covenant_status_circle:1,safe_place:1"
+    ),
+    Merit(
+        name="Nest Guardian",
+        min_value=1,
+        max_value=5,
+        description="You are the custodian of a Wyrm's Nest, host to a supernatural phenomenon proportional to dots in this Merit. You may purchase additional features separately (Chapterhouse, Crucible, Feng Shui, Perilous Nest).",
+        merit_type="supernatural",
+        prerequisite="covenant_status_ordo:1"
+    ),
+    Merit(
+        name="Temple of Damnation",
+        min_value=1,
+        max_value=5,
+        description="You've secured and consecrated a gathering place to a particular Sanctified virtue. Apply dots in this Merit as a bonus to actions in service of that virtue while within the temple, or after attending rites there.",
+        merit_type="supernatural",
+        prerequisite="covenant_status_sanctum:1,safe_place:1"
     )
 ]
 
+# Create dictionary for easy lookup
+vampire_merits_dict = {merit.name.lower().replace(" ", "_").replace("(", "").replace(")", ""): merit for merit in vampire_merits}

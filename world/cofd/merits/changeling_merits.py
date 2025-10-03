@@ -314,6 +314,144 @@ changeling_merits = [
         merit_type="changeling",
         prerequisite="hollow:1"
     ),
+    # Hollow Features
+    Merit(
+        name="Easy Access",
+        min_value=3,
+        max_value=3,
+        description="The Hollow has no fixed entrance, and is instead entered (and later exited) through any unlocked door with Glamour and a small ritual.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Escape Route",
+        min_value=1,
+        max_value=2,
+        description="The Hollow has a secondary exit into the material realm, which with two dots may be accessed from anywhere in the Hollow.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Hidden Entry",
+        min_value=2,
+        max_value=2,
+        description="Penalize rolls to find the Hollow's entrance by -2. When all characters sharing the Hollow are within, the entrance disappears.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Hob Alarm",
+        min_value=1,
+        max_value=1,
+        description="Each story, take one Goblin Debt to preserve a domestic guard of friendly hobs. Ambush in the Hollow does not strip Defense and applies Hollow as bonus dice to actions in the first turn of combat.",
+        merit_type="changeling",
+        prerequisite="hollow:1,hob_kin:1"
+    ),
+    Merit(
+        name="Home Turf",
+        min_value=3,
+        max_value=3,
+        description="Apply Hollow as a bonus to Initiative and Defense against intruders.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Luxury Goods",
+        min_value=1,
+        max_value=1,
+        description="Once a session, roll Hollow as a dice pool and distribute successes among amenities by Availability or Hedgespun items by rating.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Phantom Phone Booth",
+        min_value=1,
+        max_value=1,
+        description="A magical fixture can make outgoing calls to publically listed numbers outside the Hedge.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Route Zero",
+        min_value=1,
+        max_value=1,
+        description="A one-dot trod passes through the Hollow. It may link allied Hollows, or once a day, may be traversed with a Hedge navigation roll to recover Willpower.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Shadow Garden",
+        min_value=1,
+        max_value=1,
+        description="A plot of soil infinitely replenishes copies of goblin fruit without their magical properties, which only temporarily stave off hunger.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    Merit(
+        name="Size Matters",
+        min_value=1,
+        max_value=2,
+        description="The Hollow is large enough to sustain up to six residents, or with two dots, the size of a small town.",
+        merit_type="changeling",
+        prerequisite="hollow:1"
+    ),
+    # Shared Bastion Features (for Motleys)
+    Merit(
+        name="Buttressed Dreaming",
+        min_value=1,
+        max_value=1,
+        description="Penalize Clash of Wills to force open Bastion by merit rating.",
+        merit_type="changeling",
+        prerequisite="motley_membership:1"
+    ),
+    Merit(
+        name="Fixed Doorway",
+        min_value=3,
+        max_value=3,
+        description="Door in the Motley's hollow functions as a Gate of Horn leading to and from the Shared Bastion.",
+        merit_type="changeling",
+        prerequisite="motley_membership:1,hollow:1"
+    ),
+    Merit(
+        name="Guardian Eidolon",
+        min_value=1,
+        max_value=1,
+        description="Spend Willpower to activate the guardian for the scene, gaining immunity to surprise and adding dots in the merit on the first round of an action scene.",
+        merit_type="changeling",
+        prerequisite="motley_membership:1"
+    ),
+    Merit(
+        name="Illusory Armory",
+        min_value=2,
+        max_value=2,
+        description="Once per chapter, spend glamour to summon an unimportant prop with rating equal to twice glamour spent (max +5). Spend willpower to summon additional props.",
+        merit_type="changeling",
+        prerequisite="motley_membership:1"
+    ),
+    Merit(
+        name="Permanent Armory",
+        min_value=1,
+        max_value=1,
+        description="Maintain mundane 'real' items in shared bastion, or magic items by spending Willpower each chapter.",
+        merit_type="changeling",
+        prerequisite="motley_membership:1"
+    ),
+    Merit(
+        name="Raised Defenses",
+        min_value=1,
+        max_value=1,
+        description="Whenever any motley mate is in the Shared Bastion, all members double the bonuses against the attacks or circumstances normally granted by the merit.",
+        merit_type="changeling",
+        prerequisite="motley_membership:1"
+    ),
+    Merit(
+        name="Subtle Speech",
+        min_value=2,
+        max_value=2,
+        description="Phantom Eidolons of Motley Members can receive messages, but Changelings with clarity damage might suffer further damage as their sense of reality is befuddled.",
+        merit_type="changeling",
+        prerequisite="motley_membership:1"
+    ),
 ]
 
 # Create dictionary for easy lookup

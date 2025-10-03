@@ -234,6 +234,206 @@ mage_merits = [
         merit_type="supernatural",
         prerequisite="free_council_status:1"
     ),
+    Merit(
+        name="Astral Intruder",
+        min_value=3,
+        max_value=3,
+        description="Make a Clash of Wills to meditate into the Oneiros of a mage whose soul stone you possess, instead of your own",
+        merit_type="supernatural",
+        prerequisite="astral_adept:1,resolve:3"
+    ),
+    Merit(
+        name="Awakened Status",
+        min_value=1,
+        max_value=5,
+        description="Hold status in a Consilium or Order. You may temporarily requisition dots of Alternate Identity, Retainer, Imbued Item, Artifact, Grimoire, Mentor, Hallow, Sanctum, Library, Advanced Library, Safe Place, Familiar, and Resources",
+        merit_type="social",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Broad Dedication",
+        min_value=1,
+        max_value=1,
+        description="Instill your nimbus into a specific Yantra that aligns with your spellcasting, making your Dedicated Tool any kind of Yantra",
+        merit_type="supernatural",
+        prerequisite="prime:1"
+    ),
+    Merit(
+        name="Cognoscente",
+        min_value=2,
+        max_value=2,
+        description="Your character has perfected the art of scribing grimoires. Anyone casting from his tomes may do so without the doubled ritual casting time. He may also imprint his own signature nimbus into the rote imago when scribing the spell. Doing so causes the rote to show his own nimbus instead of hiding the caster's. Once per story, gain +2 to a Social roll that relies on this fame and enjoy the benefits of Occultation •••",
+        merit_type="supernatural",
+        prerequisite="prime:3,[academics:2,occult:2]"
+    ),
+    Merit(
+        name="Daimonomikon",
+        min_value=1,
+        max_value=5,
+        description="Your character possesses a Daimonomikon for a particular legacy. Each dot corresponds to the Attainment within the Legacy that can be learned from the Daimonomikon",
+        merit_type="supernatural",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Dominant Soul",
+        min_value=1,
+        max_value=5,
+        description="When your character has another mage's soul stone you can counterspell any Arcanum from its owner, applying Merit dots as your Arcanum rating. If used as a Yantra during a Prime dispellation, reduce Withstand by dots in this Merit",
+        merit_type="supernatural",
+        prerequisite="composure:3"
+    ),
+    Merit(
+        name="Echo Chamber",
+        min_value=4,
+        max_value=4,
+        description="See flashbacks of a soul stone's owner. Gain exceptional success off 3 dice for active mage sight to investigate a mystery based on the soul stone's Path. Once per story, meditate on the soul stone to ask yes or no questions about the mystery",
+        merit_type="supernatural",
+        prerequisite="empathy:2"
+    ),
+    Merit(
+        name="Enriched Item",
+        min_value=2,
+        max_value=4,
+        description="Your character owns an item with a natural enhancement or one permanently altered through multiple uses of the same enchantment",
+        merit_type="supernatural",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Epiphany Stone",
+        min_value=4,
+        max_value=4,
+        description="Spend Mana while using active mage sight to roll Clash of Wills to check if you are under some form of illusion, hallucination, forced astral journey or other supernatural power that separates you from reality",
+        merit_type="supernatural",
+        prerequisite="[dream:1,astral_adept:1],mind:2"
+    ),
+    Merit(
+        name="Fire Keeper",
+        min_value=1,
+        max_value=1,
+        description="Environmental causes can't fully snuff flames in your presence unless you will it",
+        merit_type="supernatural",
+        prerequisite="ancient_obrimos"
+    ),
+    Merit(
+        name="Fluent High Speech",
+        min_value=3,
+        max_value=3,
+        description="You may converse at length in High Speech. Persuasion and Intimidation rolls with mages and supernal entities that use the High Speech gain +2, and Expression rolls are not reduced to chance dice. Participating in a supernal summoning reduces the target number by two",
+        merit_type="supernatural",
+        prerequisite="awakened,presence:4,expression:3"
+    ),
+    Merit(
+        name="Invested Mana",
+        min_value=1,
+        max_value=10,
+        description="Your character owns tass invested with Mana equal to dots in this Merit. The Mana stored in these vessels doesn't count toward your character's maximum Mana pool",
+        merit_type="supernatural",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Legacy Attainments",
+        min_value=1,
+        max_value=3,
+        description="Your character has joined a Legacy and learned some of its magical secrets. Each dot in this Merit represents one Attainment learned from the Legacy. Prerequisites and experience costs for Legacy Attainments are described on p. 188",
+        merit_type="supernatural",
+        prerequisite="gnosis:2"
+    ),
+    Merit(
+        name="Mana Retention",
+        min_value=3,
+        max_value=3,
+        description="Your character's soul clings to Mana. Add two to her maximum Mana. Additionally, she may spend a point of Willpower instead of allowing a point of Mana to bleed from her Pattern each turn",
+        merit_type="supernatural",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Mana Sensitivity",
+        min_value=1,
+        max_value=1,
+        description="Your character's awakened eye has sensed Mana enough that her mundane senses have begun picking up the cues of its presence. Hallows and stored Mana trigger her Peripheral Mage Sight, even without an active magical effect",
+        merit_type="supernatural",
+        prerequisite="prime:1,wits:3"
+    ),
+    Merit(
+        name="Path Natural",
+        min_value=1,
+        max_value=1,
+        description="Choose one of your two Path's Inferior Arcana. You may spend Arcane Experiences on that Arcanum",
+        merit_type="supernatural",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Prime Speaker",
+        min_value=1,
+        max_value=1,
+        description="Your Shadow Name has power in the Temenos. When you use your Shadow Name, Divine and Mythological entities from your Shadow Name's mythology treat the initial impression in Social Maneuvering as one step better. If your Shadow Name reflects a well-known Mythological or Divine entity, enjoy +2 bonus to summon said Goetia",
+        merit_type="supernatural",
+        prerequisite="shadow_name:1"
+    ),
+    Merit(
+        name="Sky's Whispers",
+        min_value=1,
+        max_value=1,
+        description="Read the open sky as an instant action to predict the day's weather and take +3 to endure it",
+        merit_type="supernatural",
+        prerequisite="ancient_acanthus"
+    ),
+    Merit(
+        name="Soul Dealer",
+        min_value=1,
+        max_value=5,
+        description="Your character has contacts in the Black Market soul trade or is a soul trader himself. Once per story your character can obtain a soul stone as though you were a member of any order status one for one to dots in this merit",
+        merit_type="social",
+        prerequisite="streetwise:3"
+    ),
+    Merit(
+        name="Soul Stone",
+        min_value=1,
+        max_value=2,
+        description="Your character owns another Mage's soul stone. One dot is equal or lesser Gnosis to your own. 2 dots is greater",
+        merit_type="supernatural",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Spirit Warden",
+        min_value=2,
+        max_value=2,
+        description="Spirits must spend Willpower to attack you for a scene",
+        merit_type="supernatural",
+        prerequisite="ancient_thyrsus"
+    ),
+    Merit(
+        name="Stalwart Soul",
+        min_value=1,
+        max_value=2,
+        description="A soul stone created by you gains Durability equal to twice your dots in this merit and gains the same bonus to withstand against spells that would harm or destroy it",
+        merit_type="supernatural",
+        prerequisite="composure:3"
+    ),
+    Merit(
+        name="Supernal Taxonomy",
+        min_value=2,
+        max_value=2,
+        description="You possess a deep understanding of Active Mage Sight. When observing phenomena in either similar effect or origin to one already scrutinized she can recognize the similarity",
+        merit_type="mental",
+        prerequisite="intelligence:2,occult:3"
+    ),
+    Merit(
+        name="Supernal Watcher",
+        min_value=2,
+        max_value=4,
+        description="You have gained the attention of a supernal entity at rank 1 for 2 dots and rank 2 for 4 dots. When summoning your watcher you only need 5 successes, they appear when using Active mage sight and you may use it as a Path tool Yantra",
+        merit_type="supernatural",
+        prerequisite="awakened"
+    ),
+    Merit(
+        name="Trail Walker",
+        min_value=2,
+        max_value=2,
+        description="Double your rate of travel across forests",
+        merit_type="physical",
+        prerequisite="ancient_mastigos"
+    ),
 ]
 
 # Create dictionary for easy lookup

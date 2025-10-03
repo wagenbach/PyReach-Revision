@@ -138,6 +138,71 @@ beast_merits = [
         merit_type="social",
         prerequisite="beast,striking_looks:2"
     ),
+    # Location-based Merits
+    Merit(
+        name="Lair",
+        min_value=1,
+        max_value=10,
+        description="Your character has a physical place that acts as a doorway and anchor to her primordial lair in the Primordial Dream. This Merit functions as Safe Place for the physical structure, but the Beast can travel into the Chambers and Burrows beyond. Special features beyond this are Lair Traits.",
+        merit_type="supernatural",
+        prerequisite="beast"
+    ),
+    Merit(
+        name="Camouflaged Lair",
+        min_value=1,
+        max_value=5,
+        description="One or more Chambers within the character's Lair has a subtle entranceway. Characters hunting the Beast suffer a penalty equal to the character's dots in this Merit to find them. If such a character is aware of the Lair's location, this penalty applies to his rolls to find the Chamber.",
+        merit_type="supernatural",
+        prerequisite="lair:1"
+    ),
+    Merit(
+        name="Comfortable Lair",
+        min_value=1,
+        max_value=1,
+        description="One Chamber of the character's Lair is comfortable. It is well-lit and has amenities for living, even if those amenities don't always make sense (food from indeterminate sources, lights with no electrical sockets). A Chamber may be both Comfortable and Secure. This does not cost additional dots in the Lair Merit. Rather, this is a special trait that you choose for the Chamber.",
+        merit_type="supernatural",
+        prerequisite="lair:1"
+    ),
+    Merit(
+        name="Hidden Lair",
+        min_value=1,
+        max_value=5,
+        description="The Beast's Lair is particularly difficult to find. Maybe the door is hidden behind a secret panel or a Burrow only shows up in the deepest, darkest corridors in the Primordial Dream. Characters hunting the Beast suffer a penalty equal to the character's dots in this Merit to find it.",
+        merit_type="supernatural",
+        prerequisite="lair:1"
+    ),
+    Merit(
+        name="Massive Lair",
+        min_value=1,
+        max_value=5,
+        description="The character's Lair is incredibly large and intricate. Each dot in this Merit allows her to construct an additional Chamber or Burrow on top of the Chamber and Burrow granted by the Lair itself.",
+        merit_type="supernatural",
+        prerequisite="lair:1"
+    ),
+    Merit(
+        name="Secure Lair",
+        min_value=1,
+        max_value=1,
+        description="One Chamber of the character's Lair is secure. It is locked. Characters attempting to break in without the key suffer a penalty equal to the rating of the Safe Place component of the Lair Merit. A Chamber may be both Comfortable and Secure. This does not cost additional dots in the Lair Merit. Rather, this is a special trait that you choose for the Chamber.",
+        merit_type="supernatural",
+        prerequisite="lair:1"
+    ),
+    Merit(
+        name="Vast Lair",
+        min_value=1,
+        max_value=3,
+        description="Uninvited guests require at least 10 minutes per dot in this Merit to traverse a Chamber or Burrow. Further, each dot in this Merit adds five required successes and five minutes to the time increment of any extended action to collapse a Chamber.",
+        merit_type="supernatural",
+        prerequisite="lair:1"
+    ),
+    Merit(
+        name="Well-Stocked Lair",
+        min_value=1,
+        max_value=5,
+        description="Each dot in this Merit allows the character to select two dots worth of Merits that represent the material goods and inhabitants available in her Lair. Material goods removed from the Lair deteriorate into dust, insects, water, or some other useless substance within a few days. Alternately, one dot of this Merit can be used to make one or more Chambers of a character's Lair comfortable and livable.",
+        merit_type="supernatural",
+        prerequisite="lair:1"
+    ),
 ]
 
 # Create dictionary for easy lookup

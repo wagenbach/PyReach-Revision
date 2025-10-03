@@ -87,4 +87,20 @@ WEREWOLF_TEMPLATE = {
 }
 
 # Register the template
-register_template(WEREWOLF_TEMPLATE) 
+register_template(WEREWOLF_TEMPLATE)
+
+
+# Power list helper functions
+def get_primary_powers():
+    """Get list of primary werewolf powers (gifts rated 1-5)."""
+    return WEREWOLF_GIFTS.copy()
+
+
+def get_secondary_powers():
+    """Get list of secondary werewolf powers (rites - individual abilities)."""
+    return WEREWOLF_RITES.copy()
+
+
+def get_all_powers():
+    """Get all werewolf powers for validation."""
+    return (WEREWOLF_GIFTS + WEREWOLF_RITES).copy() 

@@ -161,225 +161,23 @@ class CmdSheet(MuxCommand):
         """Get the list of available primary powers for a specific template."""
         if not template:
             return []
-            
-        template = template.lower()
         
-        # Primary powers only (disciplines, arcana, gifts)
-        template_power_map = {
-            'vampire': [
-                       # Disciplines (categories only)
-                       'animalism', 'auspex', 'bloodworking', 'cachexy', 'celerity',
-                       'dominate', 'majesty', 'nightmare', 'obfuscate', 'praestantia', 'protean', 
-                       'resilience', 'vigor', 'crochan', 'dead_signal', 'chary', 'vitiate', 'cruac', 'theban_sorcery'
-                       ],
-            'legacy_vampire': [
-                       # Legacy vampire disciplines (1st edition)
-                       'animalism', 'auspex', 'celerity', 'dominate', 'majesty', 
-                       'nightmare', 'obfuscate', 'protean', 'resilience', 'vigor',
-                       'coils_of_the_dragon', 'cruac', 'theban_sorcery'
-                       ],
-            'mage': ['arcanum_death', 'fate', 'forces', 'life', 'matter', 'mind', 'prime', 'space', 'spirit', 'time'],
-            'legacy_mage': ['death', 'fate', 'forces', 'life', 'matter', 'mind', 'prime', 'space', 'spirit', 'time'],
-            'werewolf': [
-                        # Gifts (categories)
-                        'gift_death', 'dominance', 'elementals', 'insight', 'inspiration', 'knowledge',
-                        'nature', 'rage', 'gift_strength', 'technology', 'weather', 'hunting', 'pack',
-                        'crescent_moon', 'full_moon', 'new_moon', 'gibbous_moon', 'half_moon', 'agony', 'blood',
-                        'disease', 'evasion', 'fervor', 'hunger', 'shaping', 'gift_stealth', 'warding', 'change',
-                        ],
-            'legacy_werewolf': [
-                        # Legacy werewolf gifts (1st edition)
-                        'cunning', 'glory', 'honor', 'purity', 'wisdom',
-                        'crescent_moon', 'full_moon', 'gibbous_moon', 'half_moon', 'new_moon',
-                        'death', 'elementals', 'nature', 'spirits', 'hunting', 'pack', 'strength', 'warding'
-                        ],
-            'changeling': [
-                          # Crown Contracts
-                          'hostile_takeover', 'mask_of_superiority', 'paralyzing_presence', 'summon_the_loyal_servant', 'tumult',
-                          # Royal Crown Contracts
-                          'discreet_summons', 'masterminds_gambit', 'pipes_of_the_beastcaller', 'the_royal_court', 'spinning_wheel',
-                          # Jewels Contracts
-                          'blessing_of_perfection', 'changing_fortunes', 'light_shy', 'murkblur', 'trivial_reworking',
-                          # Royal Jewels Contracts
-                          'changeling_hours', 'dance_of_the_toys', 'hidden_reality', 'stealing_the_solid_reflection', 'tatterdemalions_workshop',
-                          # Mirror Contracts
-                          'glimpse_of_a_distant_mirror', 'know_the_competition', 'portents_and_visions', 'read_lucidity', 'walls_have_ears',
-                          # Royal Mirror Contracts
-                          'props_and_scenery', 'reflections_of_the_past', 'riddle_kith', 'skinmask', 'unravel_the_tapestry',
-                          # Shield Contracts
-                          'cloak_of_night', 'fae_cunning', 'shared_burden', 'thorns_and_brambles', 'trapdoor_spiders_trick',
-                          # Royal Shield Contracts
-                          'fortifying_presence', 'hedgewall', 'pure_clarity', 'vow_of_no_compromise', 'whispers_of_morning',
-                          # Steed Contracts
-                          'boon_of_the_scuttling_spider', 'dreamsteps', 'nevertread', 'pathfinder', 'seven_league_leap',
-                          # Royal Steed Contracts
-                          'chrysalis', 'flickering_hours', 'leaping_toward_nightfall', 'mirror_walk', 'talon_and_wing',
-                          # Sword Contracts
-                          'elemental_weapon', 'might_of_the_terrible_brute', 'overpowering_dread', 'primal_glory', 'touch_of_wrath',
-                          # Royal Sword Contracts
-                          'elemental_fury', 'oathbreakers_punishment', 'red_revenge', 'relentless_pursuit', 'thief_of_reason',
-                          # Chalice Contracts
-                          'filling_the_cup', 'frail_as_the_dying_word', 'sleeps_sweet_embrace', 'curses_cure', 'dreamers_phalanx',
-                          # Royal Chalice Contracts
-                          'closing_deaths_door', 'feast_of_plenty', 'still_waters_run_deep', 'poison_the_well', 'shared_cup',
-                          # Coin Contracts
-                          'book_of_black_and_red', 'give_and_take', 'beggar_knight', 'coin_mark', 'grease_the_wheels',
-                          # Royal Coin Contracts
-                          'blood_debt', 'exchange_of_gilded_contracts', 'golden_promise', 'grand_revel_of_the_harvest', 'thirty_pieces',
-                          # Scepter Contracts
-                          'burning_ambition', 'jealous_vengeance', 'litany_of_rivals', 'knights_oath', 'unmask_the_dark_horse',
-                          # Royal Scepter Contracts
-                          'a_benevolent_hand', 'fake_it_til_you_make_it', 'tempters_quest', 'curse_of_hidden_strings', 'spare_not_the_rod',
-                          # Stars Contracts
-                          'pole_star', 'straight_on_til_morning', 'cynosure', 'shooting_star', 'retrograde',
-                          # Royal Stars Contracts
-                          'frozen_star', 'star_light_star_bright', 'light_of_ancient_stars', 'pinch_of_stardust',
-                          # Thorn Contracts
-                          'briars_herald', 'by_the_pricking_of_my_thumbs', 'thistles_rebuke', 'the_gouging_curse', 'embrace_of_nettles',
-                          # Royal Thorn Contracts
-                          'acanthas_fury', 'awaken_portal', 'crown_of_thorns', 'shrikes_larder', 'witchs_brambles',
-                          # Spring Contracts
-                          'cupids_arrow', 'dreams_of_the_earth', 'gift_of_warm_breath', 'springs_kiss', 'wyrd_faced_stranger',
-                          # Royal Spring Contracts
-                          'blessing_of_spring', 'gift_of_warm_blood', 'pandoras_gift', 'prince_of_ivy', 'waking_the_inner_fae',
-                          # Summer Contracts
-                          'baleful_sense', 'child_of_the_hearth', 'helios_light', 'high_summers_zeal', 'vigilance_of_ares',
-                          # Royal Summer Contracts
-                          'fiery_tongue', 'flames_of_summer', 'helios_judgment', 'solstice_revelation', 'sunburnt_heart',
-                          # Autumn Contracts
-                          'autumns_fury', 'last_harvest', 'tale_of_the_baba_yaga', 'twilights_harbinger', 'witches_intuition',
-                          # Royal Autumn Contracts
-                          'famines_bulwark', 'mien_of_the_baba_yaga', 'riding_the_falling_leaves', 'sorcerers_rebuke', 'tasting_the_harvest',
-                          # Winter Contracts
-                          'the_dragon_knows', 'heart_of_ice', 'ice_queens_call', 'slipknot_dreams', 'touch_of_winter',
-                          # Royal Winter Contracts
-                          'ermines_winter_coat', 'fallow_fields', 'field_of_regret', 'mantle_of_frost', 'winters_curse',
-                          # Retaliation Contracts
-                          'peacemakers_draw', 'draw_likeness',
-                          # Goblin Contracts
-                          'blessing_of_forgetfulness', 'distill_the_hidden', 'glib_tongue', 'goblins_eye', 'goblins_luck',
-                          'huntsmans_clarion', 'lost_visage', 'mantle_mask', 'sight_of_truth_and_lies', 'uncanny', 'wayward_guide', 'wyrd_debt',
-                          # Independent Arcadian Contracts
-                          'coming_darkness', 'pomp_and_circumstance', 'shadow_puppet', 'steal_influence', 'earths_gentle_movements',
-                          'dread_companion', 'cracked_mirror', 'listen_with_winds_ears', 'momentary_respite', 'earths_impenetrable_walls'
-                          ],
-            'geist': [
-                      # Keys
-                      "beasts", "blood", "chance", "cold wind", "deep waters", "disease", "grave dirt", "pyre flame", "stillness",
-                      # Haunts
-                      "boneyard", "caul", "curse", "dirge", "marionette", "memoria", "oracle", "rage", "shroud", "tomb"
-                          ],
-            'legacy_changeling': [
-                      # Legacy changeling contracts (1st edition)
-                      "dream", "hearth", "mirror", "smoke", "artifice",
-                      "spring", "summer", "autumn", "winter",
-                      "fang_and_talon", "darkness", "elements", "vainglory", "stone", "goblin_contracts"
-                      ],
-            'legacy_geist': [
-                      # Legacy geist powers (1st edition)
-                      "beasts", "blood", "chance", "cold_wind", "deep_waters", 
-                      "disease", "grave_dirt", "pyre_flame", "stillness", "ceremonies"
-                      ],
-            'legacy_promethean': [
-                      # Legacy promethean transmutations (1st edition)
-                      "alchemicus", "corporeum", "deception", "disquiet", "electrification",
-                      "mesmerism", "metamorphosis", "pyros", "sensorium", "vulcanus"
-                      ],
-            'legacy_hunter': [
-                      # Legacy hunter tactics (1st edition)
-                      "professional_training", "benediction", "castigation", "advanced_armory", 
-                      "relic", "thaumatechnology", "elixir", "implant"
-                      ],
-            'promethean': [],
-            'demon': [],
-            'beast': [],
-            'hunter': [],
-            'deviant': []
-        }
+        # Import template power utilities
+        from world.cofd.templates import get_template_primary_powers
         
-        return template_power_map.get(template, [])
+        # Get primary powers from template definition
+        return get_template_primary_powers(template)
     
     def _get_template_secondary_powers(self, template):
         """Get the list of available secondary powers (rituals, rites) for a specific template."""
         if not template:
             return []
-            
-        template = template.lower()
         
-        # Secondary powers (rituals, rites, individual abilities)
-        template_secondary_map = {
-            'vampire': [
-                       # Cruac Rituals (individual rituals by level)
-                       # Level 1 Cruac
-                       'ban_of_the_spiteful_bastard', 'mantle_of_amorous_fire', 'pangs_of_proserpina', 
-                       'pool_of_forbidden_truths', 'rigor_mortis',
-                       # Level 2 Cruac  
-                       'cheval', 'mantle_of_the_beasts_breath', 'the_hydras_vitae', 'shed_the_virulent_bowels',
-                       # Level 3 Cruac
-                       'curse_of_aphrodites_favor', 'curse_of_the_beloved_toy', 'deflection_of_wooden_doom', 
-                       'donning_the_beasts_flesh', 'mantle_of_the_glorious_dervish', 'touch_of_the_morrigan',
-                       # Level 4 Cruac
-                       'blood_price', 'willful_vitae', 'blood_blight', 'feeding_the_crone', 'bounty_of_the_storm',
-                       'gorgons_gaze', 'manananggals_working', 'mantle_of_the_predator_goddess', 'quicken_the_withered_womb',
-                       'the_red_blossoms',
-                       # Level 5 Cruac
-                       'birthing_the_god', 'denying_hades', 'gwydions_curse', 'mantle_of_the_crone', 'scapegoat',
-                       # Theban Sorcery Miracles (individual miracles by level)
-                       # Level 1 Theban
-                       'apple_of_eden', 'blandishment_of_sin', 'blood_scourge', 'marian_apparition', 
-                       'revelatory_shroud', 'vitae_reliquary',
-                       # Level 2 Theban
-                       'apparition_of_the_host', 'bloody_icon', 'curse_of_babel', 'liars_plague', 'the_walls_of_jericho',
-                       # Level 3 Theban
-                       'aarons_rod', 'baptism_of_damnation', 'blessing_the_legion', 'the_guiding_star',
-                       'malediction_of_despair', 'miracle_of_the_dead_sun', 'pledge_to_the_worthless_one', 'the_rite_of_ascending_blood',
-                       # Level 4 Theban
-                       'blandishment_of_sin_advanced', 'curse_of_isolation', 'gift_of_lazarus', 'great_prophecy', 
-                       'stigmata', 'trials_of_job',
-                       # Level 5 Theban
-                       'apocalypse', 'the_judgment_fast', 'orison_of_voices', 'sins_of_the_ancestors', 'transubstatiation',
-                       # Ordo Dracul Coils
-                       'coil_of_the_ascendant', 'coil_of_the_wyrm', 'coil_of_the_voivode',
-                       'coil_of_zirnitra', 'coil_of_ziva'
-                       ],
-            'mage': [],  # Mages don't have secondary powers like rituals
-            'werewolf': [
-                        # Wolf Rites (individual rites by level)
-                        # Rank 1 Rites
-                        'chain_rage', 'messenger', 'banish', 'harness_the_cycle', 'totemic_empowerment',
-                        # Rank 2 Rites
-                        'bottle_spirit', 'infest_locus', 'rite_of_the_shroud', 'sacred_hunt', 'hunting_ground', 'moons_mad_love',
-                        'shackled_lightning', 'sigrblot', 'wellspring',
-                        # Rank 3 Rites
-                        'carrion_feast', 'flay_auspice', 'kindle_fury', 'rite_of_absolution', 'shadowbind', 'the_thorn_pursuit',
-                        'banshee_howl', 'raiment_of_the_storm', 'shadowcall', 'supplication',
-                        # Rank 4 Rites
-                        'between_worlds', 'fetish', 'shadow_bridge', 'twilight_purge', 'hidden_path', 'expel', 'heal_old_wounds',
-                        'lupus_venandi',
-                        # Rank 5 Rites
-                        'devour', 'forge_alliance', 'urfarahs_bane', 'veil', 'great_hunt', 'shadow_distortion', 'unleash_shadow'
-                        ],
-            'changeling': [],  # Changelings only have contracts (all primary)
-            'geist': [
-                        # Level 1 Ceremonies
-                        "dead man's camera", "death watch", "diviner's jawbone", "lovers' telephone", "ishtar's perfume",
-                        # Level 2 Ceremonies
-                        "crow girl kiss", "gifts of persephone", "ghost trap", "skeleton key",
-                        # Level 3 Ceremonies
-                        "bestow regalia", "krewe binding", "speaker for the dead", "black cat's crossing", "bloody codex", "dumb supper",
-                        # Level 4 Ceremonies
-                        "forge anchor", "maggot homonculus",
-                        # Level 5 Ceremonies
-                        "pass on", "ghost binding", "persephone's return"
-                        ],
-            'promethean': [],
-            'demon': [],
-            'beast': [],
-            'hunter': [],
-            'deviant': []
-        }
+        # Import template power utilities
+        from world.cofd.templates import get_template_secondary_powers
         
-        return template_secondary_map.get(template, [])
+        # Get secondary powers from template definition
+        return get_template_secondary_powers(template)
     
     def _format_powers_display(self, powers, template_powers, force_ascii):
         """Format the powers section for display."""
@@ -711,7 +509,16 @@ class CmdSheet(MuxCommand):
         if merits:
             for merit_name, merit_data in sorted(merits.items()):
                 dots = self._format_dots(merit_data.get("dots", 1), merit_data.get("max_dots", 5), force_ascii)
-                merit_display = f"{merit_name.replace('_', ' ').title():<15} {dots}"
+                
+                # Format merit display with instance if present
+                display_name = merit_name
+                if ":" in merit_name:
+                    base_name, instance = merit_name.split(":", 1)
+                    display_name = f"{base_name.replace('_', ' ').title()} ({instance.replace('_', ' ').title()})"
+                else:
+                    display_name = merit_name.replace('_', ' ').title()
+                
+                merit_display = f"{display_name:<25} {dots}"
                 merit_list.append(merit_display)
         
         # Create advantages list (including integrity)
@@ -744,10 +551,10 @@ class CmdSheet(MuxCommand):
             gnosis = advantages.get("gnosis", 0)
             if gnosis > 0:
                 advantage_list.append(f"{'Gnosis':<15} : {gnosis}")
-        elif template == "beast":
-            satiety = advantages.get("satiety", 0)
-            if satiety > 0:
-                advantage_list.append(f"{'Satiety':<15} : {satiety}")
+        #elif template == "beast":
+        #    satiety = advantages.get("satiety", 0)
+        #    if satiety > 0:
+        #        advantage_list.append(f"{'Satiety':<15} : {satiety}")
         elif template == "deviant":
             deviation = advantages.get("deviation", 0)
             if deviation > 0:
@@ -767,8 +574,8 @@ class CmdSheet(MuxCommand):
         
         # Create section headers using the same format as other sections
         merits_header = f"|g<{'-' * 12} MERITS {'-' * 13}>|n"
-        advantages_header = f"|g<{'-' * 9} ADVANTAGES {'-' * 13}>|n"
-        output.append(f"{merits_header.ljust(39)} {advantages_header}")
+        advantages_header = f"|g<{'-' * 12} ADVANTAGES {'-' * 13}>|n"
+        output.append(f"{merits_header.ljust(36)} {advantages_header}")
         
         # Display merits and advantages side by side
         max_rows = max(len(merit_list) if merit_list else 1, len(advantage_list))
@@ -780,7 +587,7 @@ class CmdSheet(MuxCommand):
             if not merit_list and i == 0:
                 left_item = "No merits yet."
             
-            left_formatted = left_item.ljust(39)
+            left_formatted = left_item.ljust(48)
             output.append(f"{left_formatted} {right_item}")
 
         
@@ -1071,204 +878,22 @@ class CmdSheet(MuxCommand):
         if target == self.caller and not supports_utf8 and "ascii" not in self.switches:
             self._show_encoding_warning(supports_utf8)
         
-        geist_stats = target.db.geist_stats
+        # Import the template-specific render function
+        from world.cofd.templates.geist import render_geist_sheet
         
-        # Build the geist sheet display with magenta color scheme
-        output = []
-        output.append(f"|m{'='*78}|n")  # Magenta border
+        # Render the geist sheet
+        output = render_geist_sheet(target, self.caller, force_ascii)
         
-        # Get geist concept or use default
-        geist_concept = geist_stats.get("bio", {}).get("concept", f"{target.name}'s Geist")
-        output.append(f"|m{geist_concept.center(78)}|n")  # Magenta text
-        output.append(f"|M{'GEIST CHARACTER SHEET'.center(78)}|n")  # Bright magenta
-        output.append(f"|m{'='*78}|n")
+        if output is None:
+            self.caller.msg(f"{target.name} has no geist character sheet set up yet.")
+            self.caller.msg("Use +stat/geist <stat>=<value> to set geist stats.")
+            return
         
-        # Bio Section
-        output.append(self._format_geist_section_header("|wBIO|n"))
-        
-        bio = geist_stats.get("bio", {})
-        other = geist_stats.get("other", {})
-        
-        # Bio data with defaults
-        concept = bio.get("concept", "<not set>")
-        virtue = bio.get("virtue", "<not set>")
-        vice = bio.get("vice", "<not set>")
-        crisis_trigger = bio.get("crisis_trigger", "<not set>")
-        ban = bio.get("ban", "<not set>")
-        bane = bio.get("bane", "<not set>")
-        innate_key = bio.get("innate_key", "<not set>")
-        rank = other.get("rank", 3)
-        
-        # Remembrance section
-        remembrance = geist_stats.get("remembrance", {})
-        remembrance_desc = bio.get("remembrance_description", "<not set>")
-        remembrance_trait = remembrance.get("trait", "<not set>")
-        remembrance_dots = remembrance.get("dots", 0)
-        remembrance_type = remembrance.get("trait_type", "")
-        
-        if remembrance_trait != "<not set>" and remembrance_dots > 0:
-            trait_display = f"{remembrance_trait.replace('_', ' ').title()} ({remembrance_type}) {self._format_dots(remembrance_dots, 3, force_ascii)}"
-        else:
-            trait_display = "<not set>"
-        
-        # Create bio items list for display
-        short_bio_items = [
-            ("Concept", concept),
-            ("Rank", f"{rank}"),
-            ("Virtue", virtue),
-            ("Vice", vice),
-            ("Crisis Trigger", crisis_trigger.title() if crisis_trigger != "<not set>" else crisis_trigger),
-            ("Bane", bane),
-            ("Innate Key", innate_key.title() if innate_key != "<not set>" else innate_key),
-            ("Trait", trait_display)
-        ]
-
-        # long fields that need their own lines
-        long_bio_items = [
-            ("Ban", ban),
-            ("Remembrance", remembrance_desc)
-        ]
-        
-        # Display short bio items in two-column format
-        for i in range(0, len(short_bio_items), 2):
-            left_label, left_value = short_bio_items[i]
-            left_text = f"{left_label:<16}: {left_value}"
-            
-            if i + 1 < len(short_bio_items):
-                right_label, right_value = short_bio_items[i + 1]
-                right_text = f"{right_label:<16}: {right_value}"
-            else:
-                right_text = ""
-            
-            left_formatted = left_text.ljust(39)
-            output.append(f"{left_formatted} {right_text}")
-        
-        # Add newline before long bio items
-        output.append("")
-        
-        # Display long bio items on their own lines
-        for label, value in long_bio_items:
-            if value != "<not set>":
-                output.append(f"{label:<16}: {value}")
-
-        
-        # Geist Attributes (simplified - Power, Finesse, Resistance)
-        attrs = geist_stats.get("attributes", {"power": 1, "finesse": 1, "resistance": 1})
-        if attrs:
-            output.append(self._format_geist_section_header("|wATTRIBUTES|n"))
-            
-            # Format geist attributes
-            power_val = attrs.get("power", 1)
-            finesse_val = attrs.get("finesse", 1)
-            resistance_val = attrs.get("resistance", 1)
-            
-            power_dots = self._format_dots(power_val, 9, force_ascii)
-            finesse_dots = self._format_dots(finesse_val, 9, force_ascii)
-            resistance_dots = self._format_dots(resistance_val, 9, force_ascii)
-            
-            output.append(f"Power          {power_dots} ({power_val})")
-            output.append(f"Finesse        {finesse_dots} ({finesse_val})")
-            output.append(f"Resistance     {resistance_dots} ({resistance_val})")
-        
-        # Keys Section
-        keys = geist_stats.get("keys", {})
-        output.append(self._format_geist_section_header("|wKEYS|n"))
-        
-        # Get key details from template
-        from world.cofd.templates.geist import GEIST_KEY_DETAILS
-        
-        if keys:
-            key_list = []
-            for key_name, has_key in keys.items():
-                if has_key:
-                    key_lookup = key_name  # Keep as stored (with spaces)
-                    key_details = GEIST_KEY_DETAILS.get(key_lookup, {})
-                    full_name = key_details.get("full_name", key_name.replace("_", " ").title())
-                    unlock_attr = key_details.get("unlock_attribute", "")
-                    
-                    key_display = f"|c{full_name}|n"
-                    if unlock_attr:
-                        key_display += f" (Unlock: {unlock_attr})"
-                    key_list.append(key_display)
-            
-            if key_list:
-                for i, key_display in enumerate(key_list):
-                    output.append(f"  {key_display}")
-                    
-                    clean_key_name = key_display.split(" (")[0]
-                    # Remove color codes from the key name
-                    clean_key_name = clean_key_name.replace("|c", "").replace("|n", "").lower()
-                    for key_code, details in GEIST_KEY_DETAILS.items():
-                        if details["full_name"].lower() == clean_key_name:
-                            output.append(f"    |cResonance:|n {details['resonance']}")
-                            output.append(f"    |rDoom:|n {details['doom']}")
-                            output.append("")
-                            break
-            else:
-                output.append("  No keys unlocked yet.")
-        else:
-            output.append("  No keys unlocked yet.")
-        
-        # Derived Stats for Geist
-        advantages = geist_stats.get("advantages", {})
-        output.append(self._format_geist_section_header("|wADVANTAGES|n"))
-        
-        # Calculate derived stats if not already calculated
-        if not advantages:
-            defense = min(attrs.get("power", 1), attrs.get("finesse", 1))
-            initiative = attrs.get("finesse", 1) + attrs.get("resistance", 1)
-            speed = attrs.get("power", 1) + attrs.get("finesse", 1) + 5
-            size = other.get("size", 5)
-        else:
-            defense = advantages.get("defense", 0)
-            initiative = advantages.get("initiative", 0) 
-            speed = advantages.get("speed", 0)
-            size = other.get("size", 5)
-        
-        geist_advantages = [
-            ("Defense", defense),
-            ("Size", size),
-            ("Initiative", initiative),
-            ("Speed", speed)
-        ]
-        
-        # Display advantages in rows of 2 columns
-        for i in range(0, len(geist_advantages), 2):
-            row_parts = []
-            for j in range(2):
-                if i + j < len(geist_advantages):
-                    name, value = geist_advantages[i + j]
-                    part = f"{name:<16} : {value}"
-                    row_parts.append(part.ljust(39))
-                else:
-                    row_parts.append(" " * 39)
-            output.append("".join(row_parts))
-        output.append(f"|m{'='*78}|n")
-        
-        # Add encoding info to bottom if ASCII mode is being used
-        if not supports_utf8 or force_ascii:
-            if force_ascii:
-                output.append("|g(ASCII mode active - use +sheet/geist without /ascii for Unicode)|n")
-            else:
-                output.append("|y(ASCII mode due to encoding - see note above for UTF-8)|n")
+        # Add encoding warning if needed
+        if not supports_utf8 and not force_ascii:
+            output.append("|y(ASCII mode due to encoding - see note above for UTF-8)|n")
         
         self.caller.msg("\n".join(output))
-    
-    def _format_geist_section_header(self, section_name):
-        """
-        Create an arrow-style section header for geist sheets with magenta coloring.
-        Format: <----------------- SECTION NAME ----------------->
-        """
-        total_width = 78
-        name_length = len(section_name) - 4  # Account for color codes |w and |n
-        # Account for < and > characters (2 total) and spaces around name (2 total)
-        available_dash_space = total_width - name_length - 4
-        
-        # Split dashes evenly, with extra dash on the right if odd number
-        left_dashes = available_dash_space // 2
-        right_dashes = available_dash_space - left_dashes
-        
-        return f"|m<{'-' * left_dashes}|n {section_name} |m{'-' * right_dashes}>|n"
     
     def _format_legacy_virtue_vice(self, virtue_name, vice_name):
         """Format legacy virtue and vice with detailed descriptions"""

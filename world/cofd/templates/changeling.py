@@ -166,4 +166,20 @@ CHANGELING_TEMPLATE = {
 }
 
 # Register the template
-register_template(CHANGELING_TEMPLATE) 
+register_template(CHANGELING_TEMPLATE)
+
+
+# Power list helper functions
+def get_primary_powers():
+    """Get list of primary changeling powers (contracts - individual abilities)."""
+    return CHANGELING_CONTRACTS.copy()
+
+
+def get_secondary_powers():
+    """Get list of secondary changeling powers (none - all powers are contracts)."""
+    return []
+
+
+def get_all_powers():
+    """Get all changeling powers for validation."""
+    return CHANGELING_CONTRACTS.copy() 

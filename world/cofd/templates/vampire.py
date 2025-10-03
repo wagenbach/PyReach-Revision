@@ -16,12 +16,15 @@ VAMPIRE_COVENANTS = [
     "lancea et sanctum", "ordo dracul", "unaligned"
 ]
 
-# Valid vampire disciplines and blood sorcery powers
-VAMPIRE_DISCIPLINES = [
-    # Disciplines (categories)
-    "animalism", "auspex", "bloodworking", "cachexy", "celerity", "coils_of_the_dragon", 
+# Primary powers (rated 1-5 dots) - Disciplines
+VAMPIRE_PRIMARY_POWERS = [
+    "animalism", "auspex", "bloodworking", "cachexy", "celerity", 
     "dominate", "majesty", "nightmare", "obfuscate", "praestantia", "protean", 
-    "resilience", "vigor", "crochan", "dead_signal", "chary", "vitiate",
+    "resilience", "vigor", "crochan", "dead_signal", "chary", "vitiate", "cruac", "theban_sorcery"
+]
+
+# Secondary powers (individual abilities) - Rituals, Miracles, Coils
+VAMPIRE_SECONDARY_POWERS = [
     # Cruac Rituals (individual rituals by level)
     # Level 1 Cruac
     "ban_of_the_spiteful_bastard", "mantle_of_amorous_fire", "pangs_of_proserpina", 
@@ -56,6 +59,9 @@ VAMPIRE_DISCIPLINES = [
     "coil_of_zirnitra", "coil_of_ziva"
 ]
 
+# All vampire powers combined (for backwards compatibility and validation)
+VAMPIRE_DISCIPLINES = VAMPIRE_PRIMARY_POWERS + VAMPIRE_SECONDARY_POWERS
+
 # Vampire template definition
 VAMPIRE_TEMPLATE = {
     "name": "vampire",
@@ -87,4 +93,20 @@ VAMPIRE_TEMPLATE = {
 }
 
 # Register the template
-register_template(VAMPIRE_TEMPLATE) 
+register_template(VAMPIRE_TEMPLATE)
+
+
+# Power list helper functions
+def get_primary_powers():
+    """Get list of primary vampire powers (disciplines rated 1-5)."""
+    return VAMPIRE_PRIMARY_POWERS.copy()
+
+
+def get_secondary_powers():
+    """Get list of secondary vampire powers (individual rituals, miracles, coils)."""
+    return VAMPIRE_SECONDARY_POWERS.copy()
+
+
+def get_all_powers():
+    """Get all vampire powers for validation."""
+    return VAMPIRE_DISCIPLINES.copy() 

@@ -7,44 +7,43 @@ from . import register_template
 
 # Core World of Darkness mortal+ types
 CORE_MORTAL_PLUS = [
-    "atariya", "dreamer", "extraordinary mortal", "immortal", "infected", 
-    "lost boys", "plain", "possessed", "psychic", "psychic vampire", 
-    "skinchanger", "slasher", "thaumaturge"
+    "Atariya", "Dreamer", "Infected", "Lost Boy", "Plain", "Psychic",
+    "Psychic Vampire", "Skinthieves", "Ghost"
 ]
 
 # Vampire: The Requiem related
 VAMPIRE_MORTAL_PLUS = [
-    "ghoul", "dhampir"
+    "Ghoul", "Dhampir"
 ]
 
 # Werewolf: The Forsaken related
 WEREWOLF_MORTAL_PLUS = [
-    "wolf-blooded", "spirit-ridden", "shadow occultist", "church of the wolf"
+    "Wolf-blooded", "Host"
 ]
 
 # Mage: The Awakening related
 MAGE_MORTAL_PLUS = [
-    "sleepwalker", "proximus", "illuminated"
+    "Sleepwalker", "Proximus"
 ]
 
 # Changeling: The Lost related
 CHANGELING_MORTAL_PLUS = [
-    "ensorcelled", "fae-touched", "former goblin queen", "former goblin king", "lucid-dreamer"
+    "Fae-Touched"
 ]
 
 # Promethean: The Created related
 PROMETHEAN_MORTAL_PLUS = [
-    "redeemed", "scion"
+    "Alchemist"
 ]
 
 # Mummy: The Curse related
 MUMMY_MORTAL_PLUS = [
-    "invested cultist", "lineal inheritor", "sadikh", "sorcerer", "witness"
+    "Immortal"
 ]
 
 # Demon: The Descent related
 DEMON_MORTAL_PLUS = [
-    "stigmatic", "demon-blooded"
+    "Stigmatic", "Demon-Blooded"
 ]
 
 # All mortal+ types combined

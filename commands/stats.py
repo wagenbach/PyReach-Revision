@@ -11,7 +11,9 @@ class CmdStat(MuxCommand):
     
     Usage:
         +stat <stat>=<value> - Set a stat on yourself (if not approved)
+        +stat <stat>= - Remove a stat from yourself (if not approved)
         +stat <name>/<stat>=<value> - Set a stat on someone else (staff only)
+        +stat <name>/<stat>= - Remove a stat from someone else (staff only)
         +stat/list [name] - List all stats for yourself or another
         +stat/remove <stat> - Remove a stat from yourself (if not approved)
         +stat/remove <name>/<stat> - Remove a stat from someone else (staff only)
@@ -24,6 +26,15 @@ class CmdStat(MuxCommand):
         The /reset switch completely wipes ALL character stats and reinitializes
         them for the new template. This is a nuclear option for fixing corrupted
         data. Use with caution as it cannot be undone!
+        
+        Merit Instances:
+        Some merits can be taken multiple times with different specifications.
+        Use colon notation to create instances:
+            +stat Unseen Sense:Ghosts=2
+            +stat Unseen Sense:Spirits=2
+            +stat Unseen Sense:Faeries=2
+        Each instance costs the full merit value. To remove an instance:
+            +stat Unseen Sense:Ghosts=
         
     Valid stat categories:
         Attributes: strength, dexterity, stamina, presence, manipulation, 
@@ -77,6 +88,8 @@ class CmdStat(MuxCommand):
         +stat fast_reflexes=2
         +stat resources=2
         +stat allies=1
+        +stat unseen_sense:ghosts=2
+        +stat unseen_sense:spirits=2
         
         Power Examples:
         +stat animalism=3 (vampire discipline)
@@ -170,163 +183,12 @@ class CmdStat(MuxCommand):
         """Get the list of available powers for a specific template (all powers for validation)."""
         if not template:
             return []
-            
-        template = template.lower()
         
-        # Template-specific power mappings - ALL powers for stats validation
-        template_power_map = {
-            'vampire': [
-                       # Disciplines (categories)
-                       'animalism', 'auspex', 'bloodworking', 'cachexy', 'celerity', 'coils_of_the_dragon', 
-                       'dominate', 'majesty', 'nightmare', 'obfuscate', 'praestantia', 'protean', 
-                       'resilience', 'vigor', 'crochan', 'dead_signal', 'chary', 'vitiate',
-                       # Cruac Rituals (individual rituals by level)
-                       # Level 1 Cruac
-                       'ban_of_the_spiteful_bastard', 'mantle_of_amorous_fire', 'pangs_of_proserpina', 
-                       'pool_of_forbidden_truths', 'rigor_mortis',
-                       # Level 2 Cruac  
-                       'cheval', 'mantle_of_the_beasts_breath', 'the_hydras_vitae', 'shed_the_virulent_bowels',
-                       # Level 3 Cruac
-                       'curse_of_aphrodites_favor', 'curse_of_the_beloved_toy', 'deflection_of_wooden_doom', 
-                       'donning_the_beasts_flesh', 'mantle_of_the_glorious_dervish', 'touch_of_the_morrigan',
-                       # Level 4 Cruac
-                       'blood_price', 'willful_vitae', 'blood_blight', 'feeding_the_crone', 'bounty_of_the_storm',
-                       'gorgons_gaze', 'manananggals_working', 'mantle_of_the_predator_goddess', 'quicken_the_withered_womb',
-                       'the_red_blossoms',
-                       # Level 5 Cruac
-                       'birthing_the_god', 'denying_hades', 'gwydions_curse', 'mantle_of_the_crone', 'scapegoat',
-                       # Theban Sorcery Miracles (individual miracles by level)
-                       # Level 1 Theban
-                       'apple_of_eden', 'blandishment_of_sin', 'blood_scourge', 'marian_apparition', 
-                       'revelatory_shroud', 'vitae_reliquary',
-                       # Level 2 Theban
-                       'apparition_of_the_host', 'bloody_icon', 'curse_of_babel', 'liars_plague', 'the_walls_of_jericho',
-                       # Level 3 Theban
-                       'aarons_rod', 'baptism_of_damnation', 'blessing_the_legion', 'the_guiding_star',
-                       'malediction_of_despair', 'miracle_of_the_dead_sun', 'pledge_to_the_worthless_one', 'the_rite_of_ascending_blood',
-                       # Level 4 Theban
-                       'blandishment_of_sin_advanced', 'curse_of_isolation', 'gift_of_lazarus', 'great_prophecy', 
-                       'stigmata', 'trials_of_job',
-                       # Level 5 Theban
-                       'apocalypse', 'the_judgment_fast', 'orison_of_voices', 'sins_of_the_ancestors', 'transubstatiation',
-                       # Ordo Dracul Coils
-                       'coil_of_the_ascendant', 'coil_of_the_wyrm', 'coil_of_the_voivode',
-                       'coil_of_zirnitra', 'coil_of_ziva'
-                       ],
-            'legacy_vampire': [
-                       # Legacy vampire disciplines (1st edition)
-                       'animalism', 'auspex', 'celerity', 'dominate', 'majesty', 
-                       'nightmare', 'obfuscate', 'protean', 'resilience', 'vigor',
-                       'coils_of_the_dragon', 'cruac', 'theban_sorcery'
-                       ],
-            'mage': ['arcanum_death', 'fate', 'forces', 'life', 'matter', 'mind', 'prime', 'space', 'spirit', 'time'],
-            'werewolf': [
-                        # Gifts (categories)
-                        'gift_death', 'dominance', 'elementals', 'insight', 'inspiration', 'knowledge',
-                        'nature', 'rage', 'gift_strength', 'technology', 'weather', 'hunting', 'pack',
-                        'crescent_moon', 'full_moon', 'new_moon', 'gibbous_moon', 'half_moon', 'agony', 'blood',
-                        'disease', 'evasion', 'fervor', 'hunger', 'shaping', 'gift_stealth', 'warding', 'change',
-                        # Wolf Rites (individual rites by level)
-                        # Rank 1 Rites
-                        'chain_rage', 'messenger', 'banish', 'harness_the_cycle', 'totemic_empowerment',
-                        # Rank 2 Rites
-                        'bottle_spirit', 'infest_locus', 'rite_of_the_shroud', 'sacred_hunt', 'hunting_ground', 'moons_mad_love',
-                        'shackled_lightning', 'sigrblot', 'wellspring',
-                        # Rank 3 Rites
-                        'carrion_feast', 'flay_auspice', 'kindle_fury', 'rite_of_absolution', 'shadowbind', 'the_thorn_pursuit',
-                        'banshee_howl', 'raiment_of_the_storm', 'shadowcall', 'supplication',
-                        # Rank 4 Rites
-                        'between_worlds', 'fetish', 'shadow_bridge', 'twilight_purge', 'hidden_path', 'expel', 'heal_old_wounds',
-                        'lupus_venandi',
-                        # Rank 5 Rites
-                        'devour', 'forge_alliance', 'urfarahs_bane', 'veil', 'great_hunt', 'shadow_distortion', 'unleash_shadow'
-                        ],
-            'changeling': [
-                          # all contracts use semantic syntax
-                          # Crown Contracts
-                          'hostile_takeover', 'mask_of_superiority', 'paralyzing_presence', 'summon_the_loyal_servant', 'tumult',
-                          # Royal Crown Contracts
-                          'discreet_summons', 'masterminds_gambit', 'pipes_of_the_beastcaller', 'the_royal_court', 'spinning_wheel',
-                          # Jewels Contracts
-                          'blessing_of_perfection', 'changing_fortunes', 'light_shy', 'murkblur', 'trivial_reworking',
-                          # Royal Jewels Contracts
-                          'changeling_hours', 'dance_of_the_toys', 'hidden_reality', 'stealing_the_solid_reflection', 'tatterdemalions_workshop',
-                          # Mirror Contracts
-                          'glimpse_of_a_distant_mirror', 'know_the_competition', 'portents_and_visions', 'read_lucidity', 'walls_have_ears',
-                          # Royal Mirror Contracts
-                          'props_and_scenery', 'reflections_of_the_past', 'riddle_kith', 'skinmask', 'unravel_the_tapestry',
-                          # Shield Contracts
-                          'cloak_of_night', 'fae_cunning', 'shared_burden', 'thorns_and_brambles', 'trapdoor_spiders_trick',
-                          # Royal Shield Contracts
-                          'fortifying_presence', 'hedgewall', 'pure_clarity', 'vow_of_no_compromise', 'whispers_of_morning',
-                          # Steed Contracts
-                          'boon_of_the_scuttling_spider', 'dreamsteps', 'nevertread', 'pathfinder', 'seven_league_leap',
-                          # Royal Steed Contracts
-                          'chrysalis', 'flickering_hours', 'leaping_toward_nightfall', 'mirror_walk', 'talon_and_wing',
-                          # Sword Contracts
-                          'elemental_weapon', 'might_of_the_terrible_brute', 'overpowering_dread', 'primal_glory', 'touch_of_wrath',
-                          # Royal Sword Contracts
-                          'elemental_fury', 'oathbreakers_punishment', 'red_revenge', 'relentless_pursuit', 'thief_of_reason',
-                          # Chalice Contracts
-                          'filling_the_cup', 'frail_as_the_dying_word', 'sleeps_sweet_embrace', 'curses_cure', 'dreamers_phalanx',
-                          # Royal Chalice Contracts
-                          'closing_deaths_door', 'feast_of_plenty', 'still_waters_run_deep', 'poison_the_well', 'shared_cup',
-                          # Coin Contracts
-                          'book_of_black_and_red', 'give_and_take', 'beggar_knight', 'coin_mark', 'grease_the_wheels',
-                          # Royal Coin Contracts
-                          'blood_debt', 'exchange_of_gilded_contracts', 'golden_promise', 'grand_revel_of_the_harvest', 'thirty_pieces',
-                          # Scepter Contracts
-                          'burning_ambition', 'jealous_vengeance', 'litany_of_rivals', 'knights_oath', 'unmask_the_dark_horse',
-                          # Royal Scepter Contracts
-                          'a_benevolent_hand', 'fake_it_til_you_make_it', 'tempters_quest', 'curse_of_hidden_strings', 'spare_not_the_rod',
-                          # Stars Contracts
-                          'pole_star', 'straight_on_til_morning', 'cynosure', 'shooting_star', 'retrograde',
-                          # Royal Stars Contracts
-                          'frozen_star', 'star_light_star_bright', 'light_of_ancient_stars', 'pinch_of_stardust',
-                          # Thorn Contracts
-                          'briars_herald', 'by_the_pricking_of_my_thumbs', 'thistles_rebuke', 'the_gouging_curse', 'embrace_of_nettles',
-                          # Royal Thorn Contracts
-                          'acanthas_fury', 'awaken_portal', 'crown_of_thorns', 'shrikes_larder', 'witchs_brambles',
-                          # Spring Contracts
-                          'cupids_arrow', 'dreams_of_the_earth', 'gift_of_warm_breath', 'springs_kiss', 'wyrd_faced_stranger',
-                          # Royal Spring Contracts
-                          'blessing_of_spring', 'gift_of_warm_blood', 'pandoras_gift', 'prince_of_ivy', 'waking_the_inner_fae',
-                          # Summer Contracts
-                          'baleful_sense', 'child_of_the_hearth', 'helios_light', 'high_summers_zeal', 'vigilance_of_ares',
-                          # Royal Summer Contracts
-                          'fiery_tongue', 'flames_of_summer', 'helios_judgment', 'solstice_revelation', 'sunburnt_heart',
-                          # Autumn Contracts
-                          'autumns_fury', 'last_harvest', 'tale_of_the_baba_yaga', 'twilights_harbinger', 'witches_intuition',
-                          # Royal Autumn Contracts
-                          'famines_bulwark', 'mien_of_the_baba_yaga', 'riding_the_falling_leaves', 'sorcerers_rebuke', 'tasting_the_harvest',
-                          # Winter Contracts
-                          'the_dragon_knows', 'heart_of_ice', 'ice_queens_call', 'slipknot_dreams', 'touch_of_winter',
-                          # Royal Winter Contracts
-                          'ermines_winter_coat', 'fallow_fields', 'field_of_regret', 'mantle_of_frost', 'winters_curse',
-                          # Retaliation Contracts
-                          'peacemakers_draw', 'draw_likeness',
-                          # Goblin Contracts
-                          'blessing_of_forgetfulness', 'distill_the_hidden', 'glib_tongue', 'goblins_eye', 'goblins_luck',
-                          'huntsmans_clarion', 'lost_visage', 'mantle_mask', 'sight_of_truth_and_lies', 'uncanny', 'wayward_guide', 'wyrd_debt',
-                          # Independent Arcadian Contracts
-                          'coming_darkness', 'pomp_and_circumstance', 'shadow_puppet', 'steal_influence', 'earths_gentle_movements',
-                          'dread_companion', 'cracked_mirror', 'listen_with_winds_ears', 'momentary_respite', 'earths_impenetrable_walls'
-                          ],
-            'geist': [
-                            # Keys (semantic syntax)
-                            "beasts", "blood", "chance", "cold wind", "deep waters", "disease", "grave dirt", "pyre flame", "stillness",
-                            # Haunts (categories)
-                            "boneyard", "caul", "curse", "dirge", "marionette", "memoria", "oracle", "rage", "shroud", "tomb"
-                                ],
-            # other templates as they're implemented
-            'promethean': [],
-            'demon': [],
-            'beast': [],
-            'hunter': [],
-            'deviant': []
-        }
+        # Import template power utilities
+        from world.cofd.templates import get_template_all_powers
         
-        return template_power_map.get(template, [])
+        # Get powers from template definition
+        return get_template_all_powers(template)
     
     def parse_target_stat(self, args):
         """Parse target and stat from arguments"""
@@ -362,6 +224,12 @@ class CmdStat(MuxCommand):
                 stat = stat.strip().lower()
                 value = value.strip()
                 
+                # Empty value means removal - return special marker
+                if value == "":
+                    # Convert spaces to underscores in stat names
+                    stat = stat.replace(" ", "_")
+                    return None, stat, None  # None value signals removal
+                
                 # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, etc.
                 semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment"]
                 if stat in semantic_prefixes:
@@ -382,8 +250,14 @@ class CmdStat(MuxCommand):
         """Set a stat value"""
         target_name, stat, value = self.parse_target_stat(self.args)
         
-        if not stat or value is None:
+        if not stat:
             self.caller.msg("Usage: +stat <stat>=<value> or +stat <name>/<stat>=<value>")
+            return
+        
+        # If value is None, this is a removal request
+        if value is None:
+            # Redirect to remove_stat
+            self.remove_stat_direct(target_name, stat)
             return
         
         # Determine target
@@ -451,7 +325,7 @@ class CmdStat(MuxCommand):
                 return
         
         # Check skills
-        elif stat in ["crafts", "investigation", "medicine", "occult", "politics", "science",
+        elif stat in ["academics", "computer", "crafts", "investigation", "medicine", "occult", "politics", "science",
                      "athletics", "brawl", "drive", "firearms", "larceny", "stealth", 
                      "survival", "weaponry", "animal_ken", "empathy", "expression", 
                      "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"]:
@@ -955,18 +829,24 @@ class CmdStat(MuxCommand):
                     self.caller.msg(f"Set {target.name}'s {power_display} to {value} dots.")
         
         # Check merits (allow setting for unapproved characters, redirect approved to XP system)
+        # Also handle instanced merits with colon syntax (e.g., unseen_sense:ghosts)
         if not stat_set:
             try:
                 from world.cofd.merits.general_merits import merits_dict
-                if stat in merits_dict:
-                    merit = merits_dict[stat]
+                from world.cofd.merit_utilities import (
+                    parse_merit_instance, check_merit_approved_status, set_merit
+                )
+                
+                # Parse base merit name and instance
+                base_merit_name, instance_name = parse_merit_instance(stat)
+                
+                if base_merit_name in merits_dict:
+                    merit = merits_dict[base_merit_name]
                     
-                    # Check if character is approved and not an NPC
-                    is_npc = hasattr(target, 'db') and target.db.is_npc
-                    if target.db.approved and not is_npc:
-                        self.caller.msg(f"Character is approved. Merits must be purchased with experience points.")
-                        self.caller.msg(f"Use '+xp/buy {stat}=[dots]' to purchase merits with experience points.")
-                        self.caller.msg(f"Use '+xp/info {stat}' to see merit details and prerequisites.")
+                    # Check if character is approved
+                    can_modify, error_msg = check_merit_approved_status(target, stat, self.caller)
+                    if not can_modify:
+                        self.caller.msg(error_msg)
                         return
                     
                     # For unapproved characters and NPCs, allow merit setting
@@ -977,27 +857,13 @@ class CmdStat(MuxCommand):
                             self.caller.msg("Merit dots must be a number.")
                             return
                     
-                    # Validate dots
-                    if value < merit.min_value or value > merit.max_value:
-                        self.caller.msg(f"{merit.name} must be between {merit.min_value} and {merit.max_value} dots.")
+                    # Set the merit using utility
+                    success, message = set_merit(target, stat, merit, value, self.caller)
+                    if not success:
+                        self.caller.msg(message)
                         return
                     
-                    # Check prerequisites if they exist
-                    if merit.prerequisite and not target.check_merit_prerequisites(merit.prerequisite):
-                        self.caller.msg(f"Prerequisites not met for {merit.name}: {merit.prerequisite}")
-                        return
-                    
-                    # Ensure merits category exists
-                    if "merits" not in target.db.stats:
-                        target.db.stats["merits"] = {}
-                    
-                    # Store merit data
-                    target.db.stats["merits"][stat] = {
-                        "dots": value,
-                        "max_dots": merit.max_value,
-                        "merit_type": merit.merit_type,
-                        "description": merit.description
-                    }
+                    # Merit was set successfully
                     stat_set = True
             except ImportError:
                 # If merit system not available, fall through to custom stat
@@ -1030,16 +896,15 @@ class CmdStat(MuxCommand):
                 skill_display = skill_name.replace('_', ' ').title()
                 self.caller.msg(f"Added '{value}' as a specialty for {target.name}'s {skill_display}.")
             else:
-                # Check if this was a merit
+                # Check if this was a merit (display confirmation message was already sent by set_merit)
                 try:
                     from world.cofd.merits.general_merits import merits_dict
-                    if stat in merits_dict:
-                        merit = merits_dict[stat]
-                        self.caller.msg(f"Set {target.name}'s {merit.name} merit to {value} dots.")
-                        is_npc = hasattr(target, 'db') and target.db.is_npc
-                        if not target.db.approved and not is_npc:
-                            self.caller.msg("(Merit set during character generation - after approval, use +xp/buy to purchase merits)")
-                    else:
+                    from world.cofd.merit_utilities import parse_merit_instance
+                    
+                    base_merit_name, instance_name = parse_merit_instance(stat)
+                    
+                    # If it wasn't a merit, give generic confirmation
+                    if base_merit_name not in merits_dict:
                         self.caller.msg(f"Set {target.name}'s {stat} to {value}.")
                 except ImportError:
                     self.caller.msg(f"Set {target.name}'s {stat} to {value}.")
@@ -1116,6 +981,35 @@ class CmdStat(MuxCommand):
         if pool_updated:
             self.caller.msg(f"Updated power pool: {pool_updated}")
     
+    def remove_stat_direct(self, target_name, stat):
+        """
+        Remove a stat directly (called from set_stat when value is empty).
+        
+        Args:
+            target_name (str): Name of target character, or None for self
+            stat (str): Name of the stat to remove
+        """
+        # Delegate to stat utilities
+        from world.cofd.stat_utilities import remove_stat_from_character, check_stat_permissions
+        
+        # Determine target
+        if target_name:
+            target = self.caller.search(target_name, global_search=True)
+            if not target:
+                return
+        else:
+            target = self.caller
+        
+        # Check permissions
+        has_permission, error_msg = check_stat_permissions(self.caller, target, is_removal=True)
+        if not has_permission:
+            self.caller.msg(error_msg)
+            return
+        
+        # Remove the stat
+        success, message = remove_stat_from_character(target, stat, self.caller)
+        self.caller.msg(message)
+    
     def remove_stat(self):
         """Remove a stat"""
         if "/" in self.args:
@@ -1169,83 +1063,11 @@ class CmdStat(MuxCommand):
             self.caller.msg(f"{target.name} has no stats set.")
             return
         
-        # Find and remove the stat
-        removed = False
+        # Delegate to stat utilities
+        from world.cofd.stat_utilities import remove_stat_from_character
         
-        # Check if removing a specialty
-        if stat.startswith("specialty/"):
-            skill_name = stat[10:]  # Remove "specialty/" prefix
-            specialties = target.db.stats.get("specialties", {})
-            if skill_name in specialties and specialties[skill_name]:
-                # Remove all specialties for this skill
-                del specialties[skill_name]
-                removed = True
-                skill_display = skill_name.replace('_', ' ').title()
-                self.caller.msg(f"Removed all specialties for {target.name}'s {skill_display}.")
-            else:
-                skill_display = skill_name.replace('_', ' ').title()
-                self.caller.msg(f"{target.name} has no specialties for {skill_display}.")
-            return
-        
-        # Check if trying to remove a merit
-        try:
-            from world.cofd.merits.general_merits import merits_dict
-            if stat in merits_dict:
-                # Check if character is approved and not an NPC
-                is_npc = hasattr(target, 'db') and target.db.is_npc
-                if target.db.approved and not is_npc:
-                    self.caller.msg(f"Character is approved. Merits cannot be removed directly with +stat/remove.")
-                    if self.caller.check_permstring("Builder"):
-                        self.caller.msg(f"Use '+xp/refund {stat}' to refund the merit and return experience points.")
-                    else:
-                        self.caller.msg(f"Only staff can refund merits. Contact staff for assistance.")
-                    return
-                # For unapproved characters and NPCs, allow direct removal
-                # (will be handled in the normal category loop below)
-        except ImportError:
-            # If merit system not available, continue with normal removal
-            pass
-        
-        for category in ["attributes", "skills", "advantages", "bio", "anchors", "merits", "powers", "other"]:
-            if stat in target.db.stats.get(category, {}):
-                # Special handling for template (staff only)
-                if stat == "template" and category == "other":
-                    if not self.caller.check_permstring("Builder"):
-                        self.caller.msg("Only staff can modify template.")
-                        return
-                
-                # Special handling for template-specific bio fields
-                if stat in ["path", "order", "mask", "dirge", "clan", "covenant", "bone", "blood", 
-                           "auspice", "tribe", "seeming", "court", "kith", "burden", "archetype", 
-                           "krewe", "lineage", "refinement", "profession", "organization", "creed", 
-                           "incarnation", "agenda", "agency", "hunger", "family", "inheritance", 
-                           "origin", "clade", "divergence", "needle", "thread", "legend", "life",
-                           "entitlement", "bloodline", "keeper", "motley", "pack", "lodge", "legacy",
-                           "cabal", "lineage", "refinement", "athanor", "conspiracy", "cell", "threshold",
-                           "decree", "guild", "judge", "incarnation", "agenda", "origin", "clade", "form",
-                           "keeper", "sire", "progenitor"] and category == "bio":
-                    character_template = target.db.stats.get("other", {}).get("template", "Mortal")
-                    valid_fields = target.get_template_bio_fields(character_template)
-                    
-                    if stat not in valid_fields:
-                        self.caller.msg(f"{stat.title()} is not a valid field for {character_template} characters.")
-                        return
-                
-                # Special handling for virtue/vice (remove from both bio and anchors)
-                if stat in ["virtue", "vice"]:
-                    target.db.stats.get("bio", {}).pop(stat, None)
-                    target.db.stats.get("anchors", {}).pop(stat, None)
-                    removed = True
-                    break
-                else:
-                    del target.db.stats[category][stat]
-                    removed = True
-                    break
-        
-        if removed:
-            self.caller.msg(f"Removed {stat} from {target.name}.")
-        else:
-            self.caller.msg(f"{target.name} doesn't have a stat called {stat}.")
+        success, message = remove_stat_from_character(target, stat, self.caller)
+        self.caller.msg(message)
     
     def list_stats(self):
         """List all stats for a character"""
@@ -1391,7 +1213,16 @@ class CmdStat(MuxCommand):
                 
                 dots = merit_data.get("dots", 1)
                 max_dots = merit_data.get("max_dots", 5)
-                merit_display = f"{merit_name.replace('_', ' ').title()} ({dots}/{max_dots} dots)"
+                
+                # Format merit display with instance if present
+                display_name = merit_name
+                if ":" in merit_name:
+                    base_name, instance = merit_name.split(":", 1)
+                    display_name = f"{base_name.replace('_', ' ').title()} ({instance.replace('_', ' ').title()})"
+                else:
+                    display_name = merit_name.replace('_', ' ').title()
+                
+                merit_display = f"{display_name} ({dots}/{max_dots} dots)"
                 merit_categories[merit_type].append(merit_display)
             
             # Display merits by category
@@ -1614,282 +1445,29 @@ class CmdStat(MuxCommand):
         stat = stat.strip().lower().replace(" ", "_")
         value = value.strip()
         
-        # Initialize geist_stats if needed
-        if not hasattr(target.db, 'geist_stats') or not target.db.geist_stats:
-            target.db.geist_stats = {
-                "attributes": {"power": 1, "finesse": 1, "resistance": 1},
-                "bio": {},
-                "remembrance": {},
-                "keys": {},
-                "haunts": {},
-                "advantages": {},
-                "other": {"rank": 3, "size": 5}
-            }
+        # Delegate to geist template utilities
+        from world.cofd.templates.geist import set_geist_stat_value, calculate_geist_derived_stats
         
-        # Get template config for validation
-        from world.cofd.templates import get_template_definition
-        template_def = get_template_definition("geist")
-        geist_config = template_def.get("geist_config", {}) if template_def else {}
+        success, message = set_geist_stat_value(target, stat, value, self.caller)
+        self.caller.msg(message)
         
-        # Validate and set the stat
-        stat_set = self._set_geist_stat_value(target, stat, value, geist_config)
-        
-        if stat_set:
-            self.caller.msg(f"Set geist's {stat.replace('_', ' ')} to {value}.")
-            
-            # Auto-calculate derived stats if setting attributes
-            if stat in ["power", "finesse", "resistance"]:
-                self._calculate_geist_derived_stats(target)
-        else:
-            self.caller.msg(f"Failed to set geist stat: {stat}")
-    
-    def _set_geist_stat_value(self, target, stat, value, geist_config):
-        """Set a specific geist stat value with validation"""
-        geist_stats = target.db.geist_stats
-        
-        # Try to convert value to int for numeric stats
-        original_value = value
-        try:
-            value = int(value)
-        except ValueError:
-            # Keep as string for non-numeric stats
-            pass
-        
-        # Handle different stat categories
-        if stat in ["power", "finesse", "resistance"]:
-            # Geist attributes
-            if not isinstance(value, int):
-                self.caller.msg("Geist attributes must be numbers.")
-                return False
-            
-            max_attr = geist_config.get("max_attribute", 9)
-            if not 1 <= value <= max_attr:
-                self.caller.msg(f"Geist attributes must be between 1 and {max_attr}.")
-                return False
-            
-            # Check total attribute dots (base 3 + 12 to assign = 15 total)
-            current_total = sum(geist_stats["attributes"].values())
-            current_value = geist_stats["attributes"].get(stat, 1)
-            new_total = current_total - current_value + value
-            max_total = 3 + geist_config.get("attribute_dots_to_assign", 12)
-            
-            if new_total > max_total:
-                self.caller.msg(f"Cannot set {stat} to {value}. Total attribute dots would be {new_total}, maximum is {max_total}.")
-                self.caller.msg(f"Current totals: Power {geist_stats['attributes']['power']}, Finesse {geist_stats['attributes']['finesse']}, Resistance {geist_stats['attributes']['resistance']}")
-                return False
-            
-            geist_stats["attributes"][stat] = value
-            return True
-        
-        elif stat in ["concept", "remembrance_description", "virtue", "vice", "crisis_trigger", "ban", "bane"]:
-            # Bio fields (string values)
-            if isinstance(value, int):
-                value = original_value  # Use original string value
-            
-            if len(str(value)) > 100:
-                self.caller.msg("Geist bio fields cannot exceed 100 characters.")
-                return False
-            
-            # Validate specific fields
-            if stat == "virtue":
-                # For geists, virtue can be more flexible than standard anchors
-                geist_stats["bio"][stat] = str(value).title()
-                return True
-            elif stat == "vice":
-                # For geists, vice can be more flexible than standard anchors
-                geist_stats["bio"][stat] = str(value).title()
-                return True
-            elif stat == "crisis_trigger":
-                valid_triggers = geist_config.get("crisis_triggers", [])
-                if valid_triggers and value.lower() not in valid_triggers:
-                    self.caller.msg(f"Invalid crisis trigger. Valid options: {', '.join(valid_triggers)}")
-                    return False
-                geist_stats["bio"][stat] = str(value).lower()
-                return True
-            else:
-                geist_stats["bio"][stat] = str(value)
-                return True
-        
-        elif stat == "innate_key":
-            # Innate key selection
-            valid_keys = geist_config.get("innate_keys", [])
-            if valid_keys and value.lower() not in valid_keys:
-                self.caller.msg(f"Invalid innate key. Valid options: {', '.join(valid_keys)}")
-                return False
-            geist_stats["bio"]["innate_key"] = str(value).lower()
-            return True
-        
-        elif stat == "remembrance_trait":
-            # Remembrance trait (skill or merit)
-            if not isinstance(value, str):
-                self.caller.msg("Remembrance trait must be a skill or merit name.")
-                return False
-                
-            value_lower = value.lower().replace(" ", "_")
-            valid_skills = geist_config.get("remembrance_skills", [])
-            valid_merits = geist_config.get("remembrance_merits", [])
-            
-            if value_lower not in valid_skills + valid_merits:
-                self.caller.msg(f"Invalid remembrance trait. Must be a valid skill or merit (≤3 dots).")
-                self.caller.msg(f"Valid skills: {', '.join(valid_skills)}")
-                self.caller.msg(f"Valid merits: {', '.join(valid_merits)}")
-                return False
-            
-            geist_stats["remembrance"]["trait"] = value_lower
-            geist_stats["remembrance"]["trait_type"] = "skill" if value_lower in valid_skills else "merit"
-            return True
-        
-        elif stat == "remembrance_dots":
-            # Remembrance trait dots
-            if not isinstance(value, int):
-                self.caller.msg("Remembrance dots must be a number.")
-                return False
-                
-            max_dots = geist_config.get("remembrance_max_dots", 3)
-            if not 1 <= value <= max_dots:
-                self.caller.msg(f"Remembrance trait dots must be between 1 and {max_dots}.")
-                return False
-            
-            geist_stats["remembrance"]["dots"] = value
-            return True
-        
-        
-        else:
-            # Unknown stat
-            self.caller.msg(f"Unknown geist stat: {stat}")
-            self.caller.msg("Valid geist stats:")
-            self.caller.msg("  Attributes: power, finesse, resistance")
-            self.caller.msg("  Bio: concept, remembrance_description, virtue, vice, crisis_trigger, ban, bane, innate_key")
-            self.caller.msg("  Remembrance: remembrance_trait, remembrance_dots")
-            self.caller.msg("  Note: For keys, use the semantic syntax:")
-            self.caller.msg("    +stat key=beasts")
-            self.caller.msg("  Note: For haunts, use regular numeric syntax:")
-            self.caller.msg("    +stat boneyard=3")
-            return False
-    
-    def _calculate_geist_derived_stats(self, target):
-        """Calculate derived stats for a geist"""
-        geist_stats = target.db.geist_stats
-        attrs = geist_stats["attributes"]
-        
-        # Calculate derived stats per Geist rules
-        defense = min(attrs["power"], attrs["finesse"])
-        initiative = attrs["finesse"] + attrs["resistance"] 
-        speed = attrs["power"] + attrs["finesse"] + 5
-        size = geist_stats["other"]["size"]  # Always 5 for geists
-        
-        # Store derived stats
-        geist_stats["advantages"] = {
-            "defense": defense,
-            "initiative": initiative,
-            "speed": speed
-        }
-        
-        self.caller.msg(f"Recalculated geist derived stats: Defense {defense}, Initiative {initiative}, Speed {speed}")
+        # Auto-calculate derived stats if setting attributes
+        if success and stat in ["power", "finesse", "resistance"]:
+            calculate_geist_derived_stats(target, self.caller)
     
     def _handle_semantic_power(self, target, power_type, power_name, value):
         """Handle semantic power syntax like key=beasts, ceremony=pass_on, alembic=purification"""
-        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        # Delegate to power utilities
+        from world.cofd.power_utilities import handle_semantic_power
         
-        # Import Promethean alembics and bestowments
-        from world.cofd.templates.promethean import ALL_ALEMBICS, PROMETHEAN_BESTOWMENTS
+        success, message = handle_semantic_power(target, power_type, power_name, value, self.caller)
         
-        # Define valid powers for each semantic type
-        valid_powers = {
-            "key": ["beasts", "blood", "chance", "cold_wind", "deep_waters", "disease", "grave_dirt", "pyre_flame", "stillness"],
-            "ceremony": [
-                "dead_mans_camera", "death_watch", "diviners_jawbone", "lovers_telephone", "ishtars_perfume",
-                "crow_girl_kiss", "gifts_of_persephone", "ghost_trap", "skeleton_key", "bestow_regalia", 
-                "krewe_binding", "speaker_for_the_dead", "black_cats_crossing", "bloody_codex", "dumb_supper",
-                "forge_anchor", "maggot_homonculus", "pass_on", "ghost_binding", "persephones_return"
-            ],
-            "rite": [
-                "chain_rage", "messenger", "banish", "harness_the_cycle", "totemic_empowerment",
-                "bottle_spirit", "infest_locus", "rite_of_the_shroud", "sacred_hunt", "hunting_ground", "moons_mad_love",
-                "shackled_lightning", "sigrblot", "wellspring", "carrion_feast", "flay_auspice", "kindle_fury", 
-                "rite_of_absolution", "shadowbind", "the_thorn_pursuit", "banshee_howl", "raiment_of_the_storm", 
-                "shadowcall", "supplication", "between_worlds", "fetish", "shadow_bridge", "twilight_purge", 
-                "hidden_path", "expel", "heal_old_wounds", "lupus_venandi", "devour", "forge_alliance", 
-                "urfarahs_bane", "veil", "great_hunt", "shadow_distortion", "unleash_shadow"
-            ],
-            "ritual": [
-                "ban_of_the_spiteful_bastard", "mantle_of_amorous_fire", "pangs_of_proserpina", 
-                "pool_of_forbidden_truths", "rigor_mortis", "cheval", "mantle_of_the_beasts_breath", 
-                "the_hydras_vitae", "shed_the_virulent_bowels", "curse_of_aphrodites_favor", 
-                "curse_of_the_beloved_toy", "deflection_of_wooden_doom", "donning_the_beasts_flesh", 
-                "mantle_of_the_glorious_dervish", "touch_of_the_morrigan", "blood_price", "willful_vitae", 
-                "blood_blight", "feeding_the_crone", "bounty_of_the_storm", "gorgons_gaze", 
-                "manananggals_working", "mantle_of_the_predator_goddess", "quicken_the_withered_womb", 
-                "the_red_blossoms", "birthing_the_god", "denying_hades", "gwydions_curse", 
-                "mantle_of_the_crone", "scapegoat", "apple_of_eden", "blandishment_of_sin", 
-                "blood_scourge", "marian_apparition", "revelatory_shroud", "vitae_reliquary", 
-                "apparition_of_the_host", "bloody_icon", "curse_of_babel", "liars_plague", 
-                "the_walls_of_jericho", "aarons_rod", "baptism_of_damnation", "blessing_the_legion", 
-                "the_guiding_star", "malediction_of_despair", "miracle_of_the_dead_sun", 
-                "pledge_to_the_worthless_one", "the_rite_of_ascending_blood", "blandishment_of_sin_advanced", 
-                "curse_of_isolation", "gift_of_lazarus", "great_prophecy", "stigmata", "trials_of_job", 
-                "apocalypse", "the_judgment_fast", "orison_of_voices", "sins_of_the_ancestors", "transubstatiation"
-            ],
-            "alembic": ALL_ALEMBICS,
-            "bestowment": [b.lower().replace(" ", "_") for b in PROMETHEAN_BESTOWMENTS]
-        }
-        
-        # Validate power type
-        if power_type not in valid_powers:
-            self.caller.msg(f"Invalid power type: {power_type}")
-            self.caller.msg("Valid types: key, ceremony, rite, ritual, contract, alembic, bestowment")
-            return False
-        
-        # Validate power name
-        if power_name not in valid_powers[power_type]:
-            self.caller.msg(f"Invalid {power_type}: {power_name}")
-            self.caller.msg(f"Valid {power_type}s: {', '.join(valid_powers[power_type])}")
-            return False
-        
-        # Check template compatibility
-        template_requirements = {
-            "key": ["geist"],
-            "ceremony": ["geist"],
-            "rite": ["werewolf"],
-            "ritual": ["vampire"],
-            "contract": ["changeling"],
-            "alembic": ["promethean"],
-            "bestowment": ["promethean"]
-        }
-        
-        required_templates = template_requirements.get(power_type, [])
-        if required_templates and character_template.lower() not in required_templates:
-            self.caller.msg(f"{power_type.title()}s are only available to {', '.join(required_templates).title()} characters.")
-            self.caller.msg(f"Your template is: {character_template}")
-            return False
-        
-        # Handle different power types
-        if power_type == "key":
-            # Keys go to geist stats for Sin-Eaters
-            if not hasattr(target.db, 'geist_stats') or not target.db.geist_stats:
-                target.db.geist_stats = {
-                    "attributes": {"power": 1, "finesse": 1, "resistance": 1},
-                    "bio": {},
-                    "remembrance": {},
-                    "keys": {},
-                    "haunts": {},
-                    "advantages": {},
-                    "other": {"rank": 3, "size": 5}
-                }
-            
-            # Keys are known/unknown - semantic syntax means they have the key
-            target.db.geist_stats["keys"][power_name.replace("_", " ")] = True
-            self.caller.msg(f"Set {target.name} to have the {power_name.replace('_', ' ').title()} key.")
+        if not success:
+            self.caller.msg(message)
         else:
-            # Ceremonies, rites, rituals, contracts, alembics, bestowments go to regular powers as known abilities (stored as 1)
-            if "powers" not in target.db.stats:
-                target.db.stats["powers"] = {}
-            
-            target.db.stats["powers"][power_name] = 1
-            power_display_name = power_name.replace('_', ' ').title()
-            self.caller.msg(f"Set {target.name} to know {power_display_name} ({power_type}).")
+            self.caller.msg(message)
         
-        return True
+        return success
 
 class CmdRecalc(MuxCommand):
     """

@@ -17,7 +17,7 @@ from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WE
 from world.cofd.templates.changeling import CHANGELING_SEEMINGS, CHANGELING_COURTS, CHANGELING_KITHS, CHANGELING_ENTITLEMENTS
 from world.cofd.templates.promethean import (
     PROMETHEAN_TRANSMUTATIONS, PROMETHEAN_ALEMBICS, 
-    PROMETHEAN_BESTOWMENTS, ATHANORS_BY_LINEAGE, PROMETHEAN_LINEAGES
+    PROMETHEAN_BESTOWMENTS, PROMETHEAN_LINEAGES
 )
 import re
 
@@ -90,8 +90,7 @@ class LookupData:
             'transmutations': PROMETHEAN_TRANSMUTATIONS,
             'alembics': PROMETHEAN_ALEMBICS,
             'bestowments': PROMETHEAN_BESTOWMENTS,
-            'lineages': PROMETHEAN_LINEAGES,
-            'athanors': ATHANORS_BY_LINEAGE
+            'lineages': PROMETHEAN_LINEAGES
         }
         
         # Skill specialties
