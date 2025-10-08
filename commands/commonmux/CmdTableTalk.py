@@ -1,5 +1,5 @@
 from evennia.commands.default.muxcommand import MuxCommand
-from commands.diesiraecode.CmdPose import PoseBreakMixin
+from commands.commonmux.CmdPose import PoseBreakMixin
 import re
 
 class CmdTableTalk(PoseBreakMixin, MuxCommand):

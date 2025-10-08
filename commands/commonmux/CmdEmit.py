@@ -1,6 +1,6 @@
 from evennia import default_cmds
 from evennia.utils import ansi
-from commands.diesiraecode.CmdPose import PoseBreakMixin
+from commands.commonmux.CmdPose import PoseBreakMixin
 from utils.text import process_special_characters
 import re
 

@@ -130,7 +130,295 @@ mummy_merits = [
         merit_type="social",
         prerequisite=""
     ),
+    # Additional Arisen Merits
+    Merit(
+        name="Artisan's Aptitude",
+        min_value=3,
+        max_value=3,
+        description="When you spend Willpower on a dice pool involving your guild's relics, achieve exceptional success on a threshold of three instead of five",
+        merit_type="mental",
+        prerequisite="mummy,specialty:1"
+    ),
+    Merit(
+        name="Balanced",
+        min_value=3,
+        max_value=3,
+        description="Your character has a second Balance. Once per chapter, you can restore a Pillar by serving both Balances in one scene",
+        merit_type="supernatural",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Blue Lotus Pillar",
+        min_value=3,
+        max_value=3,
+        description="Grants enhanced abilities based on guild: Ashem (Sheut 5): Use Pillars for Manifestation/Numen while projecting Jackal's Shade. Deshret (Ba 5): Soaring Falcon reduces exceptional threshold for aspirations. Kheru (Ab 5): Lion's Pride can steal Willpower when absorbing emotions. Nesrem (Ka 5): Guardian Bull adds +1 Armor when sealing flesh, spend Willpower to confer Armor to Touchstone. Usheb (Ren 5): Spend Willpower to apply Serpent's Tongue's Informed benefit to Utterance use",
+        merit_type="supernatural",
+        prerequisite="mummy,pillar:5"
+    ),
+    Merit(
+        name="Dead Celebrity",
+        min_value=1,
+        max_value=3,
+        description="You possessed Fame in a previous Descent. Apply as a Social bonus to appeal to your 'resemblance' to your famed self",
+        merit_type="social",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Dead Flesh",
+        min_value=2,
+        max_value=4,
+        description="Twice per scene, you may spend two turns reassembling your body to reverse the upgrade of a lethal wound to aggravated. With four dots, you may spend a Pillar to reduce a fresh aggravated wound to lethal",
+        merit_type="supernatural",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Fount of Vitality",
+        min_value=4,
+        max_value=4,
+        description="Sealing the flesh lasts for two more turns. You may spend Willpower and sacrifice Defense to instead seal an invested cultist's flesh",
+        merit_type="supernatural",
+        prerequisite="mummy,ab:1,ba:1,ka:1,ren:1,sheut:1"
+    ),
+    Merit(
+        name="Funerary Text",
+        min_value=1,
+        max_value=5,
+        description="Your tomb contains records preparing you for the Trials of Duat. When you enter henet within your tomb, you may ask the Storyteller one yes-or-no question in Duat for each dot of Funerary Text",
+        merit_type="supernatural",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Guild Paragon",
+        min_value=3,
+        max_value=3,
+        description="Grants guild-specific benefits: Maa-Kep: Spend Willpower for 8-Again on teamwork support, recover Willpower on exceptional success. Mesen-Nebu: Spend Willpower to analyze materials, +2 to repair/destroy, repurpose as gifts. Sesha-Hebsu: Spend Willpower when mediating to reduce exceptional threshold to three and improve impressions. Su-Menent: Spend Willpower to preserve dead flesh for a story, +2 to study remains. Tef-Aabhi: Sense sacred architecture, spend Willpower to arrange Hallowed Ground for a day per hour's work",
+        merit_type="supernatural",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Interstitial Lives",
+        min_value=1,
+        max_value=2,
+        description="Bond to one mummy or to all Arisen of your meret. When a bonded mummy rises, you rise at the same Sekhem. With two dots, breaking points and Memory rolls gain +2 in their presence",
+        merit_type="supernatural",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Overburdened",
+        min_value=3,
+        max_value=3,
+        description="Your character has a second Burden. Once per chapter, you can restore a Pillar by suffering both Burdens in one scene",
+        merit_type="supernatural",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Relic Sensitivity",
+        min_value=2,
+        max_value=2,
+        description="Receive a +2 kepher bonus",
+        merit_type="supernatural",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Resonant Lifetime",
+        min_value=3,
+        max_value=3,
+        description="Retain clear memories of a single Descent, or if you have reincarnated into another body, the life of that body",
+        merit_type="mental",
+        prerequisite="mummy"
+    ),
+    Merit(
+        name="Resplendent Soul",
+        min_value=3,
+        max_value=3,
+        description="Choose one secondary Pillar. When you replenish your defining Pillar by upholding your decree, also recover a point of the secondary Pillar",
+        merit_type="supernatural",
+        prerequisite="mummy,pillar:3"
+    ),
 ]
 
+# Cult Merits - These are purchased for/by the mummy's cult
+cult_merits = [
+    Merit(
+        name="Cult Allies",
+        min_value=1,
+        max_value=5,
+        description="As the universal Merit",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Contacts",
+        min_value=1,
+        max_value=1,
+        description="As the universal Merit",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Devotees",
+        min_value=3,
+        max_value=3,
+        description="The cult has a bonus dot of Fidelity",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Fanatical",
+        min_value=2,
+        max_value=2,
+        description="When you take more cult actions than your Dominance permits, overextended actions apply a +2 bonus to Reach and Grasp, but inflict additional Fidelity damage",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Forbidden Rites",
+        min_value=1,
+        max_value=5,
+        description="As the supernatural Merit. Cultists led by a sorcerer may perform the rites as cult actions",
+        merit_type="supernatural",
+        prerequisite="cult:1,ritual_sorcerer:1,library_occult:2,sorcerous_knowledge:1"
+    ),
+    Merit(
+        name="Cult Library",
+        min_value=1,
+        max_value=3,
+        description="As the universal Merit",
+        merit_type="mental",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Observance",
+        min_value=2,
+        max_value=2,
+        description="Monthly tomb rites inspire cultists and cult actions. Participating mummies recover Willpower",
+        merit_type="supernatural",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Resources",
+        min_value=1,
+        max_value=5,
+        description="As the universal Merit",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Retainer",
+        min_value=1,
+        max_value=5,
+        description="As the universal Merit",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Ritualistic",
+        min_value=1,
+        max_value=1,
+        description="The cult maintains a schedule of tomb rituals. Add Dominance as a bonus to restore Pillars through the tomb's Lifeweb",
+        merit_type="supernatural",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Safe Place",
+        min_value=1,
+        max_value=5,
+        description="As the location Merit",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Scapegoats",
+        min_value=1,
+        max_value=1,
+        description="Once per story, the cult may resolve a mutiny by refocusing to a new cult action, healing two Fidelity wounds without sacrificing Reach or Grasp",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Scorpion Cult Initiation",
+        min_value=1,
+        max_value=5,
+        description="As the style Merit",
+        merit_type="style",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Secretive",
+        min_value=3,
+        max_value=3,
+        description="Cultists hide their identities from the less initiated. Investigating a cultist's ties requires additional clues equal to their Scorpion Cult Initiation",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Specialized Cultists",
+        min_value=1,
+        max_value=1,
+        description="Cult assistance provides 9-Again to a given Skill",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Storied",
+        min_value=1,
+        max_value=1,
+        description="The cult is deniable or implausible, providing a +1 bonus to discredit enemies",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Staff",
+        min_value=1,
+        max_value=5,
+        description="As the universal Merit",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Status",
+        min_value=1,
+        max_value=5,
+        description="As the universal Merit",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Syncretic",
+        min_value=1,
+        max_value=1,
+        description="The cult incorporates local beliefs, providing a +2 cult action bonus to work alongside believers",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+    Merit(
+        name="Cult Vice-Ridden",
+        min_value=2,
+        max_value=2,
+        description="As the universal Merit",
+        merit_type="mental",
+        prerequisite="cult:1,vice:1"
+    ),
+    Merit(
+        name="Cult Virtuous",
+        min_value=2,
+        max_value=2,
+        description="As the universal Merit",
+        merit_type="mental",
+        prerequisite="cult:1,virtue:1"
+    ),
+    Merit(
+        name="Wayward",
+        min_value=3,
+        max_value=3,
+        description="The cult maintains no Iremite faith or loyalty and is deceived as to the nature of their Arisen master. It has no Judge's Doctrine, though it can sacrifice Dominance to develop a third Doctrine of its own. Its Reach and Grasp gain a +2 bonus to block other cults, but the first attack by a rival cult under a mummy's leadership inflicts aggravated Fidelity damage",
+        merit_type="social",
+        prerequisite="cult:1"
+    ),
+]
+
+# Combine all mummy merits
+all_mummy_merits = mummy_merits + cult_merits
+
 # Create dictionary for easy lookup
-mummy_merits_dict = {merit.name.lower().replace(" ", "_").replace("(", "").replace(")", ""): merit for merit in mummy_merits}
+mummy_merits_dict = {merit.name.lower().replace(" ", "_").replace("(", "").replace(")", ""): merit for merit in all_mummy_merits}

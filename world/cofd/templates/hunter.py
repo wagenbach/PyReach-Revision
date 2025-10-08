@@ -4,30 +4,39 @@ Hunters are ordinary people who have seen the supernatural and chosen to fight b
 """
 
 from . import register_template
+from .hunter_organizations import (
+    ALL_CONSPIRACIES, 
+    ALL_COMPACTS,
+    get_organization,
+    get_organization_summary
+)
+from .hunter_tactics import (
+    ALL_TACTICS,
+    ALL_MENTAL_TACTICS,
+    ALL_PHYSICAL_TACTICS,
+    ALL_SOCIAL_TACTICS,
+    get_tactic,
+    get_tactic_summary
+)
 
-# Valid hunter conspiracies
-HUNTER_CONSPIRACIES = [
-    "aegis kai doru", "ascending ones", "cheiron group", "lucifuge", "malleus maleficarum", 
-    "network zero", "null mysteriis", "task force: valkyrie", "union"
-]
+# Valid hunter conspiracies (includes historical)
+HUNTER_CONSPIRACIES = ALL_CONSPIRACIES
 
-# Valid hunter compacts
-HUNTER_COMPACTS = [
-    "ashwood abbey", "barrett commission", "bear lodge", "cainite heresy", "division six",
-    "faithful of shulpae", "habibti ma", "hunt club", "knights of saint adrian",
-    "long night", "loyalists of thule", "night watch", "operation blackbook", 
-    "otodo", "promethean brotherhood", "utopia now", "yuri's group"
-]
+# Valid hunter compacts (includes historical)
+HUNTER_COMPACTS = ALL_COMPACTS
 
-# Valid hunter tactics
-HUNTER_TACTICS = [
-    "advanced armory", "benedictions", "elixirs", "reliquary", "thaumatechnology"
-]
+# Valid hunter tactics (mental, physical, and social)
+HUNTER_TACTICS = ALL_TACTICS
 
 # Valid hunter endowments
 HUNTER_ENDOWMENTS = [
-    "aegis talisman", "ascending flame", "cheiron implant", "lucifuge blessing", 
-    "malleus ritual", "network equipment", "null mystic", "task force gear", "union device"
+    "advanced armory", "benediction", "elixirs", "reliquary", "thaumatechnology",
+    "animal control kit", "castigation", "enkoimesis", "horror within", "infusion",
+    "inspiration", "lives remembered", "perispiritism", "relics", "teleinformatics",
+    "xenotechnology", "dreamscape", "ink", "rites du cheval", "seitokuken", "goetic gospel",
+    "rites of denial", "all-seeing eye", "anthropophagy", "bacchanal",
+    "i'm doing science", "monster media", "the prayer", "rite of hecate", "setto",
+    "unearthed secrets", "your friends and neighbors"
 ]
 
 # Hunter template definition

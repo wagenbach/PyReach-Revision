@@ -125,6 +125,7 @@ class CmdStat(MuxCommand):
         Contracts (Changeling): +stat contract=hostile_takeover, +stat contract=cloak_of_night
         Alembics (Promethean): +stat alembic=purification, +stat alembic=human_flesh
         Bestowments (Promethean): +stat bestowment=spare_parts, +stat bestowment=titans_strength
+        Endowments (Hunter): +stat endowment=hellfire, +stat endowment=aegis_talisman
 
         Category Powers (1-5 dots):
         Haunts (Geist): +stat boneyard=3, +stat curse=2
@@ -230,8 +231,8 @@ class CmdStat(MuxCommand):
                     stat = stat.replace(" ", "_")
                     return None, stat, None  # None value signals removal
                 
-                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, etc.
-                semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment"]
+                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, endowment=hellfire, etc.
+                semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment", "endowment"]
                 if stat in semantic_prefixes:
                     # this is semantic syntax like key=beasts
                     power_type = stat
@@ -830,7 +831,7 @@ class CmdStat(MuxCommand):
                 # If merit system not available, fall through to custom stat
                 pass
         
-        # Check for semantic power syntax (key:beasts, ceremony:pass_on, etc.)
+        # Semantic power syntax (key:beasts, ceremony:pass_on, etc.)
         # This comes after merit check since both use colons
         if not stat_set and ":" in stat:
             power_type, power_name = stat.split(":", 1)

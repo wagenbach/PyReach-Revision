@@ -94,16 +94,16 @@ changeling_merits = [
         name="Elemental Warrior",
         min_value=1,
         max_value=5,
-        description="Choose one physical element when you purchase this Merit, such as wind, flame, or wood. Your character commands it in battle; all of the following effects apply only to the chosen element. This Merit represents mastery of elemental combat techniques that allow the changeling to weaponize their chosen element in various ways, from basic manipulation to advanced combat applications. Each dot provides increasingly sophisticated control and combat applications of the chosen element.",
-        merit_type="changeling",
-        prerequisite="dexterity:3,brawl:2,elemental_seeming"
+        description="Choose one physical element. (•) Wind Cuts to the Bone: Exceptional success on elemental attack on threshold of three instead of five. (••) Defensive Flurry: Dodging adds half Wyrd (rounded down) as bonus dice and can apply against Firearms. (•••) Hungry Leaping Flames: Spend Glamour to make elemental attack, increasing range by ten yards and potentially wreaking environmental effects. (••••) Antaean Endurance: While immersed in or fortified on element, add half Wyrd as temporary Health and bonus dice to resist fatigue, poison, unconsciousness. (•••••) Wrath of Titans: Spend Glamour to inflict Blinded, Deafened, or Knocked Down Tilts with strikes for the scene",
+        merit_type="style",
+        prerequisite="[dexterity:3,wits:3],[brawl:2,firearms:2,weaponry:2],elemental_weapon_or_primal_glory_or_elemental_seeming"
     ),
     Merit(
         name="Enchanting Performance",
         min_value=1,
         max_value=3,
-        description="A character with Enchanting Performance can touch upon whatever font makes all things fae so captivating. She brings a little of that magical obsession from beyond the Hedge and puts it to use. Whether she does so for cruelty or kindness depends on the changeling. This Style Merit allows the changeling to use performance arts to entrance and influence audiences in supernatural ways, drawing on the same captivating power that makes all fae creatures so alluring to mortals.",
-        merit_type="changeling",
+        description="(•) Limerick: Hurl an insult and roll Presence + Expression - Composure to penalize a target's Social rolls on others by your successes for the scene. (••) Poem: When you open a Door by an expressive performance, spend Glamour to open another. (•••) Sonnet: Spend Glamour to deliver a performance with an Expression roll, taking the rote quality. Success renders an audience member Inspired",
+        merit_type="style",
         prerequisite="presence:3,expression:3"
     ),
     Merit(
@@ -137,6 +137,14 @@ changeling_merits = [
         description="Your character has the spirit of Summer within him, and channels that wrath into others. Once per scene, when your character goads someone into a fight, he regains a single Willpower point.",
         merit_type="changeling",
         prerequisite="summer_mantle:3"
+    ),
+    Merit(
+        name="Frightful Incantation",
+        min_value=4,
+        max_value=4,
+        description="Can use Mantle and Mein in place of a hecatomb, opening Doors up to Mantle rating each story",
+        merit_type="changeling",
+        prerequisite="hedge_sorcerer:1,mantle:2,resolve:2"
     ),
     Merit(
         name="Gentrified Bearing",
@@ -179,12 +187,28 @@ changeling_merits = [
         prerequisite="brawl:2"
     ),
     Merit(
+        name="Hedge Sorcerer",
+        min_value=4,
+        max_value=4,
+        description="You can perform Hedge Sorcery rituals",
+        merit_type="changeling",
+        prerequisite="occult:1,mentor:2"
+    ),
+    Merit(
+        name="Hedgewise",
+        min_value=2,
+        max_value=2,
+        description="+2 to ken even magically concealed Hedgeways, and 9-Again to Hedgespinning",
+        merit_type="changeling",
+        prerequisite="changeling"
+    ),
+    Merit(
         name="Hedge Duelist",
         min_value=1,
         max_value=3,
-        description="Your character is a skilled fae duelist, capable of turning the Hedge into a weapon. Each duelist adopts a different style. A capricious sword dancer might taunt and tease the Hedge into action, while a king of beasts calls Glamour phantoms and Hedge fiends to aid him, and a druidic sorcerer communes with the Hedge, its voice guiding his movements. This Merit's effects only work in the Hedge proper. The various techniques allow different approaches to using the Hedge as both weapon and ally in combat situations.",
-        merit_type="changeling",
-        prerequisite="presence:2,brawl:2,empathy:2"
+        description="These maneuvers work in the Hedge. (•) Thousand Falling Leaves: Half your normal damage on an attack to inflict -1 Defense on the target. (••) Emerald Shield: Receive 2/0 magical Armor. (•••) Bite Like Thorns: Add a foe's wound penalties as bonus attack dice",
+        merit_type="style",
+        prerequisite="[presence:2,manipulation:2],[brawl:2,weaponry:2],social_skill:2"
     ),
     Merit(
         name="Hedge Sense",
@@ -219,6 +243,14 @@ changeling_merits = [
         prerequisite="changeling"
     ),
     Merit(
+        name="Librarian",
+        min_value=3,
+        max_value=3,
+        description="Your impression level is one higher at the first social interaction with librarians and scholars, you keep or lose the bonus depending on your behaviour on subsequent encounters. Gain two additional dice on rolls about researching written accounts",
+        merit_type="changeling",
+        prerequisite="changeling"
+    ),
+    Merit(
         name="Mantle",
         min_value=1,
         max_value=5,
@@ -235,6 +267,14 @@ changeling_merits = [
         prerequisite="wyrd:2,manipulation:3"
     ),
     Merit(
+        name="Magic Dreams",
+        min_value=5,
+        max_value=5,
+        description="May use Hedge Sorcery in dreams, substituting oneiromancy for Hedgespinning",
+        merit_type="changeling",
+        prerequisite="hedge_sorcerer:1,occult:3"
+    ),
+    Merit(
         name="Market Sense",
         min_value=1,
         max_value=1,
@@ -249,6 +289,14 @@ changeling_merits = [
         description="Your character knows how to harness the power of his Mantle to inspire others. Any time your character is in charge of a group of people who share his court, either through Mantle or Court Goodwill, he can grant benefits to the group (but not to himself) for a scene by spending a Willpower point. The benefit conferred depends on the court. Drawbacks: Being the leader is not easy. It means that you are responsible for those under you and they look to you for guidance. Those under your character's command gain a two-die bonus to Social rolls against him.",
         merit_type="changeling",
         prerequisite="mantle:1"
+    ),
+    Merit(
+        name="Blood Liege",
+        min_value=3,
+        max_value=3,
+        description="Swear yourself to a vampire, gain a two dot mentor. Once a lunar month, the vampire may give you a relatively task to be completed in good faith. May cancel this merit to cause a huntsman or true fae to divert their attention to the vampire",
+        merit_type="changeling",
+        prerequisite="changeling"
     ),
     Merit(
         name="Pandemoniacal",

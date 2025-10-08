@@ -93,7 +93,7 @@ The following files were already using the correct `.get()` pattern:
 
 ### 4. Subdirectory Files
 All files in subdirectories verified:
--  **diesiraecode/** - All files use correct patterns
+-  **commonmux/** - All files use correct patterns
 -  **bbs/** - All files use correct patterns
 -  **jobs/** - All files use correct patterns
 

@@ -1,23 +1,23 @@
-# Dies Irae Code - Custom Commands
+# CommonMux - Custom Commands
 
-This directory contains all custom commands specific to the Dies Irae MUSH. They are fairly generic MUSH-style commands like page, +who, +where, but also includes some other elements that could be game-specific such as languages and language code, pools that match Chronicles of Darkness (blood, willpower, glamour, essence, etc.), weather, and more.
+This directory contains all custom CommonMux commands. They are fairly generic MUSH-style commands like page, +who, +where, but also includes some other elements that could be game-specific such as languages and language code, pools that match Chronicles of Darkness (blood, willpower, glamour, essence, etc.), weather, and more.
 
 I've described any modifications that need to be made to these files or others in order to get them to work if you are using this code outside of the PyReach file structure.
 
 ## Command Set
 
-All commands in this directory are organized into the `DiesIraeCmdSet` commandset, which can be imported and added to other commandsets easily.
+All commands in this directory are organized into the `CommonMuxCmdSet` commandset, which can be imported and added to other commandsets easily.
 
 ### Usage
 
 Add the following to your default_cmdsets.py file in the import section near the top:
 ```python
-from commands.diesiraecode.diesiraecode_cmdset import DiesIraeCmdSet
+from commands.commonmux.commonmux_cmdset import CommonMuxCmdSet
 ```
 
 In your cmdset's at_cmdset_creation method add the following:
 ```python
-self.add(DiesIraeCmdSet())
+self.add(CommonMuxCmdSet())
 ```
 
 ## Available Commands
@@ -51,9 +51,9 @@ self.add(DiesIraeCmdSet())
 ## File Structure
 
 ```
-diesiraecode/
+commonmux/
 ├── __init__.py                 # Package initialization
-├── diesiraecode_cmdset.py      # Main commandset containing all commands
+├── commonmux_cmdset.py         # Main commandset containing all commands
 ├── README.md                   # This file
 ├── CmdAlias.py                 # Alias management
 ├── CmdAlts.py                  # Alt character management
@@ -76,7 +76,7 @@ diesiraecode/
 
 ## Integration
 
-The `DiesIraeCmdSet` is integrated into the main `CharacterCmdSet` in `commands/default_cmdsets.py`, making all these commands available to all characters in the game.
+The `CommonMuxCmdSet` is integrated into the main `CharacterCmdSet` in `commands/default_cmdsets.py`, making all these commands available to all characters in the game.
 
 ### File Specific Integration
 
@@ -84,12 +84,12 @@ The `DiesIraeCmdSet` is integrated into the main `CharacterCmdSet` in `commands/
 CmdWeather requires some additional modification in order for it to start working. Weather utilizes two APIs from outside sources: one from tidesandcurrents.noaa.gov, and another from openweather.org. To get this to work properly, one must set up a new API link as found on the NOAA and Open Weather websites. Just make sure to change this link:
 ```python
     def get_tide_info(self):
-        tide_url = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?date=today&station=9410170&product=predictions&datum=STND&time_zone=lst_ldt&interval=hilo&units=english&format=json" # Dies Irae API key
+        tide_url = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?date=today&station=9410170&product=predictions&datum=STND&time_zone=lst_ldt&interval=hilo&units=english&format=json" # Example API key
 ```
 and to modify the following information starting on line 142 and ending on 144:
 ```python
             # OpenWeatherMap API call
-            api_key = "549ac137ad7db9fb5d6f68b590d488a6" # Dies Irae API key
+            api_key = "549ac137ad7db9fb5d6f68b590d488a6" # Example API key
             city_id = "5391811"  # San Diego city ID
 ```
 The links to the Open Weather API are designed to be updated based on the attributes above, so no need to modify them.
@@ -196,9 +196,9 @@ Finally, please put the following into your rooms.py typeclass **if you are not 
         
         return place_number
 ```
-After that, you should be all set. If you're using PyReach with the Dies Irae code, then ignore the above. It should work natively.
+After that, you should be all set. If you're using PyReach with the CommonMux code, then ignore the above. It should work natively.
 
-You can also safely disable the TableTalk command and it will not impact anything else if places are not something you are interested in pursuing. Just comment out (put a hashtag in front of the line) in diesiraecode_cmdset.py that identifies the command. That would look like this:
+You can also safely disable the TableTalk command and it will not impact anything else if places are not something you are interested in pursuing. Just comment out (put a hashtag in front of the line) in commonmux_cmdset.py that identifies the command. That would look like this:
 ```python
         #self.add(CmdTableTalk())
 ```
@@ -210,7 +210,7 @@ For page, since there are some conflicts with base evennia files in the most rec
 This is what that looks like:
 In your imports, specify the following:
 ```python
-from commands.diesiraecode.CmdPage import CmdPage
+from commands.commonmux.CmdPage import CmdPage
 ```
 
 Then your account level commands should have something like this (as well as any other account-level commands you might identify, such as if you're using the mail contrib)
@@ -253,19 +253,19 @@ As far as I know, this requires the characters.py typeclass from PyReach since a
 
 ## Adding New Commands
 
-To add a new command to the Dies Irae command set:
+To add a new command to the CommonMux command set:
 
 1. Create your command file in this directory (e.g., `CmdNewCommand.py`)
-2. Add the import to `diesiraecode_cmdset.py`
-3. Add the command instance to the `at_cmdset_creation` method in `DiesIraeCmdSet`
+2. Add the import to `commonmux_cmdset.py`
+3. Add the command instance to the `at_cmdset_creation` method in `CommonMuxCmdSet`
 4. The command will automatically be available to all characters
 
 Example:
 ```python
-# In diesiraecode_cmdset.py
-from commands.diesiraecode.CmdNewCommand import CmdNewCommand
+# In commonmux_cmdset.py
+from commands.commonmux.CmdNewCommand import CmdNewCommand
 
-class DiesIraeCmdSet(CmdSet):
+class CommonMuxCmdSet(CmdSet):
     # ...
     def at_cmdset_creation(self):
         # ... other commands ...

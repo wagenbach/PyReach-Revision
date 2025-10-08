@@ -99,7 +99,7 @@ The `+finger` command integrates with:
 - The display automatically handles online/offline status
 
 ## Command Class
-- **Location**: `PyReach/commands/diesiraecode/CmdFinger.py`
+- **Location**: `PyReach/commands/commonmux/CmdFinger.py`
 - **Base Class**: `MuxCommand`
 - **Key**: `+finger`
 - **Aliases**: `finger`

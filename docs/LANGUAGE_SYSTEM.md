@@ -162,8 +162,8 @@ Use `+language/all` to see the complete list with all available languages.
 The language system is integrated into:
 - **Character typeclass** (`typeclasses/characters.py`): Methods for language handling
 - **Language data** (`world/utils/language_data.py`): List of available languages
-- **RP commands** (`commands/diesiraecode/`): Say, Pose, Emit commands with language support
-- **Language command** (`commands/diesiraecode/CmdLanguage.py`): All language management
+- **RP commands** (`commands/commonmux/`): Say, Pose, Emit commands with language support
+- **Language command** (`commands/commonmux/CmdLanguage.py`): All language management
 
 ### Language Obfuscation
 

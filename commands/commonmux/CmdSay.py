@@ -1,5 +1,5 @@
 from evennia.commands.default.muxcommand import MuxCommand
-from commands.diesiraecode.CmdPose import PoseBreakMixin
+from commands.commonmux.CmdPose import PoseBreakMixin
 from utils.text import process_special_characters
 
 class CmdSay(PoseBreakMixin, MuxCommand):

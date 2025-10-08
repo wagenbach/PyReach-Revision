@@ -744,6 +744,30 @@ class CmdSheet(MuxCommand):
                 secondary_power_display = self._format_secondary_powers_display(powers, template_secondary_powers, force_ascii)
                 output.extend(secondary_power_display)
         
+        # Hunter Endowments section (individual powers without ratings)
+        if template.lower() == "hunter":
+            output.append(self._format_section_header("|wENDOWMENTS|n"))
+            
+            # Get all endowment powers
+            from world.cofd.templates.hunter_endowments import ALL_ENDOWMENT_POWERS, get_endowment
+            
+            endowment_list = []
+            for power_name in ALL_ENDOWMENT_POWERS:
+                if power_name in powers and powers[power_name] > 0:
+                    # Get the proper display name and endowment type
+                    power_data = get_endowment(power_name)
+                    if power_data:
+                        endowment_type = power_data['endowment_type'].replace('_', ' ').title()
+                        endowment_display = f"{power_data['name']} ({endowment_type})"
+                        endowment_list.append(endowment_display)
+            
+            if endowment_list:
+                # Display endowments in single column for readability
+                for endowment in sorted(endowment_list):
+                    output.append(f"  {endowment}")
+            else:
+                output.append("No endowment powers learned yet.")
+        
         # Pools section (horizontal layout)
         output.append(self._format_section_header("|wPOOLS|n"))
         

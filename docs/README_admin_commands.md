@@ -424,7 +424,7 @@ The job system includes extensive administrative functions for managing player r
 ### +staff
 **Purpose**: List and manage staff members  
 **Permission**: Various (see individual functions)  
-**File**: `commands/DiesIraeCode/CmdStaff.py`
+**File**: `commands/commonmux/CmdStaff.py`
 
 ```
 Usage:
@@ -458,7 +458,7 @@ Usage:
 ### +pst
 **Purpose**: Manage Player Storytellers  
 **Permission**: Various (Admin for management functions)  
-**File**: `commands/DiesIraeCode/CmdStaff.py`
+**File**: `commands/commonmux/CmdStaff.py`
 
 ```
 Usage:
@@ -487,7 +487,7 @@ Usage:
 ### @emit
 **Purpose**: Send messages to a room without your name attached  
 **Permission**: All (with some restrictions)  
-**File**: `commands/DiesIraeCode/CmdEmit.py`
+**File**: `commands/commonmux/CmdEmit.py`
 
 ```
 Usage:
