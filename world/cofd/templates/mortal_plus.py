@@ -1,112 +1,154 @@
 """
-Mortal+ Template Definition for Chronicles of Darkness.
-Mortals with supernatural abilities - comprehensive list including all minor templates.
+Mortal+ Template Definition for Chronicles of Darkness 2nd Edition.
+Mortals with supernatural abilities - comprehensive list of all minor templates.
+Based on Codex of Darkness: https://codexofdarkness.com/wiki/Mortals_and_Lesser_Templates
 """
 
 from . import register_template
 
-# Core World of Darkness mortal+ types
+# Core Chronicles of Darkness 2e mortal+ types (General Character Types)
 CORE_MORTAL_PLUS = [
-    "Atariya", "Dreamer", "Infected", "Lost Boy", "Plain", "Psychic",
-    "Psychic Vampire", "Skinthieves", "Ghost"
+    "Atariya",           # Spirit-touched with connection to the Shadow
+    "Changing Breeds",   # Minor shapeshifters (not Uratha)
+    "Dreamer",           # Those who walk in dreams
+    "Infected",          # Carriers of supernatural diseases
+    "Lost Boy",          # Children who never grew up
+    "Plain",             # Seemingly normal but with hidden depths
+    "Psychic",           # Humans with psychic abilities
+    "Psychic Vampire",   # Those who feed on life force
+    "Skinthief",         # Shapeshifters who steal skins
 ]
 
-# Vampire: The Requiem related
+# Vampire: The Requiem related (Associated Character Types)
 VAMPIRE_MORTAL_PLUS = [
-    "Ghoul", "Dhampir"
+    "Ghoul",    # Blood-bound servants with Disciplines
+    "Dhampir"   # Half-vampire offspring
 ]
 
-# Werewolf: The Forsaken related
+# Werewolf: The Forsaken related (Associated Character Types)
 WEREWOLF_MORTAL_PLUS = [
-    "Wolf-blooded", "Host"
+    "Wolf-Blooded",  # Descendants of werewolves with Tells
+    "Host"           # Possessed by spirits with Dread Powers
 ]
 
-# Mage: The Awakening related
+# Mage: The Awakening related (Associated Character Types)
 MAGE_MORTAL_PLUS = [
-    "Sleepwalker", "Proximus"
+    "Sleepwalker",  # Mortals who can witness magic
+    "Proximus"      # Bloodlines with innate magical abilities
 ]
 
-# Changeling: The Lost related
+# Changeling: The Lost related (Associated Character Types)
 CHANGELING_MORTAL_PLUS = [
-    "Fae-Touched"
+    "Fae-Touched"  # Mortals touched by the Fae
 ]
 
-# Promethean: The Created related
-PROMETHEAN_MORTAL_PLUS = [
-    "Alchemist"
-]
-
-# Mummy: The Curse related
+# Mummy: The Curse related (Associated Character Types)
 MUMMY_MORTAL_PLUS = [
-    "Immortal"
+    "Immortal"  # Humans who achieved immortality through various means
 ]
 
-# Demon: The Descent related
+# Demon: The Descent related (Associated Character Types)
 DEMON_MORTAL_PLUS = [
-    "Stigmatic", "Demon-Blooded"
+    "Demon-Blooded",  # Offspring or touched by demons
+    "Stigmatic"       # Marked by the God-Machine
 ]
 
-# All mortal+ types combined
-ALL_MORTAL_PLUS_TYPES = (CORE_MORTAL_PLUS + VAMPIRE_MORTAL_PLUS + WEREWOLF_MORTAL_PLUS + 
-                        MAGE_MORTAL_PLUS + CHANGELING_MORTAL_PLUS + 
-                        PROMETHEAN_MORTAL_PLUS + MUMMY_MORTAL_PLUS + 
-                        DEMON_MORTAL_PLUS)
+# All mortal+ types combined (2nd Edition only)
+ALL_MORTAL_PLUS_TYPES = (
+    CORE_MORTAL_PLUS + 
+    VAMPIRE_MORTAL_PLUS + 
+    WEREWOLF_MORTAL_PLUS + 
+    MAGE_MORTAL_PLUS + 
+    CHANGELING_MORTAL_PLUS + 
+    MUMMY_MORTAL_PLUS + 
+    DEMON_MORTAL_PLUS
+)
 
-# Psychic power types (for psychics)
+# Psychic power types (for Psychics - 2e Supernatural Merits)
+# Based on Chronicles of Darkness 2e core book
 PSYCHIC_POWERS = [
-    "aura sight", "clairvoyance", "mind reading", "psychokinesis", 
-    "psychometry", "telepathy", "precognition", "medium", "biokinesis",
-    "cryokinesis", "pyrokinesis", "electrokinesis", "teleportation"
+    "aura_reading",      # See supernatural auras
+    "clairvoyance",      # Remote viewing
+    "mind_reading",      # Read surface thoughts
+    "psychokinesis",     # Move objects with mind
+    "psychometry",       # Read object histories
+    "telepathy",         # Mental communication
+    "precognition",      # See future events
+    "medium",            # Communicate with ghosts
+    "biokinesis",        # Control biological functions
+    "telekinesis"        # Advanced psychokinesis
 ]
 
-# Thaumaturge traditions
-THAUMATURGE_TRADITIONS = [
-    "apostle of the dark one", "ceremonial magician", "hedge witch", 
-    "shaman", "taoist alchemist", "vodoun", "wiccan", "hermetic"
-]
-# Demon-blooded levels
+# Demon-blooded levels (2e)
 DEMON_BLOODED_LEVELS = [
-    "latent", "offspring", "fractal"
+    "latent",      # Dormant abilities
+    "offspring",   # Direct demon parentage
+    "fractal"      # God-Machine touched
 ]
 
-# Immortal types
-IMMORTAL_TYPES = [
-    "blood bather", "body thief", "spirit immortal", "mnemonic immortal",
-    "horned immortal", "purified", "arisen"
+# Wolf-Blooded Tell categories (2e)
+WOLF_BLOODED_TELLS = [
+    "moon_gift",         # Powers tied to moon phases
+    "pack_awareness",    # Sense other Wolf-Blooded
+    "territorial",       # Enhanced in claimed territory
+    "spirit_sight",      # See into Shadow
+    "primal"            # Enhanced physical traits
 ]
 
-# Game line heritage
+PROXIMUS_FAMILIES = [
+    "benedetto",    # Mastigos, Provincial Italian occultists bonded with something in the land.
+    "essers",       # Thyrsus, Specialists in harnessing the soul, with loosened souls of their own.
+    "myrmidons",    # Obrimos, Muscular warrior slaves concealing insectile mutations.
+    "sisters of the mountain" # Thyrsus, Appalachian folk witches with faint signs of plant life beneath the skin.
+]
+
+# Game line heritage (for tracking mortal+ origin)
 GAME_LINE_HERITAGE = [
     "vampire", "werewolf", "mage", "changeling", "hunter", "promethean",
-    "geist", "mummy", "demon", "beast", "deviant", "core", "none"
+    "geist", "mummy", "demon", "deviant", "core", "none"
 ]
 
-# Mortal+ template definition
+# Get mage spells for Sleepwalkers/Proximus
+try:
+    from world.cofd.templates.mage_spells import SLEEPWALKER_SPELLS, PROXIMUS_SPELLS
+    MORTAL_PLUS_SPELL_ACCESS = PROXIMUS_SPELLS  # Use Proximus list (1-3 dot) for validation
+except ImportError:
+    MORTAL_PLUS_SPELL_ACCESS = []
+
+# Mortal+ template definition (2nd Edition)
 MORTAL_PLUS_TEMPLATE = {
     "name": "mortal_plus",
     "display_name": "Mortal+",
-    "description": "Mortals with supernatural abilities - psychics, mediums, wolf-blooded, sleepwalkers, ghouls, and many other minor supernatural templates from across the Chronicles of Darkness.",
-    "bio_fields": ["virtue", "vice", "template_type", "game_line", "heritage", "abilities", "organization"],
+    "description": ("Mortals with supernatural abilities - psychics, witches, wolf-blooded, sleepwalkers, ghouls, "
+                   "and many other minor supernatural templates from Chronicles of Darkness 2nd Edition. "
+                   "See: https://codexofdarkness.com/wiki/Mortals_and_Lesser_Templates"),
+    "bio_fields": ["virtue", "vice", "template_type", "subtype", "game_line", "heritage", "abilities", "organization"],
     "integrity_name": "Integrity",
     "starting_integrity": 7,
     "supernatural_power_stat": None,
     "starting_power_stat": None,
     "resource_pool": "willpower",
-    "power_systems": PSYCHIC_POWERS + THAUMATURGE_TRADITIONS,
+    "power_systems": PSYCHIC_POWERS + MORTAL_PLUS_SPELL_ACCESS,  # 2e: Psychic, and Spells
     "anchors": ["virtue", "vice"],
     "merit_categories": ["physical", "social", "mental", "supernatural", "fighting", "style", "minor_template"],
     "field_validations": {
         "template_type": {
-            "valid_values": ALL_MORTAL_PLUS_TYPES
+            "valid_values": ALL_MORTAL_PLUS_TYPES,
+            "description": "Primary mortal+ template type"
+        },
+        "subtype": {
+            "valid_values": WOLF_BLOODED_TELLS + DEMON_BLOODED_LEVELS,
+            "description": "Specific variant or subtype (optional)"
         },
         "game_line": {
-            "valid_values": GAME_LINE_HERITAGE
+            "valid_values": GAME_LINE_HERITAGE,
+            "description": "Associated game line or origin"
         },
     },
-    "version": "2.1",
-    "author": "Chronicles of Darkness",
+    "version": "2.0",
+    "author": "Chronicles of Darkness 2nd Edition",
     "game_line": "Chronicles of Darkness Core",
-    "notes": "Enhanced Mortal+ template with psychic powers and thaumaturge traditions"
+    "notes": ("2nd Edition Mortal+ template. Includes psychic powers and spells. ")
 }
 
 # Register the template

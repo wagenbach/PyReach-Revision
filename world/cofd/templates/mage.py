@@ -150,4 +150,290 @@ def get_secondary_powers():
 
 def get_all_powers():
     """Get all mage powers for validation."""
-    return MAGE_ARCANA.copy() 
+    return MAGE_ARCANA.copy()
+
+
+# Mage Sheet Rendering Functions
+def render_mage_sheet(character, caller, force_ascii=False):
+    """
+    Render the Mage-specific character sheet.
+    
+    Args:
+        character: The character object with mage_stats
+        caller: The calling object (for dot style detection)
+        force_ascii: Whether to force ASCII display
+        
+    Returns:
+        list: Lines of output for the mage sheet
+    """
+    # Helper function to format dots
+    def format_dots(value, max_value=5):
+        if force_ascii:
+            filled = "*" * value
+            empty = "-" * (max_value - value)
+        else:
+            filled = "●" * value
+            empty = "○" * (max_value - value)
+        return filled + empty
+    
+    # Helper function for section headers
+    def format_section_header(section_name):
+        total_width = 78
+        name_length = len(section_name)
+        available_dash_space = total_width - name_length - 4
+        left_dashes = available_dash_space // 2
+        right_dashes = available_dash_space - left_dashes
+        return f"|g<{'-' * left_dashes}|n {section_name} |g{'-' * right_dashes}>|n"
+    
+    # Initialize mage stats if needed (using shared function)
+    initialize_mage_stats(character)
+    
+    mage_stats = character.db.mage_stats
+    bio = character.db.stats.get("bio", {})
+    other = character.db.stats.get("other", {})
+    advantages = character.db.stats.get("advantages", {})
+    
+    # Build output
+    output = []
+    output.append(f"|y{'='*78}|n")
+    output.append(f"|y{character.name} - Mage Details|n".center(88))
+    output.append(f"|y{'='*78}|n")
+    
+    # Basic Mage Info
+    output.append(format_section_header("|wMAGE IDENTITY|n"))
+    
+    path = bio.get("path", "<not set>")
+    order = bio.get("order", "<not set>")
+    shadow_name = bio.get("shadow_name", "<not set>")
+    cabal = bio.get("cabal", "<not set>")
+    legacy = bio.get("legacy", "<not set>")
+    gnosis = advantages.get("gnosis", 1)
+    
+    info_items = [
+        ("Shadow Name", shadow_name),
+        ("Path", path),
+        ("Order", order),
+        ("Legacy", legacy),
+        ("Cabal", cabal),
+        ("Gnosis", f"{gnosis} {format_dots(gnosis, gnosis)}")
+    ]
+    
+    for i in range(0, len(info_items), 2):
+        left_label, left_value = info_items[i]
+        left_text = f"{left_label:<15}: {left_value}"
+        
+        if i + 1 < len(info_items):
+            right_label, right_value = info_items[i + 1]
+            right_text = f"{right_label:<15}: {right_value}"
+        else:
+            right_text = ""
+        
+        left_formatted = left_text.ljust(39)
+        output.append(f"{left_formatted} {right_text}")
+    
+    # Dedicated Tool
+    output.append(format_section_header("|wDEDICATED TOOL|n"))
+    dedicated_tool = mage_stats.get("dedicated_tool", "<not set>")
+    output.append(f"  {dedicated_tool}")
+    
+    # Only show help if not set
+    if dedicated_tool == "<not set>":
+        output.append("")
+        output.append("|gYour dedicated magical tool synchronizes with your Nimbus.|n")
+        output.append("|gSet with:|n +stat/mage dedicated_tool=<description>")
+    
+    # Nimbus
+    output.append(format_section_header("|wNIMBUS|n"))
+    
+    immediate = mage_stats.get("immediate_nimbus", "<not set>")
+    long_term = mage_stats.get("long_term_nimbus", "<not set>")
+    signature = mage_stats.get("signature_nimbus", "<not set>")
+    
+    output.append("|cImmediate Nimbus:|n")
+    output.append(f"  {immediate}")
+    if immediate == "<not set>":
+        output.append("|g  (Visible when casting spells, causes Nimbus Tilt based on Potency)|n")
+    output.append("")
+    
+    output.append("|cLong-Term Nimbus:|n")
+    output.append(f"  {long_term}")
+    if long_term == "<not set>":
+        output.append("|g  (Subtle coincidences around you based on your Path)|n")
+    output.append("")
+    
+    output.append("|cSignature Nimbus:|n")
+    output.append(f"  {signature}")
+    if signature == "<not set>":
+        output.append("|g  (Your magical signature left on spells, visible to Mage Sight, reflects a portion of what immediate nimbus looks like.)|n")
+    
+    # Only show command help if any nimbus is not set
+    if immediate == "<not set>" or long_term == "<not set>" or signature == "<not set>":
+        output.append("")
+        if immediate == "<not set>":
+            output.append("|gSet with:|n +stat/mage immediate_nimbus=<description>")
+        if long_term == "<not set>":
+            output.append("|gSet with:|n +stat/mage long_term_nimbus=<description>")
+        if signature == "<not set>":
+            output.append("|gSet with:|n +stat/mage signature_nimbus=<description>")
+    
+    # Obsessions
+    output.append(format_section_header("|wOBSESSIONS|n"))
+    
+    obsessions = mage_stats.get("obsessions", [])
+    if obsessions:
+        for i, obsession in enumerate(obsessions, 1):
+            if obsession:
+                output.append(f"{i}. {obsession}")
+    else:
+        output.append("No obsessions set yet.")
+    
+    # Only show help if no obsessions or less than max (3)
+    if len(obsessions) < 3:
+        output.append("")
+        output.append("|gObsessions are mage-specific goals tied to your magical practice.|n")
+        output.append("|gMages can have up to 3 obsessions (1 short-term, 2 long-term).|n")
+        output.append("|gSet with:|n +stat/mage obsession=<description>")
+    
+    # Praxes
+    output.append(format_section_header("|wPRAXES|n"))
+    
+    praxes = mage_stats.get("praxes", [])
+    if praxes:
+        # Import spell data for display
+        from world.cofd.templates.mage_spells import get_spell
+        
+        for praxis_key in sorted(praxes):
+            spell_data = get_spell(praxis_key)
+            if spell_data:
+                spell_level = spell_data['level']
+                arcana_dots = format_dots(spell_level, 5)
+                arcana_name = spell_data['arcana'].title()
+                output.append(f"  {spell_data['name']} ({arcana_name} {arcana_dots})")
+            else:
+                output.append(f"  {praxis_key.replace('_', ' ').title()} (Unknown Spell)")
+    else:
+        output.append("No praxes learned yet.")
+    
+    # Only show help if they have room for more praxes (or have none)
+    if not praxes or len(praxes) < gnosis:
+        output.append("")
+        output.append(f"|gPraxes are spells you've mastered (exceptional success on 3 successes).|n")
+        output.append(f"|gYou gain 1 free praxis per Gnosis dot, plus extras for 1 Arcane XP each.|n")
+        output.append(f"|gCurrent Gnosis: {gnosis} = {gnosis} free praxis|n")
+        output.append(f"|gSet with:|n +stat/mage praxis=<spell_name>")
+    
+    output.append(f"|y{'='*78}|n")
+    
+    return output
+
+
+def initialize_mage_stats(character):
+    """
+    Initialize the mage stats structure for a Mage character.
+    
+    Args:
+        character: The character object
+    """
+    if not hasattr(character.db, 'mage_stats') or not character.db.mage_stats:
+        character.db.mage_stats = {
+            "immediate_nimbus": "<not set>",
+            "long_term_nimbus": "<not set>",
+            "signature_nimbus": "<not set>",
+            "obsessions": [],
+            "praxes": [],
+            "dedicated_tool": "<not set>"
+        }
+
+
+def set_mage_stat_value(character, stat, value, caller):
+    """
+    Set a mage stat value with validation.
+    
+    Args:
+        character: The character object
+        stat (str): The stat to set
+        value: The value to set
+        caller: The caller object (for messages)
+        
+    Returns:
+        tuple: (success, message)
+    """
+    # Initialize mage_stats if needed (like geist does)
+    initialize_mage_stats(character)
+    
+    # Get reference to mage_stats for modification (like geist does)
+    mage_stats = character.db.mage_stats
+    
+    # Handle different mage stats
+    if stat in ["immediate_nimbus", "long_term_nimbus", "signature_nimbus", "dedicated_tool"]:
+        # Text descriptions
+        if len(value) > 200:
+            return False, "Nimbus and tool descriptions cannot exceed 200 characters."
+        
+        # Modify through the reference (like geist does)
+        mage_stats[stat] = value
+        
+        display_name = stat.replace('_', ' ').title()
+        return True, f"Set {character.name}'s {display_name} to: {value}"
+        
+    elif stat == "obsession":
+        # Add to obsessions list (max 3)
+        current_obsessions = mage_stats.get("obsessions", [])
+        
+        if len(current_obsessions) >= 3:
+            return False, "Mages can only have up to 3 obsessions (1 short-term, 2 long-term).\nRemove an obsession first or use +aspiration for general aspirations."
+        
+        # Modify through the reference (like geist does)
+        mage_stats["obsessions"].append(value)
+        
+        return True, f"Added obsession {len(current_obsessions) + 1}: {value}"
+        
+    elif stat == "praxis":
+        # Add a praxis (validate it's a real spell)
+        from world.cofd.templates.mage_spells import get_spell
+        
+        spell_key = value.lower().replace(" ", "_")
+        spell_data = get_spell(spell_key)
+        
+        if not spell_data:
+            return False, f"'{value}' is not a valid spell.\nUse +lookup spells to browse available spells."
+        
+        current_praxes = mage_stats.get("praxes", [])
+        
+        # Check if already have this praxis
+        if spell_key in current_praxes:
+            return False, f"You already have {spell_data['name']} as a praxis."
+        
+        # Check gnosis limit and cost
+        gnosis = character.db.stats.get("advantages", {}).get("gnosis", 1)
+        free_praxes = gnosis
+        
+        # If buying beyond free praxes, need to spend 1 Arcane XP
+        if len(current_praxes) >= free_praxes:
+            # Check if character is approved
+            if character.db.approved:
+                # Need to spend Arcane XP
+                exp_handler = character.experience
+                if exp_handler.arcane_experience < 1:
+                    return False, f"|rInsufficient Arcane Experience.|n\nYou have {len(current_praxes)} praxes and Gnosis {gnosis} (which gives {free_praxes} free praxes).\nAdditional praxes cost 1 Arcane XP each.\nYou have {exp_handler.arcane_experience} Arcane XP."
+                
+                # Spend the Arcane XP
+                exp_handler.spend_arcane_experience(1)
+                xp_message = f"\n|gSpent 1 Arcane XP.|n Remaining: {exp_handler.arcane_experience} Arcane XP"
+            else:
+                # Character not approved, just warn them
+                xp_message = f"\n|yNote:|n You have {len(current_praxes)} praxes with Gnosis {gnosis}. You get {free_praxes} free praxes.\nOnce approved, additional praxes cost 1 Arcane Experience each."
+        else:
+            # Free praxis
+            xp_message = f"\n|gFree praxis ({len(current_praxes) + 1}/{free_praxes} from Gnosis {gnosis})|n"
+        
+        # Modify through the reference (like geist does)
+        mage_stats["praxes"].append(spell_key)
+        
+        spell_level = spell_data['level']
+        arcana_name = spell_data['arcana'].title()
+        dots_str = "●" * spell_level
+        return True, f"Added praxis: {spell_data['name']} ({arcana_name} {dots_str}){xp_message}"
+        
+    else:
+        return False, f"Unknown mage stat: {stat}\nValid stats: immediate_nimbus, long_term_nimbus, signature_nimbus, dedicated_tool, obsession, praxis" 

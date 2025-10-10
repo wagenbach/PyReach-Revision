@@ -1325,25 +1325,20 @@ plain_merits = [
 
 # Template type is set via template_type="Psychic"
 # Psychics have access to various psychic powers
+# These are specific merit names that are psychic-focused (from general_merits.py)
+PSYCHIC_MERIT_NAMES = [
+    "Aura Reading", "Automatic Writing", "Biokinesis", "Clairvoyance", 
+    "Medium", "Numbing Touch", "Psychokinesis", "Psychometry", 
+    "Telekinesis", "Telepathy", "Animal Possession", "Apportation", 
+    "Biomimicry", "Doppelganger", "Incite Ecosystem", "Invoke Spirit", 
+    "Mind Control", "Phantasmagoria", "Psychic Concealment", "Psychic Onslaught", 
+    "Psychic Poltergeist", "Psychokinetic Combat", "Psychokinetic Resistance", 
+    "Sojourner", "Tactical Telepathy", "Technopathy", "Telekinetic Evasion"
+]
+
 psychic_merits = [
     # NOTE: Psychics use the supernatural merits from general_merits.py
-    # These include:
-    # - Aura Reading (3) - Perceive auras
-    # - Automatic Writing (2) - Spirit possession for clues
-    # - Biokinesis (1-5) - Shift Physical Attributes, enhanced healing
-    # - Clairvoyance (3) - Project senses to another location
-    # - Laying on Hands (3) - Faith healing at cost to self
-    # - Medium (3) - Communicate with and influence ghosts
-    # - Mind of a Madman (2) - 8-again investigating specific culprit
-    # - Numbing Touch (1-5) - Psychic paralysis and Willpower drain
-    # - Omen Sensitivity (3) - Interpret signs for yes/no questions
-    # - Psychokinesis (3-5) - Manipulate specific force (fire, cold, electricity)
-    # - Psychometry (3) - Read emotional impressions from objects
-    # - Telekinesis (1-5) - Move objects with mind
-    # - Telepathy (3-5) - Read surface thoughts, send messages at 5 dots
-    # - Thief of Fate (3) - Steal luck from touched targets
-    #
-    # Psychics may have one or more of these merits based on their abilities
+    # The specific psychic merit names are listed in PSYCHIC_MERIT_NAMES above
     # No template_type-specific merits for basic Psychics
 ]
 
@@ -1574,4 +1569,7 @@ minor_template_merits_dict = {
     merit.name.lower().replace(" ", "_").replace("-", "_"): merit 
     for merit in all_minor_template_merits
 }
+
+# Export alias for consistency with other merit files
+minor_template_merits = all_minor_template_merits
 

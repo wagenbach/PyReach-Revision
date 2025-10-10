@@ -261,8 +261,12 @@ def render_geist_sheet(character, caller, force_ascii=False):
     remembrance_dots = remembrance.get("dots", 0)
     remembrance_type = remembrance.get("trait_type", "")
     
-    if remembrance_trait != "<not set>" and remembrance_dots > 0:
-        trait_display = f"{remembrance_trait.replace('_', ' ').title()} ({remembrance_type}) {format_dots(remembrance_dots, 3)}"
+    if remembrance_trait != "<not set>":
+        # Show trait even if dots aren't set
+        if remembrance_dots > 0:
+            trait_display = f"{remembrance_trait.replace('_', ' ').title()} ({remembrance_type}) {format_dots(remembrance_dots, 3)}"
+        else:
+            trait_display = f"{remembrance_trait.replace('_', ' ').title()} ({remembrance_type})"
     else:
         trait_display = "<not set>"
     
@@ -287,11 +291,12 @@ def render_geist_sheet(character, caller, force_ascii=False):
     # Display short bio items in two-column format
     for i in range(0, len(short_bio_items), 2):
         left_label, left_value = short_bio_items[i]
-        left_text = f"{left_label:<16}: {left_value}"
+        left_text = f"{left_label:<15}: {left_value}"
         
         if i + 1 < len(short_bio_items):
             right_label, right_value = short_bio_items[i + 1]
-            right_text = f"{right_label:<16}: {right_value}"
+            # Use less padding for right column labels to prevent overflow
+            right_text = f"{right_label:<12}: {right_value}"
         else:
             right_text = ""
         
@@ -304,7 +309,7 @@ def render_geist_sheet(character, caller, force_ascii=False):
     # Display long bio items on their own lines
     for label, value in long_bio_items:
         if value != "<not set>":
-            output.append(f"{label:<16}: {value}")
+            output.append(f"{label:<15}: {value}")
 
     
     # Geist Attributes (simplified - Power, Finesse, Resistance)

@@ -252,6 +252,12 @@ class Character(ObjectParent, DefaultCharacter):
         self.db.willpower_current = None
         self.db.health_damage = {}
         
+        # Clear template-specific stats
+        if hasattr(self.db, 'geist_stats'):
+            self.db.geist_stats = None
+        if hasattr(self.db, 'mage_stats'):
+            self.db.mage_stats = None
+        
         # Clean up any legacy attributes that might exist
         legacy_cleanup_attrs = [
             "advantages", "merits", "pools", "powers", "sphere",

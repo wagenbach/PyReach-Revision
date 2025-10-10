@@ -81,6 +81,12 @@ def remove_stat_from_character(character, stat, caller):
         # If merit system not available, continue with normal removal
         pass
     
+    # Special handling for mage arcana: map "death" to "arcanum_death"
+    character_template = character.db.stats.get("other", {}).get("template", "Mortal")
+    if character_template.lower() in ["mage", "legacy_mage"]:
+        if stat == "death":
+            stat = "arcanum_death"
+    
     # Try to find stat in all categories
     for category in ["attributes", "skills", "advantages", "bio", "anchors", "merits", "powers", "other"]:
         if stat in character.db.stats.get(category, {}):
@@ -112,13 +118,21 @@ def remove_stat_from_character(character, stat, caller):
             else:
                 del character.db.stats[category][stat]
             
-            # Format display for instanced merits
+            # Format display for instanced merits and clean up power prefixes
             display_stat = stat
             if ":" in stat:
                 base_name, instance = stat.split(":", 1)
                 display_stat = f"{base_name.replace('_', ' ').title()} ({instance.replace('_', ' ').title()})"
             else:
-                display_stat = stat.replace('_', ' ').title()
+                # Clean up power prefixes for better display
+                if stat.startswith('discipline_'):
+                    display_stat = stat[11:]  # Remove 'discipline_'
+                elif stat.startswith('arcanum_'):
+                    display_stat = stat[8:]   # Remove 'arcanum_'
+                elif stat.startswith('gift_'):
+                    display_stat = stat[5:]   # Remove 'gift_'
+                
+                display_stat = display_stat.replace('_', ' ').title()
             
             return True, f"Removed {display_stat} from {character.name}."
     

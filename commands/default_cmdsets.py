@@ -41,7 +41,7 @@ from .mystery_commands import CmdMystery
 from .storyteller_admin import CmdStoryteller, CmdStorytellerWho
 from .jobs.jobs_commands import CmdJobs
 from commands.CmdFinger import CmdFinger
-from commands.diesiraecode.diesiraecode_cmdset import DiesIraeCmdSet
+from commands.commonmux.commonmux_cmdset import CommonMuxCmdSet
 from .lookup import CmdLookup
 from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
 from .test_xp_integration import CmdTestXP
@@ -49,7 +49,7 @@ from .CmdLegacy import CmdLegacy
 from .ooc_ic_commands import CmdOOC, CmdIC, CmdJoin
 from .hangouts import CmdHangouts, CmdHangoutAdmin
 from .bbs.bbs_cmdset import BBSCmdSet
-from commands.diesiraecode.CmdPage import CmdPage
+from commands.commonmux.CmdPage import CmdPage
 
 # Custom help command that escapes ANSI codes in help text
 from .help_custom import CmdHelp
@@ -144,8 +144,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         # Custom help command with ANSI stripping to prevent the color codes from breaking the help text
         self.add(CmdHelp())
         
-        # Dies Irae custom commands
-        self.add(DiesIraeCmdSet())
+        # CommonMux custom commands
+        self.add(CommonMuxCmdSet())
         
         # Melteth BBS commands
         self.add(BBSCmdSet())

@@ -5,6 +5,7 @@ Handles semantic power syntax and power validation.
 
 from world.cofd.templates.promethean import ALL_ALEMBICS, PROMETHEAN_BESTOWMENTS
 from world.cofd.templates.hunter_endowments import ALL_ENDOWMENT_POWERS
+from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
 
 
 def get_valid_semantic_powers(power_type):
@@ -12,7 +13,7 @@ def get_valid_semantic_powers(power_type):
     Get list of valid powers for a semantic power type.
     
     Args:
-        power_type (str): Type of power (key, ceremony, rite, ritual, contract, alembic, bestowment, endowment)
+        power_type (str): Type of power (key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment)
         
     Returns:
         list: List of valid power names for that type
@@ -52,6 +53,7 @@ def get_valid_semantic_powers(power_type):
             "curse_of_isolation", "gift_of_lazarus", "great_prophecy", "stigmata", "trials_of_job", 
             "apocalypse", "the_judgment_fast", "orison_of_voices", "sins_of_the_ancestors", "transubstatiation"
         ],
+        "spell": list(ALL_MAGE_SPELLS.keys()),
         "alembic": ALL_ALEMBICS,
         "bestowment": [b.lower().replace(" ", "_") for b in PROMETHEAN_BESTOWMENTS],
         "endowment": ALL_ENDOWMENT_POWERS
@@ -76,6 +78,7 @@ def get_template_requirements(power_type):
         "rite": ["werewolf"],
         "ritual": ["vampire"],
         "contract": ["changeling"],
+        "spell": ["mage", "legacy_mage"],
         "alembic": ["promethean"],
         "bestowment": ["promethean"],
         "endowment": ["hunter"]
@@ -86,11 +89,11 @@ def get_template_requirements(power_type):
 
 def handle_semantic_power(character, power_type, power_name, value, caller):
     """
-    Handle semantic power syntax like key=beasts, ceremony=pass_on, alembic=purification, endowment=hellfire.
+    Handle semantic power syntax like key=beasts, ceremony=pass_on, spell=telekinesis, alembic=purification, endowment=hellfire.
     
     Args:
         character: The character object
-        power_type (str): Type of power (key, ceremony, rite, ritual, contract, alembic, bestowment, endowment)
+        power_type (str): Type of power (key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment)
         power_name (str): Name of the specific power
         value: The value to set (usually "known" or 1)
         caller: The caller object (for messages)
@@ -105,11 +108,16 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
     
     # Validate power type
     if not valid_powers:
-        return False, f"Invalid power type: {power_type}\nValid types: key, ceremony, rite, ritual, contract, alembic, bestowment, endowment"
+        return False, f"Invalid power type: {power_type}\nValid types: key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment"
     
     # Validate power name
     if power_name not in valid_powers:
-        return False, f"Invalid {power_type}: {power_name}\nValid {power_type}s: {', '.join(sorted(valid_powers)[:10])}... (use +lookup endowment <name> for details)"
+        if power_type == "spell":
+            return False, f"Invalid spell: {power_name}\nUse +lookup spells to browse spells or +lookup <spell_name> for details. There are {len(valid_powers)} spells available."
+        elif power_type == "endowment":
+            return False, f"Invalid endowment: {power_name}\nUse +lookup endowments to browse endowments or +lookup <endowment_name> for details. There are {len(valid_powers)} endowments available."
+        else:
+            return False, f"Invalid {power_type}: {power_name}\nValid {power_type}s: {', '.join(sorted(valid_powers)[:10])}..."
     
     # Check template compatibility
     required_templates = get_template_requirements(power_type)
@@ -125,21 +133,45 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
         # Keys are known/unknown - semantic syntax means they have the key
         character.db.geist_stats["keys"][power_name.replace("_", " ")] = True
         return True, f"Set {character.name} to have the {power_name.replace('_', ' ').title()} key."
+    elif power_type == "spell":
+        # Spells are stored in powers with spell: prefix as "known"
+        if "powers" not in character.db.stats:
+            character.db.stats["powers"] = {}
+        
+        character.db.stats["powers"][f"spell:{power_name}"] = "known"
+        
+        # Get spell data to show more info
+        spell_data = get_spell(power_name)
+        if spell_data:
+            arcana_name = spell_data['arcana'].title()
+            spell_level = spell_data['level']
+            dots_str = "●" * spell_level
+            return True, f"Set {character.name} to know {spell_data['name']} ({arcana_name} {dots_str})."
+        else:
+            return True, f"Set {character.name} to know {power_name.replace('_', ' ').title()} (spell)."
+    elif power_type == "endowment":
+        # Endowments are stored in powers with endowment: prefix as "known"
+        # Endowment keys use spaces, not underscores
+        if "powers" not in character.db.stats:
+            character.db.stats["powers"] = {}
+        
+        character.db.stats["powers"][f"endowment:{power_name}"] = "known"
+        
+        # Get endowment data to show more info
+        from world.cofd.templates.hunter_endowments import get_endowment
+        power_data = get_endowment(power_name)
+        if power_data:
+            cost_info = f" (Cost: {power_data['cost']})" if power_data.get('cost') else ""
+            return True, f"Set {character.name} to know {power_data['name']} ({power_data['endowment_type'].replace('_', ' ').title()}){cost_info}."
+        else:
+            return True, f"Set {character.name} to know {power_name.title()} (endowment)."
     else:
-        # Ceremonies, rites, rituals, contracts, alembics, bestowments, endowments go to regular powers as known abilities (stored as 1)
+        # Ceremonies, rites, rituals, contracts, alembics, bestowments go to regular powers as known abilities (stored as 1)
         if "powers" not in character.db.stats:
             character.db.stats["powers"] = {}
         
         character.db.stats["powers"][power_name] = 1
         power_display_name = power_name.replace('_', ' ').title()
-        
-        # For endowments, get the full name and add additional info
-        if power_type == "endowment":
-            from world.cofd.templates.hunter_endowments import get_endowment
-            power_data = get_endowment(power_name)
-            if power_data:
-                cost_info = f" (Cost: {power_data['cost']})" if power_data.get('cost') else ""
-                return True, f"Set {character.name} to know {power_data['name']} ({power_data['endowment_type'].replace('_', ' ').title()}){cost_info}."
         
         return True, f"Set {character.name} to know {power_display_name} ({power_type})."
 

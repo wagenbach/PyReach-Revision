@@ -5,11 +5,14 @@ from evennia.utils import logger
 class ExperienceHandler:
     """
     A handler for managing experience points and beats for characters.
+    For Mages, also manages Arcane Beats and Arcane Experience.
     """
     def __init__(self, obj):
         self.obj = obj
         self._beats = 0
         self._experience = 0
+        self._arcane_beats = 0
+        self._arcane_experience = 0
         self._load_experience()
     
     def _load_experience(self):
@@ -36,11 +39,17 @@ class ExperienceHandler:
         # Load from attributes (including migrated data)
         self._beats = self.obj.attributes.get('beats', default=legacy_beats)
         self._experience = self.obj.attributes.get('experience', default=legacy_experience)
+        
+        # Load arcane experience (Mage-specific)
+        self._arcane_beats = self.obj.attributes.get('arcane_beats', default=0)
+        self._arcane_experience = self.obj.attributes.get('arcane_experience', default=0)
     
     def _save_experience(self):
         """Save experience data to the object's attributes"""
         self.obj.attributes.add('beats', self._beats)
         self.obj.attributes.add('experience', self._experience)
+        self.obj.attributes.add('arcane_beats', self._arcane_beats)
+        self.obj.attributes.add('arcane_experience', self._arcane_experience)
     
     def add_beat(self, amount=1):
         """Add beats to the character"""
@@ -102,6 +111,69 @@ class ExperienceHandler:
             self.add_beat(whole_beats)
         
         return whole_beats, fractional_beats
+    
+    # Arcane Experience methods (Mage-specific)
+    
+    def add_arcane_beat(self, amount=1):
+        """Add arcane beats to the character (Mage-specific)"""
+        self._arcane_beats += amount
+        # Check if we can convert arcane beats to arcane experience
+        while self._arcane_beats >= 5:
+            self._arcane_beats -= 5
+            self._arcane_experience += 1
+        self._save_experience()
+        self.obj.msg(f"You gained {amount} arcane beat(s). You now have {self._arcane_beats} arcane beats and {self._arcane_experience} arcane experience.")
+    
+    def add_arcane_experience(self, amount):
+        """Add arcane experience directly to the character (Mage-specific)"""
+        self._arcane_experience += amount
+        self._save_experience()
+        self.obj.msg(f"You gained {amount} arcane experience. You now have {self._arcane_experience} arcane experience.")
+    
+    def spend_arcane_experience(self, amount):
+        """Spend arcane experience points (Mage-specific)"""
+        if self._arcane_experience >= amount:
+            self._arcane_experience -= amount
+            self._save_experience()
+            self.obj.msg(f"You spent {amount} arcane experience. You now have {self._arcane_experience} arcane experience remaining.")
+            return True
+        else:
+            self.obj.msg(f"You don't have enough arcane experience. You need {amount} but only have {self._arcane_experience}.")
+            return False
+    
+    @property
+    def arcane_beats(self):
+        """Get current arcane beats"""
+        return self._arcane_beats
+    
+    @property
+    def arcane_experience(self):
+        """Get current arcane experience"""
+        return self._arcane_experience
+    
+    @property
+    def total_arcane_beats(self):
+        """Get total arcane beats including fractional arcane beats"""
+        fractional_arcane_beats = self.obj.attributes.get('fractional_arcane_beats', default=0.0)
+        return self._arcane_beats + fractional_arcane_beats
+    
+    def add_fractional_arcane_beat(self, amount):
+        """Add fractional arcane beats to the character (Mage-specific)"""
+        fractional_arcane_beats = self.obj.attributes.get('fractional_arcane_beats', default=0.0)
+        fractional_arcane_beats += amount
+        
+        # Convert to whole beats when >= 1.0
+        whole_beats = int(fractional_arcane_beats)
+        fractional_arcane_beats = fractional_arcane_beats - whole_beats
+        
+        # Save fractional arcane beats
+        self.obj.attributes.add('fractional_arcane_beats', fractional_arcane_beats)
+        
+        # Add whole beats if any
+        if whole_beats > 0:
+            self.add_arcane_beat(whole_beats)
+        
+        return whole_beats, fractional_arcane_beats
 
 # Experience costs for different improvements
 EXPERIENCE_COSTS = {
@@ -129,4 +201,52 @@ BEAT_SOURCES = {
     'consequence': 1,           # For accepting consequences
     'learning': 1,              # For learning from mistakes
     'growth': 1                 # For character growth
+}
+
+# Mage-specific: Arcane Experience costs
+# Some can be bought with EITHER normal XP or Arcane XP (marked 'either')
+# Some MUST be bought with Arcane XP only (marked 'arcane_only')
+ARCANE_EXPERIENCE_COSTS = {
+    'arcanum_to_limit': {
+        'cost': 4,              # per dot
+        'currency': 'either'    # Can use normal XP or Arcane XP
+    },
+    'arcanum_above_limit': {
+        'cost': 5,              # per dot
+        'currency': 'either'    # Can use normal XP or Arcane XP
+    },
+    'gnosis': {
+        'cost': 5,              # per dot
+        'currency': 'either'    # Can use normal XP or Arcane XP
+    },
+    'rote': {
+        'cost': 1,
+        'currency': 'either'    # Can use normal XP or Arcane XP
+    },
+    'praxis': {
+        'cost': 1,
+        'currency': 'arcane_only'  # MUST use Arcane XP
+    },
+    'wisdom': {
+        'cost': 2,              # per dot
+        'currency': 'arcane_only'  # MUST use Arcane XP
+    },
+    'legacy_attainment_tutored': {
+        'cost': 1,
+        'currency': 'either'    # Can use normal XP or Arcane XP
+    },
+    'legacy_attainment_untutored': {
+        'cost': 1,
+        'currency': 'arcane_only'  # MUST use Arcane XP
+    }
+}
+
+# Ways to earn Arcane Beats (Mage-specific)
+ARCANE_BEAT_SOURCES = {
+    'obsession': 1,                  # Fulfill or make major headway into an Obsession
+    'magical_condition': 1,          # Resolve a Condition from spellcasting, Paradox, or magical effect
+    'spell_dramatic_failure': 1,     # Voluntarily make a spellcasting roll a dramatic failure
+    'act_of_hubris': 1,             # Risk an Act of Hubris against Wisdom
+    'legacy_tutoring': 1,            # Spend a scene tutoring/being tutored in a Legacy
+    'supernatural_encounter': 1      # Meaningful new supernatural encounter (ST discretion)
 } 

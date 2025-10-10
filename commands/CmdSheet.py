@@ -13,9 +13,12 @@ class CmdSheet(MuxCommand):
         +sheet/ascii [character] - Force ASCII display (no Unicode dots)
         +sheet/geist [character] - Display geist character sheet (Sin-Eater only)
         +sheet/geist/ascii [character] - Display geist sheet in ASCII mode
+        +sheet/mage [character] - Display mage-specific sheet (Mage only)
+        +sheet/mage/ascii [character] - Display mage sheet in ASCII mode
         
     Shows all character statistics in an organized format.
     The /geist switch displays the secondary character sheet for a Sin-Eater's bound geist.
+    The /mage switch displays mage-specific details like Nimbus, Obsessions, Praxes, and Dedicated Tool.
     """
     
     key = "+sheet"
@@ -179,6 +182,20 @@ class CmdSheet(MuxCommand):
         # Get secondary powers from template definition
         return get_template_secondary_powers(template)
     
+    def _get_sleepwalker_spells(self):
+        """Get the list of spells available to Sleepwalkers and Proximus.
+        
+        Sleepwalkers typically have access to 1-2 dot spells.
+        Proximus have access to 1-3 dot spells from their bloodline arcana.
+        """
+        try:
+            from world.cofd.templates.mage_spells import SLEEPWALKER_SPELLS, PROXIMUS_SPELLS, ALL_MAGE_SPELLS
+            # Return all spell keys for checking
+            return list(ALL_MAGE_SPELLS.keys())
+        except ImportError:
+            # If mage_spells not found, return empty list
+            return []
+    
     def _format_powers_display(self, powers, template_powers, force_ascii):
         """Format the powers section for display."""
         if not template_powers:
@@ -272,6 +289,11 @@ class CmdSheet(MuxCommand):
         # Check if this is a geist sheet request
         if "geist" in self.switches:
             self.show_geist_sheet()
+            return
+        
+        # Check if this is a mage sheet request
+        if "mage" in self.switches:
+            self.show_mage_sheet()
             return
             
         # Determine target
@@ -726,47 +748,220 @@ class CmdSheet(MuxCommand):
                 output.append("No ceremonies learned yet.")
         
         else:
-            # Regular template power display
-            if powers or template_powers:
-                output.append(self._format_section_header(f"|w{primary_section}|n"))
-                
-                if template_powers:
-                    power_display = self._format_powers_display(powers, template_powers, force_ascii)
-                    output.extend(power_display)
-                else:
-                    output.append("No primary powers available for this template.")
+            # Regular template power display (skip for hunter since endowments are handled separately)
+            if template.lower() != "hunter":
+                if powers or template_powers:
+                    output.append(self._format_section_header(f"|w{primary_section}|n"))
+                    
+                    if template_powers:
+                        power_display = self._format_powers_display(powers, template_powers, force_ascii)
+                        output.extend(power_display)
+                    else:
+                        output.append("No primary powers available for this template.")
         
-        # Secondary Powers (rituals, rites, blood sorcery) - skip for Geist since handled above
-        if template.lower() != "geist" and (powers or template_secondary_powers):
+        # Secondary Powers (rituals, rites, blood sorcery) - skip for Geist and Hunter since handled separately
+        if template.lower() not in ["geist", "hunter"] and (powers or template_secondary_powers):
             if template_secondary_powers:  # Only show section if template has secondary powers
                 output.append(self._format_section_header(f"|w{secondary_section}|n"))
                 
                 secondary_power_display = self._format_secondary_powers_display(powers, template_secondary_powers, force_ascii)
                 output.extend(secondary_power_display)
         
+        # Mage Spells section (individual spells without ratings)
+        if template.lower() in ["mage", "legacy_mage"]:
+            output.append(self._format_section_header("|wSPELLS|n"))
+            
+            # Get all spell powers
+            from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
+            
+            spell_list = []
+            for power_name, value in powers.items():
+                if power_name.startswith("spell:") and value == "known":
+                    # Extract spell key from "spell:spell_name"
+                    spell_key = power_name[6:]  # Remove "spell:" prefix
+                    
+                    # Look up spell data
+                    spell_data = get_spell(spell_key)
+                    if spell_data:
+                        # Format arcana dots (e.g., "●●●●●" for level 5)
+                        spell_level = spell_data['level']
+                        arcana_dots = self._format_dots(spell_level, 5, force_ascii)
+                        arcana_name = spell_data['arcana'].title()
+                        
+                        spell_display = f"{spell_data['name']} ({arcana_name} {arcana_dots})"
+                        spell_list.append(spell_display)
+                    else:
+                        # Spell not found in database, show as unknown
+                        spell_display = f"{spell_key.replace('_', ' ').title()} (Unknown Spell)"
+                        spell_list.append(spell_display)
+            
+            if spell_list:
+                # Display spells in single column for readability
+                for spell in sorted(spell_list):
+                    output.append(f"  {spell}")
+            else:
+                output.append("No spells learned yet.")
+            
+            output.append("")
+            output.append("|gSee +sheet/mage for Nimbus, Obsessions, Praxes, and Dedicated Tool.|n")
+        
         # Hunter Endowments section (individual powers without ratings)
         if template.lower() == "hunter":
             output.append(self._format_section_header("|wENDOWMENTS|n"))
             
             # Get all endowment powers
-            from world.cofd.templates.hunter_endowments import ALL_ENDOWMENT_POWERS, get_endowment
+            from world.cofd.templates.hunter_endowments import get_endowment
             
             endowment_list = []
-            for power_name in ALL_ENDOWMENT_POWERS:
-                if power_name in powers and powers[power_name] > 0:
-                    # Get the proper display name and endowment type
-                    power_data = get_endowment(power_name)
+            for power_name, value in powers.items():
+                if power_name.startswith("endowment:") and value == "known":
+                    # Extract endowment key from "endowment:endowment_name"
+                    endowment_key = power_name[10:]  # Remove "endowment:" prefix
+                    
+                    # Look up endowment data
+                    power_data = get_endowment(endowment_key)
                     if power_data:
                         endowment_type = power_data['endowment_type'].replace('_', ' ').title()
-                        endowment_display = f"{power_data['name']} ({endowment_type})"
+                        # Truncate name if too long for 2-column display (max 35 chars with type info)
+                        endowment_name = power_data['name']
+                        endowment_display = f"{endowment_name} ({endowment_type})"
+                        endowment_list.append(endowment_display)
+                    else:
+                        # Endowment not found in database, show as unknown
+                        endowment_display = f"{endowment_key.title()} (Unknown Endowment)"
                         endowment_list.append(endowment_display)
             
             if endowment_list:
-                # Display endowments in single column for readability
-                for endowment in sorted(endowment_list):
-                    output.append(f"  {endowment}")
+                # Display endowments in 2 columns for space efficiency
+                sorted_endowments = sorted(endowment_list)
+                for i in range(0, len(sorted_endowments), 2):
+                    left_endowment = sorted_endowments[i] if i < len(sorted_endowments) else ""
+                    right_endowment = sorted_endowments[i + 1] if i + 1 < len(sorted_endowments) else ""
+                    
+                    # Truncate if needed (39 chars for left column)
+                    if len(left_endowment) > 37:
+                        left_endowment = left_endowment[:34] + "..."
+                    if len(right_endowment) > 37:
+                        right_endowment = right_endowment[:34] + "..."
+                    
+                    left_formatted = left_endowment.ljust(39)
+                    output.append(f"  {left_formatted} {right_endowment}")
             else:
                 output.append("No endowment powers learned yet.")
+        
+        # Mortal+ specific sections (Demon-Blooded, Wolf-Blooded, Sleepwalkers/Proximus)
+        if template.lower() in ["mortal_plus", "mortal plus"]:
+            template_type = bio.get("template_type", "").lower()
+            
+            # Demon-Blooded Level
+            if "demon" in template_type or template_type == "demon-blooded":
+                demon_level = bio.get("demon_blooded_level", bio.get("subtype", "<not set>"))
+                if demon_level and demon_level != "<not set>":
+                    output.append(self._format_section_header("|wDEMON-BLOODED|n"))
+                    output.append(f"  Level: {demon_level.replace('_', ' ').title()}")
+                    
+                    # Display any embed powers they have
+                    embed_list = []
+                    for power_name, rating in powers.items():
+                        if rating > 0 and "_embed" in power_name:
+                            embed_display = power_name.replace("_embed", "").replace("_", " ").title()
+                            embed_list.append(embed_display)
+                    
+                    if embed_list:
+                        output.append(f"  Embeds: {', '.join(sorted(embed_list))}")
+            
+            # Wolf-Blooded Tells
+            elif "wolf" in template_type or template_type == "wolf-blooded":
+                tells = bio.get("wolf_blooded_tells", [])
+                if not tells:
+                    # Check if stored as single tell in subtype
+                    subtype = bio.get("subtype", "")
+                    if subtype and subtype != "<not set>":
+                        tells = [subtype]
+                
+                output.append(self._format_section_header("|wWOLF-BLOODED TELLS|n"))
+                
+                if tells:
+                    tell_list = []
+                    if isinstance(tells, str):
+                        tells = [tells]
+                    for tell in tells:
+                        tell_display = tell.replace("_", " ").title()
+                        tell_list.append(tell_display)
+                    
+                    # Display tells in 2 columns
+                    for i in range(0, len(tell_list), 2):
+                        left_tell = tell_list[i] if i < len(tell_list) else ""
+                        right_tell = tell_list[i + 1] if i + 1 < len(tell_list) else ""
+                        
+                        left_formatted = left_tell.ljust(39)
+                        output.append(f"  {left_formatted} {right_tell}")
+                else:
+                    output.append("  No tells manifested yet.")
+            
+            # Sleepwalker/Proximus Spells
+            elif template_type in ["sleepwalker", "proximus"]:
+                output.append(self._format_section_header("|wSPELLS|n"))
+                
+                # Import spell data
+                from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
+                
+                # Get spell powers
+                spell_list = []
+                for power_name, value in powers.items():
+                    # Check if it's a spell: notation power
+                    if power_name.startswith("spell:") and value == "known":
+                        # Extract spell key from "spell:spell_name"
+                        spell_key = power_name[6:]  # Remove "spell:" prefix
+                        
+                        # Look up spell data
+                        spell_data = get_spell(spell_key)
+                        if spell_data:
+                            # Format arcana dots (e.g., "●●●●●" for level 5)
+                            spell_level = spell_data['level']
+                            arcana_dots = self._format_dots(spell_level, 5, force_ascii)
+                            arcana_name = spell_data['arcana'].title()
+                            
+                            spell_display = f"{spell_data['name']} ({arcana_name} {arcana_dots})"
+                            spell_list.append(spell_display)
+                        else:
+                            # Spell not found in database, show as unknown
+                            spell_display = f"{spell_key.replace('_', ' ').title()} (Unknown Spell)"
+                            spell_list.append(spell_display)
+                
+                if spell_list:
+                    # Display spells in single column for readability
+                    for spell in sorted(spell_list):
+                        output.append(f"  {spell}")
+                else:
+                    output.append("No spells learned yet.")
+                    if template_type == "proximus":
+                        output.append("|g(Proximus have access to limited mage spells)|n")
+                    else:
+                        output.append("|g(Sleepwalkers can learn spells from mages)|n")
+            
+            # Psychic Powers
+            elif template_type == "psychic":
+                psychic_powers = []
+                from world.cofd.templates.mortal_plus import PSYCHIC_POWERS
+                
+                for power_name in PSYCHIC_POWERS:
+                    power_key = power_name.replace(" ", "_").lower()
+                    if power_key in powers and powers[power_key] > 0:
+                        dots = self._format_dots(powers[power_key], 5, force_ascii)
+                        power_display = f"{power_name.replace('_', ' ').title():<20} {dots}"
+                        psychic_powers.append(power_display)
+                
+                if psychic_powers:
+                    output.append(self._format_section_header("|wPSYCHIC POWERS|n"))
+                    
+                    # Display psychic powers in 2 columns
+                    for i in range(0, len(psychic_powers), 2):
+                        left_power = psychic_powers[i] if i < len(psychic_powers) else ""
+                        right_power = psychic_powers[i + 1] if i + 1 < len(psychic_powers) else ""
+                        
+                        left_formatted = left_power.ljust(39)
+                        output.append(f"{left_formatted} {right_power}")
         
         # Pools section (horizontal layout)
         output.append(self._format_section_header("|wPOOLS|n"))
@@ -911,6 +1106,48 @@ class CmdSheet(MuxCommand):
         if output is None:
             self.caller.msg(f"{target.name} has no geist character sheet set up yet.")
             self.caller.msg("Use +stat/geist <stat>=<value> to set geist stats.")
+            return
+        
+        # Add encoding warning if needed
+        if not supports_utf8 and not force_ascii:
+            output.append("|y(ASCII mode due to encoding - see note above for UTF-8)|n")
+        
+        self.caller.msg("\n".join(output))
+    
+    def show_mage_sheet(self):
+        """Display the mage-specific character sheet"""
+        # Determine target
+        if self.args:
+            target = self.caller.search(self.args.strip(), global_search=True)
+            if not target:
+                return
+        else:
+            target = self.caller
+        
+        # Check if character is a Mage
+        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() not in ["mage", "legacy_mage"]:
+            self.caller.msg(f"{target.name} is not a Mage. Current template: {character_template}")
+            self.caller.msg("Only Mage characters have mage-specific details to display.")
+            return
+        
+        # Get dot style and check UTF-8 support
+        force_ascii = "ascii" in self.switches
+        filled_char, empty_char, supports_utf8 = self._get_dots_style(force_ascii)
+        
+        # Show encoding warning if needed
+        if target == self.caller and not supports_utf8 and "ascii" not in self.switches:
+            self._show_encoding_warning(supports_utf8)
+        
+        # Import the template-specific render function
+        from world.cofd.templates.mage import render_mage_sheet
+        
+        # Render the mage sheet
+        output = render_mage_sheet(target, self.caller, force_ascii)
+        
+        if output is None:
+            self.caller.msg(f"{target.name} has no mage stats set up yet.")
+            self.caller.msg("Use +stat/mage <stat>=<value> to set mage stats.")
             return
         
         # Add encoding warning if needed

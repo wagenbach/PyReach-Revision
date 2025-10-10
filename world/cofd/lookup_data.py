@@ -9,15 +9,39 @@ from world.cofd.stat_dictionary import (
 )
 from world.cofd.merits.general_merits import all_merits as general_merits
 from world.cofd.merits.vampire_merits import vampire_merits
+from world.cofd.merits.mage_merits import mage_merits
+from world.cofd.merits.werewolf_merits import werewolf_merits
+from world.cofd.merits.changeling_merits import changeling_merits
+from world.cofd.merits.geist_merits import geist_merits
+from world.cofd.merits.demon_merits import demon_merits
+from world.cofd.merits.deviant_merits import deviant_merits
+from world.cofd.merits.hunter_merits import hunter_merits
+from world.cofd.merits.mummy_merits import mummy_merits
+from world.cofd.merits.promethean_merits import promethean_merits
+from world.cofd.merits.minor_template_merits import (
+    minor_template_merits, PSYCHIC_MERIT_NAMES,
+    ghoul_merits, dhampir_merits, atariya_merits, psychic_vampire_merits,
+    general_supernatural_merits
+)
 from world.cofd.templates.vampire import VAMPIRE_CLANS, VAMPIRE_COVENANTS, VAMPIRE_DISCIPLINES
 from world.cofd.templates.mage import MAGE_PATHS, MAGE_ORDERS, MAGE_ARCANA, LEGACIES_BY_PATH, LEGACIES_BY_ORDER, UNLINKED_LEGACIES, ALL_LEGACIES
 from world.cofd.templates.demon import DEMON_INCARNATIONS, DEMON_AGENDAS, DEMON_EMBEDS, DEMON_EXPLOITS
-from world.cofd.templates.mortal_plus import ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS, THAUMATURGE_TRADITIONS
+from world.cofd.templates.mortal_plus import ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS
 from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_LODGES
 from world.cofd.templates.changeling import CHANGELING_SEEMINGS, CHANGELING_COURTS, CHANGELING_KITHS, CHANGELING_ENTITLEMENTS
 from world.cofd.templates.promethean import (
     PROMETHEAN_TRANSMUTATIONS, PROMETHEAN_ALEMBICS, 
     PROMETHEAN_BESTOWMENTS, PROMETHEAN_LINEAGES
+)
+from world.cofd.templates.legacy_promethean import ATHANORS_BY_LINEAGE
+from world.cofd.templates.hunter_endowments import ADVANCED_ARMORY, ANIMAL_CONTROL_KIT, BENEDICTION, CASTIGATION, DREAMSCAPE, ELIXIR, ENKOIMESIS, GOETIC_GOSPEL, HORROR_WITHIN, INFUSION, INK, INSPIRATION, LIVES_REMEMBERED, PERISPIRITISM, RELIC, RITES_DU_CHEVAL, RITES_OF_DENIAL, SEITOKUTEN, TELEINFORMATICS, THAUMATECHNOLOGY, XENOTECHNOLOGY
+from world.cofd.templates.hunter import HUNTER_CONSPIRACIES, HUNTER_COMPACTS, HUNTER_TACTICS, HUNTER_ENDOWMENTS
+from world.cofd.templates.mummy import MUMMY_GUILDS, MUMMY_DECREES, MUMMY_JUDGES, MUMMY_UTTERANCES, MUMMY_AFFINITIES
+from world.cofd.templates.geist import GEIST_BURDENS, GEIST_KREWE_TYPES, GEIST_HAUNTS, GEIST_KEYS, GEIST_CEREMONIES
+from world.cofd.templates.deviant import DEVIANT_ORIGINS, DEVIANT_CLADES, DEVIANT_SCARS, DEVIANT_VARIATIONS, DEVIANT_ADAPTATIONS
+from world.cofd.templates.mortal_plus import (
+    ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS, PROXIMUS_FAMILIES,
+    DEMON_BLOODED_LEVELS, GAME_LINE_HERITAGE, WOLF_BLOODED_TELLS
 )
 import re
 
@@ -32,7 +56,25 @@ class LookupData:
         self.anchors = anchor_dictionary
         self.general_merits = general_merits
         self.vampire_merits = vampire_merits
-        self.all_merits = general_merits + vampire_merits
+        self.mage_merits = mage_merits
+        self.werewolf_merits = werewolf_merits
+        self.changeling_merits = changeling_merits
+        self.geist_merits = geist_merits
+        self.demon_merits = demon_merits
+        self.deviant_merits = deviant_merits
+        self.hunter_merits = hunter_merits
+        self.mummy_merits = mummy_merits
+        self.promethean_merits = promethean_merits
+        self.minor_template_merits = minor_template_merits
+        self.ghoul_merits = ghoul_merits
+        self.dhampir_merits = dhampir_merits
+        self.atariya_merits = atariya_merits
+        self.psychic_vampire_merits = psychic_vampire_merits
+        self.general_supernatural_merits = general_supernatural_merits
+        self.psychic_merit_names = PSYCHIC_MERIT_NAMES
+        self.all_merits = (general_merits + vampire_merits + mage_merits + werewolf_merits + 
+                          changeling_merits + geist_merits + demon_merits + deviant_merits +
+                          hunter_merits + mummy_merits + promethean_merits + minor_template_merits)
         
         # Template-specific data
         self.vampire_data = {
@@ -44,7 +86,11 @@ class LookupData:
         self.mage_data = {
             'paths': MAGE_PATHS,
             'orders': MAGE_ORDERS,
-            'arcana': MAGE_ARCANA
+            'arcana': MAGE_ARCANA,
+            'legacies_by_path': LEGACIES_BY_PATH,
+            'legacies_by_order': LEGACIES_BY_ORDER,
+            'unlinked_legacies': UNLINKED_LEGACIES,
+            'all_legacies': ALL_LEGACIES
         }
         
         self.demon_data = {
@@ -57,40 +103,93 @@ class LookupData:
         self.mortal_plus_data = {
             'types': ALL_MORTAL_PLUS_TYPES,
             'psychic_powers': PSYCHIC_POWERS,
-            'thaumaturge_traditions': THAUMATURGE_TRADITIONS
+            'demon_blooded_levels': DEMON_BLOODED_LEVELS,
+            'game_line_heritage': GAME_LINE_HERITAGE,
+            'wolf_blooded_tells': WOLF_BLOODED_TELLS,
+            'proximus_families': PROXIMUS_FAMILIES,
         }
         
-        # Try to import additional template data if available
-        try:
-            from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES
-            self.werewolf_data = {
-                'auspices': WEREWOLF_AUSPICES,
-                'tribes': WEREWOLF_TRIBES
-            }
-        except ImportError:
-            self.werewolf_data = {
-                'auspices': ['cahalith', 'elodoth', 'irraka', 'ithaeur', 'rahu'],
-                'tribes': ['blood talons', 'bone shadows', 'hunters in darkness', 'iron masters', 'storm lords', 'ghost wolves']
-            }
+        # Mummy data
+        self.mummy_data = {
+            'guilds': MUMMY_GUILDS,
+            'decrees': MUMMY_DECREES,
+            'judges': MUMMY_JUDGES,
+            'utterances': MUMMY_UTTERANCES,
+            'affinities': MUMMY_AFFINITIES
+        }
         
-        try:
-            from world.cofd.templates.changeling import CHANGELING_SEEMINGS, CHANGELING_COURTS
-            self.changeling_data = {
-                'seemings': CHANGELING_SEEMINGS,
-                'courts': CHANGELING_COURTS
-            }
-        except ImportError:
-            self.changeling_data = {
-                'seemings': ['beast', 'darkling', 'elemental', 'fairest', 'ogre', 'wizened'],
-                'courts': ['spring', 'summer', 'autumn', 'winter', 'courtless']
-            }
+        # Geist data
+        self.geist_data = {
+            'burdens': GEIST_BURDENS,
+            'krewe_types': GEIST_KREWE_TYPES,
+            'haunts': GEIST_HAUNTS,
+            'keys': GEIST_KEYS,
+            'ceremonies': GEIST_CEREMONIES
+        }
+        
+        # Deviant data
+        self.deviant_data = {
+            'origins': DEVIANT_ORIGINS,
+            'clades': DEVIANT_CLADES,
+            'scars': DEVIANT_SCARS,
+            'variations': DEVIANT_VARIATIONS,
+            'adaptations': DEVIANT_ADAPTATIONS
+        }
+        
+        # Werewolf data
+        self.werewolf_data = {
+            'auspices': WEREWOLF_AUSPICES,
+            'tribes': WEREWOLF_TRIBES,
+            'lodges': WEREWOLF_LODGES
+        }
+        
+        # Changeling data
+        self.changeling_data = {
+            'seemings': CHANGELING_SEEMINGS,
+            'courts': CHANGELING_COURTS,
+            'kiths': CHANGELING_KITHS,
+            'entitlements': CHANGELING_ENTITLEMENTS
+        }
         
         # Promethean data
         self.promethean_data = {
             'transmutations': PROMETHEAN_TRANSMUTATIONS,
             'alembics': PROMETHEAN_ALEMBICS,
             'bestowments': PROMETHEAN_BESTOWMENTS,
-            'lineages': PROMETHEAN_LINEAGES
+            'lineages': PROMETHEAN_LINEAGES,
+            'athanors': ATHANORS_BY_LINEAGE
+        }
+        
+        # Hunter data - need to build the endowments dict from imported modules
+        hunter_endowments = {
+            **ADVANCED_ARMORY,
+            **ANIMAL_CONTROL_KIT,
+            **BENEDICTION,
+            **CASTIGATION,
+            **DREAMSCAPE,
+            **ELIXIR,
+            **ENKOIMESIS,
+            **GOETIC_GOSPEL,
+            **HORROR_WITHIN,
+            **INFUSION,
+            **INK,
+            **INSPIRATION,
+            **LIVES_REMEMBERED,
+            **PERISPIRITISM,
+            **RELIC,
+            **RITES_DU_CHEVAL,
+            **RITES_OF_DENIAL,
+            **SEITOKUTEN,
+            **TELEINFORMATICS,
+            **THAUMATECHNOLOGY,
+            **XENOTECHNOLOGY
+        }
+        
+        self.hunter_data = {
+            'endowments': hunter_endowments,
+            'conspiracies': HUNTER_CONSPIRACIES,
+            'compacts': HUNTER_COMPACTS,
+            'tactics': HUNTER_TACTICS
         }
         
         # Skill specialties
@@ -188,9 +287,35 @@ class LookupData:
         """Get merits filtered by type and/or template."""
         merits = []
         
-        if template == 'vampire':
-            merits = self.vampire_merits
-        elif template == 'general' or template is None:
+        # Map template names to their merit lists
+        template_map = {
+            'vampire': self.vampire_merits,
+            'mage': self.mage_merits,
+            'werewolf': self.werewolf_merits,
+            'changeling': self.changeling_merits,
+            'geist': self.geist_merits,
+            'demon': self.demon_merits,
+            'deviant': self.deviant_merits,
+            'hunter': self.hunter_merits,
+            'mummy': self.mummy_merits,
+            'promethean': self.promethean_merits,
+            'mortal+': self.minor_template_merits,
+            'mortal_plus': self.minor_template_merits,
+            'general': self.general_merits,
+            # Minor template types
+            'ghoul': self.ghoul_merits,
+            'dhampir': self.dhampir_merits,
+            'atariya': self.atariya_merits,
+            'psychic_vampire': self.psychic_vampire_merits,
+            'psychic vampire': self.psychic_vampire_merits,
+        }
+        
+        # Special handling for psychic merits - filter from general merits by name
+        if template and template.lower() == 'psychic':
+            merits = [m for m in self.general_merits if m.name in self.psychic_merit_names]
+        elif template and template.lower() in template_map:
+            merits = template_map[template.lower()]
+        elif template is None:
             merits = self.general_merits
         else:
             merits = self.all_merits

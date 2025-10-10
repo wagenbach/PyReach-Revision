@@ -22,6 +22,7 @@ class CmdStat(MuxCommand):
         +stat/unapprove <name> - Unlock a character's stats (staff only)
         +stat/reset <name>=<template> - Reset character to new template (staff only)
         +stat/geist <stat>=<value> - Set a geist stat (Sin-Eater characters only)
+        +stat/mage <stat>=<value> - Set a mage stat (Mage characters only)
         
         The /reset switch completely wipes ALL character stats and reinitializes
         them for the new template. This is a nuclear option for fixing corrupted
@@ -83,6 +84,14 @@ class CmdStat(MuxCommand):
         +stat specialty/investigation=Crime Scenes  
         +stat specialty/brawl=Dirty Fighting
         
+        Category Prefixes (for ambiguous stats):
+        Some stats conflict between categories (e.g., 'life' is both an arcana and a bio field).
+        Use category prefixes to disambiguate:
+        +stat arcana/life=3 (force as mage arcana)
+        +stat bio/life=text (force as deviant bio field)
+        +stat power/strength=2 (force as werewolf gift, not attribute)
+        Without prefix, the system auto-detects based on your template
+        
         Merit Examples (during character generation):
         +stat contacts=3
         +stat fast_reflexes=2
@@ -97,7 +106,11 @@ class CmdStat(MuxCommand):
         +stat blood_scourge=1 (vampire theban miracle - level 1)
         +stat coil_of_the_ascendant=1 (vampire ordo dracul coil)
         +stat arcanum_death=2 (mage arcanum - prefixed to avoid conflict)
+        +stat death=2 (also works - auto-mapped to arcanum_death for mages)
         +stat forces=2 (mage arcanum - no conflict)
+        +stat life=3 (mage arcanum - auto-detected based on template)
+        +stat arcana/life=3 (explicit: force as arcana)
+        +stat bio/life=Mortal life (explicit: force as bio field for Deviants)
         +stat gift_strength=4 (werewolf gift - prefixed to avoid attribute conflict)
         +stat sacred_hunt=1 (werewolf rite - rank 2)
         +stat hostile_takeover=1 (changeling contract)
@@ -117,15 +130,25 @@ class CmdStat(MuxCommand):
         +stat/geist innate_key=cold wind
         +stat/geist boneyard=3 (haunts are rated 1-5)
         
+        Mage Examples (Mage-specific character sheet):
+        +stat/mage immediate_nimbus=A halo of crackling electricity
+        +stat/mage long_term_nimbus=Electronics malfunction, lights flicker
+        +stat/mage signature_nimbus=Ozone smell and static charge
+        +stat/mage dedicated_tool=A copper staff wrapped in wire
+        +stat/mage obsession=Understand the digital realm
+        +stat/mage praxis=telekinesis
+        +stat/mage praxis=create locus
+        
         Semantic Power Setting (Individual Abilities):
         Keys (Geist): +stat key=beasts, +stat key=stillness, +stat key=cold_wind
         Ceremonies (Geist): +stat ceremony=pass_on, +stat ceremony=ghost_trap
         Rites (Werewolf): +stat rite=sacred_hunt, +stat rite=bottle_spirit
         Rituals (Vampire): +stat ritual=pangs_of_proserpina, +stat ritual=blood_scourge
         Contracts (Changeling): +stat contract=hostile_takeover, +stat contract=cloak_of_night
+        Spells (Mage): +stat spell=create locus, +stat spell=telekinesis
         Alembics (Promethean): +stat alembic=purification, +stat alembic=human_flesh
         Bestowments (Promethean): +stat bestowment=spare_parts, +stat bestowment=titans_strength
-        Endowments (Hunter): +stat endowment=hellfire, +stat endowment=aegis_talisman
+        Endowments (Hunter): +stat endowment=hellfire, +stat endowment=wrathful sword of st michael
 
         Category Powers (1-5 dots):
         Haunts (Geist): +stat boneyard=3, +stat curse=2
@@ -177,6 +200,8 @@ class CmdStat(MuxCommand):
             self.reset_template()
         elif switch == "geist":
             self.set_geist_stat()
+        elif switch == "mage":
+            self.set_mage_stat()
         else:
             self.caller.msg("Invalid switch. See help for usage.")
     
@@ -205,6 +230,30 @@ class CmdStat(MuxCommand):
                     specialty_stat, value = args.split("=", 1)
                     specialty_keyword, skill = specialty_stat.split("/", 1)
                     return None, f"specialty/{skill.strip().lower().replace(' ', '_')}", value.strip()
+            # Check if this is a category prefix command (arcana/life, bio/life, power/strength, etc.)
+            elif args.startswith(("arcana/", "bio/", "power/", "discipline/", "gift/")):
+                # Format: category/stat=value
+                category_stat, value = args.split("=", 1)
+                category, stat = category_stat.split("/", 1)
+                category = category.strip().lower()
+                stat = stat.strip().lower().replace(" ", "_")
+                
+                # Map category to internal format
+                if category == "arcana":
+                    # Mage arcana - handle death specially
+                    if stat == "death":
+                        stat = "arcanum_death"
+                    # Mark this as a power category stat
+                    return None, f"power:{stat}", value.strip()
+                elif category == "bio":
+                    # Bio field - mark it clearly
+                    return None, f"bio:{stat}", value.strip()
+                elif category in ["power", "discipline", "gift"]:
+                    # Generic power category
+                    return None, f"power:{stat}", value.strip()
+                else:
+                    # Unknown category, treat normally
+                    return None, stat, value.strip()
             else:
                 # Format: name/stat=value
                 target_stat, value = args.split("=", 1)
@@ -231,12 +280,16 @@ class CmdStat(MuxCommand):
                     stat = stat.replace(" ", "_")
                     return None, stat, None  # None value signals removal
                 
-                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, endowment=hellfire, etc.
-                semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment", "endowment"]
+                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, endowment=hellfire, spell=create_locus, etc.
+                semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment", "endowment", "spell"]
                 if stat in semantic_prefixes:
                     # this is semantic syntax like key=beasts
                     power_type = stat
-                    power_name = value.lower().replace(" ", "_")
+                    # For endowments, keep spaces; for spells and others, convert to underscores
+                    if power_type == "endowment":
+                        power_name = value.lower()  # Keep spaces for endowments
+                    else:
+                        power_name = value.lower().replace(" ", "_")  # Underscores for others
                     return None, f"{power_type}:{power_name}", "known"  # Mark as known for individual abilities
                 
                 # Convert spaces to underscores in stat names
@@ -314,6 +367,15 @@ class CmdStat(MuxCommand):
         
         # Determine stat category and validate
         stat_set = False
+        
+        # Handle category prefixes (power:stat or bio:stat)
+        force_category = None
+        if stat.startswith("power:"):
+            force_category = "power"
+            stat = stat[6:]  # Remove "power:" prefix
+        elif stat.startswith("bio:"):
+            force_category = "bio"
+            stat = stat[4:]  # Remove "bio:" prefix
         
         # Check attributes
         if stat in ["strength", "dexterity", "stamina", "presence", "manipulation", 
@@ -411,149 +473,172 @@ class CmdStat(MuxCommand):
             
             # Get character's template
             character_template = target.db.stats.get("other", {}).get("template", "Mortal")
-            valid_fields = target.get_template_bio_fields(character_template)
             
-            # Check if this field is valid for the character's template
-            if stat not in valid_fields:
-                self.caller.msg(f"{stat.title()} is not a valid field for {character_template} characters.")
-                self.caller.msg(f"Valid fields for {character_template}: {', '.join(valid_fields).title()}")
-                return
-            
-            # Custom validation for Mage Legacy field
-            if stat == "legacy" and character_template.lower() == "mage":
-                legacy_value = str(value).lower()
-                
-                # Import the legacy data from mage template
-                from world.cofd.templates.mage import (
-                    LEGACIES_BY_PATH, LEGACIES_BY_ORDER, UNLINKED_LEGACIES, ALL_LEGACIES
-                )
-                
-                # First check if legacy is valid at all
-                if legacy_value not in [l.lower() for l in ALL_LEGACIES]:
-                    self.caller.msg(f"'{value}' is not a valid Legacy.")
-                    self.caller.msg(f"|wUse +help legacy|n for a complete list of valid Legacies.")
-                    return
-                
-                # Get character's path and order
-                char_path = target.db.stats.get("bio", {}).get("path", "").lower()
-                char_order = target.db.stats.get("bio", {}).get("order", "").lower()
-                
-                # Check if legacy is unlinked (available to everyone)
-                if legacy_value in [l.lower() for l in UNLINKED_LEGACIES]:
-                    # Unlinked legacies are always valid
+            # If forced to be a bio field, don't check if it's a power
+            if force_category == "bio":
+                # Force it to be a bio field
+                pass
+            # If forced to be a power, skip bio field entirely
+            elif force_category == "power":
+                # Skip bio field handling, will be caught by power check below
+                pass
+            # Otherwise, auto-detect: if this might be a power instead of a bio field, check powers first
+            # This handles conflicts like "life" which is both a Mage arcana and a Deviant bio field
+            else:
+                template_powers = self._get_template_powers(character_template)
+                if stat in template_powers or (stat == "death" and "arcanum_death" in template_powers):
+                    # This is actually a power, not a bio field - skip this section
+                    # It will be handled by the power check below
                     pass
                 else:
-                    # Check if character qualifies through Path or Order
-                    valid_by_path = False
-                    valid_by_order = False
+                    # Continue to bio field validation below
+                    force_category = "bio"  # Mark that we've confirmed it's a bio field
+            
+            # Only process as bio field if not skipping
+            if force_category != "power":
+                valid_fields = target.get_template_bio_fields(character_template)
+                
+                # Check if this field is valid for the character's template
+                if stat not in valid_fields:
+                    self.caller.msg(f"{stat.title()} is not a valid field for {character_template} characters.")
+                    self.caller.msg(f"Valid fields for {character_template}: {', '.join(valid_fields).title()}")
+                    return
+                
+                # Custom validation for Mage Legacy field
+                if stat == "legacy" and character_template.lower() in ["mage", "legacy_mage"]:
+                    legacy_value = str(value).lower()
                     
-                    # Check Path
-                    if char_path and char_path in LEGACIES_BY_PATH:
-                        path_legacies = [l.lower() for l in LEGACIES_BY_PATH[char_path]]
-                        if legacy_value in path_legacies:
-                            valid_by_path = True
-                    
-                    # Check Order
-                    if char_order and char_order in LEGACIES_BY_ORDER:
-                        order_legacies = [l.lower() for l in LEGACIES_BY_ORDER[char_order]]
-                        if legacy_value in order_legacies:
-                            valid_by_order = True
-                    
-                    # If not valid by either path or order, reject
-                    if not valid_by_path and not valid_by_order:
-                        error_parts = []
-                        error_parts.append(f"|rYou cannot take the '{value.title()}' Legacy.|n")
-                        
-                        if not char_path and not char_order:
-                            error_parts.append("You must set your Path and/or Order before setting a Legacy.")
-                        else:
-                            error_parts.append(f"Your Path ({char_path.title() if char_path else 'None'}) and Order ({char_order.title() if char_order else 'None'}) do not qualify for this Legacy.")
-                            
-                            # Show which paths/orders can access this legacy
-                            qualifying_paths = []
-                            qualifying_orders = []
-                            
-                            for path_name, legacies in LEGACIES_BY_PATH.items():
-                                if legacy_value in [l.lower() for l in legacies]:
-                                    qualifying_paths.append(path_name.title())
-                            
-                            for order_name, legacies in LEGACIES_BY_ORDER.items():
-                                if legacy_value in [l.lower() for l in legacies]:
-                                    qualifying_orders.append(order_name.title())
-                            
-                            if qualifying_paths:
-                                error_parts.append(f"|wQualifying Paths:|n {', '.join(qualifying_paths)}")
-                            if qualifying_orders:
-                                error_parts.append(f"|wQualifying Orders:|n {', '.join(qualifying_orders)}")
-                        
-                        for part in error_parts:
-                            self.caller.msg(part)
+                    # Import the legacy data from mage template
+                    from world.cofd.templates.mage import (
+                        LEGACIES_BY_PATH, LEGACIES_BY_ORDER, UNLINKED_LEGACIES, ALL_LEGACIES
+                    )
+                
+                    # First check if legacy is valid at all
+                    if legacy_value not in [l.lower() for l in ALL_LEGACIES]:
+                        self.caller.msg(f"'{value}' is not a valid Legacy.")
+                        self.caller.msg(f"|wUse +help legacy|n for a complete list of valid Legacies.")
                         return
-            
-            # Custom validation for Promethean Athanor field
-            if stat == "athanor" and character_template.lower() == "promethean":
-                athanor_value = str(value).lower()
-                
-                # Import the athanor data from promethean template
-                from world.cofd.templates.legacy_promethean import (
-                    ATHANORS_BY_LINEAGE, ALL_ATHANORS
-                )
-                
-                # First check if athanor is valid at all
-                if athanor_value not in [a.lower() for a in ALL_ATHANORS]:
-                    self.caller.msg(f"'{value}' is not a valid Athanor.")
-                    self.caller.msg(f"|wUse +help athanor|n for a complete list of valid Athanors.")
-                    return
-                
-                # Get character's lineage
-                char_lineage = target.db.stats.get("bio", {}).get("lineage", "").lower()
-                
-                # Check if character has set their lineage
-                if not char_lineage:
-                    self.caller.msg("|rYou must set your Lineage before setting an Athanor.|n")
-                    self.caller.msg("Use: |c+stat lineage=<lineage name>|n")
-                    return
-                
-                # Check if lineage qualifies for this athanor
-                if char_lineage in ATHANORS_BY_LINEAGE:
-                    lineage_athanors = [a.lower() for a in ATHANORS_BY_LINEAGE[char_lineage]]
-                    if athanor_value not in lineage_athanors:
-                        error_parts = []
-                        error_parts.append(f"|rYou cannot take the '{value.title()}' Athanor.|n")
-                        error_parts.append(f"Your Lineage ({char_lineage.title()}) does not qualify for this Athanor.")
+                    
+                    # Get character's path and order
+                    char_path = target.db.stats.get("bio", {}).get("path", "").lower()
+                    char_order = target.db.stats.get("bio", {}).get("order", "").lower()
+                    
+                    # Check if legacy is unlinked (available to everyone)
+                    if legacy_value in [l.lower() for l in UNLINKED_LEGACIES]:
+                        # Unlinked legacies are always valid
+                        pass
+                    else:
+                        # Check if character qualifies through Path or Order
+                        valid_by_path = False
+                        valid_by_order = False
                         
-                        # Show which lineages can access this athanor
-                        qualifying_lineages = []
-                        for lineage_name, athanors in ATHANORS_BY_LINEAGE.items():
-                            if athanor_value in [a.lower() for a in athanors]:
-                                qualifying_lineages.append(lineage_name.title())
+                        # Check Path
+                        if char_path and char_path in LEGACIES_BY_PATH:
+                            path_legacies = [l.lower() for l in LEGACIES_BY_PATH[char_path]]
+                            if legacy_value in path_legacies:
+                                valid_by_path = True
                         
-                        if qualifying_lineages:
-                            error_parts.append(f"|wQualifying Lineages:|n {', '.join(qualifying_lineages)}")
+                        # Check Order
+                        if char_order and char_order in LEGACIES_BY_ORDER:
+                            order_legacies = [l.lower() for l in LEGACIES_BY_ORDER[char_order]]
+                            if legacy_value in order_legacies:
+                                valid_by_order = True
                         
-                        for part in error_parts:
-                            self.caller.msg(part)
+                        # If not valid by either path or order, reject
+                        if not valid_by_path and not valid_by_order:
+                            error_parts = []
+                            error_parts.append(f"|rYou cannot take the '{value.title()}' Legacy.|n")
+                            
+                            if not char_path and not char_order:
+                                error_parts.append("You must set your Path and/or Order before setting a Legacy.")
+                            else:
+                                error_parts.append(f"Your Path ({char_path.title() if char_path else 'None'}) and Order ({char_order.title() if char_order else 'None'}) do not qualify for this Legacy.")
+                                
+                                # Show which paths/orders can access this legacy
+                                qualifying_paths = []
+                                qualifying_orders = []
+                                
+                                for path_name, legacies in LEGACIES_BY_PATH.items():
+                                    if legacy_value in [l.lower() for l in legacies]:
+                                        qualifying_paths.append(path_name.title())
+                                
+                                for order_name, legacies in LEGACIES_BY_ORDER.items():
+                                    if legacy_value in [l.lower() for l in legacies]:
+                                        qualifying_orders.append(order_name.title())
+                                
+                                if qualifying_paths:
+                                    error_parts.append(f"|wQualifying Paths:|n {', '.join(qualifying_paths)}")
+                                if qualifying_orders:
+                                    error_parts.append(f"|wQualifying Orders:|n {', '.join(qualifying_orders)}")
+                            
+                            for part in error_parts:
+                                self.caller.msg(part)
+                            return
+                
+                # Custom validation for Promethean Athanor field
+                if stat == "athanor" and character_template.lower() == "promethean":
+                    athanor_value = str(value).lower()
+                    
+                    # Import the athanor data from promethean template
+                    from world.cofd.templates.legacy_promethean import (
+                        ATHANORS_BY_LINEAGE, ALL_ATHANORS
+                    )
+                    
+                    # First check if athanor is valid at all
+                    if athanor_value not in [a.lower() for a in ALL_ATHANORS]:
+                        self.caller.msg(f"'{value}' is not a valid Athanor.")
+                        self.caller.msg(f"|wUse +help athanor|n for a complete list of valid Athanors.")
                         return
-                else:
-                    # Lineage not recognized or doesn't have athanors
-                    self.caller.msg(f"|rYour Lineage ({char_lineage.title()}) does not have access to Athanors.|n")
-                    self.caller.msg("|wValid Lineages with Athanors:|n Frankenstein, Galatea, Osiris, Tammuz, Ulgan, Unfleshed, Zeka")
+                    
+                    # Get character's lineage
+                    char_lineage = target.db.stats.get("bio", {}).get("lineage", "").lower()
+                    
+                    # Check if character has set their lineage
+                    if not char_lineage:
+                        self.caller.msg("|rYou must set your Lineage before setting an Athanor.|n")
+                        self.caller.msg("Use: |c+stat lineage=<lineage name>|n")
+                        return
+                    
+                    # Check if lineage qualifies for this athanor
+                    if char_lineage in ATHANORS_BY_LINEAGE:
+                        lineage_athanors = [a.lower() for a in ATHANORS_BY_LINEAGE[char_lineage]]
+                        if athanor_value not in lineage_athanors:
+                            error_parts = []
+                            error_parts.append(f"|rYou cannot take the '{value.title()}' Athanor.|n")
+                            error_parts.append(f"Your Lineage ({char_lineage.title()}) does not qualify for this Athanor.")
+                            
+                            # Show which lineages can access this athanor
+                            qualifying_lineages = []
+                            for lineage_name, athanors in ATHANORS_BY_LINEAGE.items():
+                                if athanor_value in [a.lower() for a in athanors]:
+                                    qualifying_lineages.append(lineage_name.title())
+                            
+                            if qualifying_lineages:
+                                error_parts.append(f"|wQualifying Lineages:|n {', '.join(qualifying_lineages)}")
+                            
+                            for part in error_parts:
+                                self.caller.msg(part)
+                            return
+                    else:
+                        # Lineage not recognized or doesn't have athanors
+                        self.caller.msg(f"|rYour Lineage ({char_lineage.title()}) does not have access to Athanors.|n")
+                        self.caller.msg("|wValid Lineages with Athanors:|n Frankenstein, Galatea, Osiris, Tammuz, Ulgan, Unfleshed, Zeka")
+                        return
+                
+                # Validate field value if it has restrictions
+                is_valid, error_msg = target.validate_template_field(stat, str(value))
+                if not is_valid:
+                    self.caller.msg(error_msg)
                     return
-            
-            # Validate field value if it has restrictions
-            is_valid, error_msg = target.validate_template_field(stat, str(value))
-            if not is_valid:
-                self.caller.msg(error_msg)
-                return
-            
-            # Validate length for string fields
-            if isinstance(value, str) and len(value) > 50:
-                self.caller.msg("Bio field values cannot exceed 50 characters.")
-                return
-            
-            # Store in bio category
-            target.db.stats["bio"][stat] = str(value).title()
-            stat_set = True
+                
+                # Validate length for string fields
+                if isinstance(value, str) and len(value) > 50:
+                    self.caller.msg("Bio field values cannot exceed 50 characters.")
+                    return
+                
+                # Store in bio category
+                target.db.stats["bio"][stat] = str(value).title()
+                stat_set = True
         
         # Check anchors (for backward compatibility)
         elif stat in ["virtue", "vice"]:
@@ -675,9 +760,11 @@ class CmdStat(MuxCommand):
                 "other": {"template": value.title()}
             }
             
-            # Also wipe any geist stats if they exist
+            # Also wipe any template-specific stats if they exist
             if hasattr(target.db, 'geist_stats'):
                 target.db.geist_stats = None
+            if hasattr(target.db, 'mage_stats'):
+                target.db.mage_stats = None
             
             # Clear other character-specific data
             target.db.willpower_current = None
@@ -794,7 +881,18 @@ class CmdStat(MuxCommand):
         # This must come before semantic power check since both use colons
         if not stat_set:
             try:
-                from world.cofd.merits.general_merits import merits_dict
+                from world.cofd.merits.general_merits import merits_dict as general_merits_dict
+                from world.cofd.merits.mage_merits import mage_merits_dict
+                from world.cofd.merits.vampire_merits import vampire_merits_dict
+                from world.cofd.merits.werewolf_merits import werewolf_merits_dict
+                from world.cofd.merits.changeling_merits import changeling_merits_dict
+                from world.cofd.merits.geist_merits import geist_merits_dict
+                from world.cofd.merits.demon_merits import demon_merits_dict
+                from world.cofd.merits.deviant_merits import deviant_merits_dict
+                from world.cofd.merits.hunter_merits import hunter_merits_dict
+                from world.cofd.merits.mummy_merits import mummy_merits_dict
+                from world.cofd.merits.promethean_merits import promethean_merits_dict
+                from world.cofd.merits.minor_template_merits import minor_template_merits_dict
                 from world.cofd.merit_utilities import (
                     parse_merit_instance, check_merit_approved_status, set_merit
                 )
@@ -802,8 +900,20 @@ class CmdStat(MuxCommand):
                 # Parse base merit name and instance
                 base_merit_name, instance_name = parse_merit_instance(stat)
                 
-                if base_merit_name in merits_dict:
-                    merit = merits_dict[base_merit_name]
+                # Check all merit dictionaries
+                all_merit_dicts = [
+                    general_merits_dict, mage_merits_dict, vampire_merits_dict, werewolf_merits_dict,
+                    changeling_merits_dict, geist_merits_dict, demon_merits_dict, deviant_merits_dict,
+                    hunter_merits_dict, mummy_merits_dict, promethean_merits_dict, minor_template_merits_dict
+                ]
+                
+                merit = None
+                for merit_dict in all_merit_dicts:
+                    if base_merit_name in merit_dict:
+                        merit = merit_dict[base_merit_name]
+                        break
+                
+                if merit:
                     
                     # Check if character is approved
                     can_modify, error_msg = check_merit_approved_status(target, stat, self.caller)
@@ -838,12 +948,24 @@ class CmdStat(MuxCommand):
             return self._handle_semantic_power(target, power_type, power_name, value)
         
         # Check powers (template-specific supernatural abilities)
-        if not stat_set:
+        # Skip if force_category is "bio"
+        if not stat_set and force_category != "bio":
             # Get character's template to determine valid powers
             character_template = target.db.stats.get("other", {}).get("template", "Mortal")
             template_powers = self._get_template_powers(character_template)
             
-            if stat in template_powers:
+            # Special handling for mage arcana: map "death" to "arcanum_death"
+            if character_template.lower() in ["mage", "legacy_mage"]:
+                if stat == "death" and "arcanum_death" in template_powers:
+                    stat = "arcanum_death"
+            
+            # If forced to be a power or if it's in the template powers
+            if force_category == "power" or stat in template_powers:
+                # If forced to be a power but not valid for this template, show error
+                if force_category == "power" and stat not in template_powers:
+                    self.caller.msg(f"{stat.replace('_', ' ').title()} is not a valid power for {character_template} characters.")
+                    return
+                
                 # Validate power value
                 if not isinstance(value, int):
                     try:
@@ -866,7 +988,16 @@ class CmdStat(MuxCommand):
                 stat_set = True
                 
                 # Message about power setting
-                power_display = stat.replace('_', ' ').title()
+                # Clean up display name - remove prefixes for better readability
+                power_display = stat
+                if stat.startswith('discipline_'):
+                    power_display = stat[11:]  # Remove 'discipline_'
+                elif stat.startswith('arcanum_'):
+                    power_display = stat[8:]   # Remove 'arcanum_'
+                elif stat.startswith('gift_'):
+                    power_display = stat[5:]   # Remove 'gift_'
+                
+                power_display = power_display.replace('_', ' ').title()
                 if value == 0:
                     self.caller.msg(f"Removed {power_display} from {target.name}.")
                 else:
@@ -901,13 +1032,20 @@ class CmdStat(MuxCommand):
             else:
                 # Check if this was a merit (display confirmation message was already sent by set_merit)
                 try:
-                    from world.cofd.merits.general_merits import merits_dict
+                    from world.cofd.merits.general_merits import merits_dict as general_merits_dict
+                    from world.cofd.merits.mage_merits import mage_merits_dict
+                    from world.cofd.merits.vampire_merits import vampire_merits_dict
                     from world.cofd.merit_utilities import parse_merit_instance
                     
                     base_merit_name, instance_name = parse_merit_instance(stat)
                     
+                    # Check if it's in any merit dictionary
+                    is_merit = (base_merit_name in general_merits_dict or 
+                               base_merit_name in mage_merits_dict or 
+                               base_merit_name in vampire_merits_dict)
+                    
                     # If it wasn't a merit, give generic confirmation
-                    if base_merit_name not in merits_dict:
+                    if not is_merit:
                         self.caller.msg(f"Set {target.name}'s {stat} to {value}.")
                 except ImportError:
                     self.caller.msg(f"Set {target.name}'s {stat} to {value}.")
@@ -1272,7 +1410,7 @@ class CmdStat(MuxCommand):
             # Display powers with dots or as known abilities
             power_list = []
             for power_name, dots in sorted(powers.items()):
-                if dots > 0:  # Only show powers with dots
+                if dots > 0 or dots == "known":  # Show powers with dots or marked as known
                     # Clean up display name - remove prefixes and format properly
                     display_name = power_name
                     if power_name.startswith('discipline_'):
@@ -1287,8 +1425,8 @@ class CmdStat(MuxCommand):
                         display_name = power_name[5:]   # Remove 'rite_'
                     
                     # Check if this template uses individual powers (no dots) or rated powers
-                    if template in individual_power_templates:
-                        # For Changeling/Promethean, just show the power name
+                    if template in individual_power_templates or dots == "known":
+                        # For Changeling/Promethean or semantic powers, just show the power name
                         power_display = f"{display_name.replace('_', ' ').title()}"
                     else:
                         # For others, show dots
@@ -1301,6 +1439,52 @@ class CmdStat(MuxCommand):
                 output.append(f"  |c{power_type}:|n None")
             
             output.append("")
+            
+            # For Mages, also list spells separately with proper formatting
+            if template.lower() in ["mage", "legacy_mage"]:
+                spell_powers = [p for p in powers.keys() if p.startswith("spell:") and powers[p] == "known"]
+                if spell_powers:
+                    output.append("|wSpells:|n")
+                    from world.cofd.templates.mage_spells import get_spell
+                    
+                    spell_displays = []
+                    for power_name in sorted(spell_powers):
+                        spell_key = power_name[6:]  # Remove "spell:" prefix
+                        spell_data = get_spell(spell_key)
+                        if spell_data:
+                            spell_level = spell_data['level']
+                            arcana_name = spell_data['arcana'].title()
+                            dots_str = "●" * spell_level
+                            spell_display = f"{spell_data['name']} ({arcana_name} {dots_str})"
+                        else:
+                            spell_display = f"{spell_key.replace('_', ' ').title()} (Unknown)"
+                        spell_displays.append(spell_display)
+                    
+                    for spell_display in spell_displays:
+                        output.append(f"  {spell_display}")
+                    output.append("")
+            
+            # For Hunters, also list endowments separately with proper formatting
+            if template.lower() == "hunter":
+                endowment_powers = [p for p in powers.keys() if p.startswith("endowment:") and powers[p] == "known"]
+                if endowment_powers:
+                    output.append("|wEndowments:|n")
+                    from world.cofd.templates.hunter_endowments import get_endowment
+                    
+                    endowment_displays = []
+                    for power_name in sorted(endowment_powers):
+                        endowment_key = power_name[10:]  # Remove "endowment:" prefix
+                        endowment_data = get_endowment(endowment_key)
+                        if endowment_data:
+                            endow_type = endowment_data['endowment_type'].replace('_', ' ').title()
+                            endowment_display = f"{endowment_data['name']} ({endow_type})"
+                        else:
+                            endowment_display = f"{endowment_key.title()} (Unknown)"
+                        endowment_displays.append(endowment_display)
+                    
+                    for endowment_display in endowment_displays:
+                        output.append(f"  {endowment_display}")
+                    output.append("")
         
         # Anchors
         anchors = target.db.stats.get("anchors", {})
@@ -1457,6 +1641,44 @@ class CmdStat(MuxCommand):
         # Auto-calculate derived stats if setting attributes
         if success and stat in ["power", "finesse", "resistance"]:
             calculate_geist_derived_stats(target, self.caller)
+    
+    def set_mage_stat(self):
+        """Set a stat on mage-specific sheet (Mage characters only)"""
+        if not self.args or "=" not in self.args:
+            self.caller.msg("Usage: +stat/mage <stat>=<value>")
+            self.caller.msg("Valid stats: immediate_nimbus, long_term_nimbus, signature_nimbus, dedicated_tool, obsession, praxis")
+            return
+        
+        # Only the player can set their own mage stats (for now)
+        target = self.caller
+        
+        # Check if character is a Mage
+        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() not in ["mage", "legacy_mage"]:
+            self.caller.msg(f"Only Mage characters can have mage-specific stats. Your template is currently: {character_template}")
+            self.caller.msg("Use '+stat template=mage' (staff) to change your template first.")
+            return
+        
+        # Check if character is approved (same restrictions as regular stats)
+        is_npc = hasattr(target, 'db') and target.db.is_npc
+        if not is_npc and target.db.approved:
+            if not self.caller.check_permstring("Builder"):
+                self.caller.msg("Your character is approved. Only staff can modify your mage stats.")
+                return
+        
+        # Parse stat and value
+        stat, value = self.args.split("=", 1)
+        stat = stat.strip().lower().replace(" ", "_")
+        value = value.strip()
+        
+        # Delegate to mage template utilities
+        from world.cofd.templates.mage import set_mage_stat_value
+        
+        success, message = set_mage_stat_value(target, stat, value, self.caller)
+        self.caller.msg(message)
+        
+        # Explicit return to ensure no further processing
+        return
     
     def _handle_semantic_power(self, target, power_type, power_name, value):
         """Handle semantic power syntax like key=beasts, ceremony=pass_on, alembic=purification"""

@@ -10,12 +10,15 @@ class CmdExperience(Command):
     Usage:
         +xp                              - Show your current experience and beats
         +xp/beat <source>               - Add a beat from a valid source
+        +xp/arcane <source>             - Add an arcane beat (Mages only)
         +xp/spend <stat>=<dots>         - Spend experience on attributes/skills
+        +xp/spend/arcane <stat>=<dots>  - Spend arcane XP on mage abilities
         +xp/buy <merit>=[dots]          - Purchase a merit with experience
         +xp/refund <merit>              - Refund a merit for experience (staff only)
         +xp/list merits [category]      - List available merits by category
         +xp/info <merit>                - Show detailed merit information
         +xp/costs                       - Show experience point costs
+        +xp/costs/arcane                - Show arcane experience costs (Mages only)
 
     Merit Categories:
         mental, physical, social, fighting, style, supernatural
@@ -24,6 +27,10 @@ class CmdExperience(Command):
         dramatic_failure, exceptional_success, conditions, aspirations,
         story, scene, session, roleplay, challenge, sacrifice,
         discovery, relationship, consequence, learning, growth
+    
+    Valid arcane beat sources (Mages only):
+        obsession, magical_condition, spell_dramatic_failure, 
+        act_of_hubris, legacy_tutoring, supernatural_encounter
         
     Note: Exceptional successes and dramatic failures from dice rolls 
     automatically award beats - no need to manually request them.
@@ -34,10 +41,22 @@ class CmdExperience(Command):
         Merits: 1 XP per dot
         Integrity: 2 XP per dot
         Specialties: 1 XP each
+    
+    Arcane Experience Costs (Mages only):
+        Arcanum (to limit): 4 Arcane XP per dot (or regular XP)
+        Arcanum (above limit): 5 Arcane XP per dot (or regular XP)
+        Gnosis: 5 Arcane XP per dot (or regular XP)
+        Praxis: 1 Arcane XP (MUST use Arcane XP)
+        Rote: 1 Arcane XP (or regular XP)
+        Wisdom: 2 Arcane XP per dot (MUST use Arcane XP)
+        Legacy Attainment (tutored): 1 Arcane XP (or regular XP)
+        Legacy Attainment (untutored): 1 Arcane XP (MUST use Arcane XP)
 
     Examples:
         +xp/buy contacts=3              - Buy Contacts merit at 3 dots
         +xp/spend strength=4            - Raise Strength to 4 dots
+        +xp/arcane obsession            - Add arcane beat for fulfilling obsession
+        +xp/spend/arcane forces=3       - Spend arcane XP to raise Forces to 3
         +xp/list merits mental          - List mental merits
         +xp/info fast_reflexes          - Show Fast Reflexes merit details
     """
@@ -82,8 +101,17 @@ class CmdExperience(Command):
                 self.caller.msg("Experience is awarded directly. Use +xp/award for staff awards.")
             else:
                 self.add_beat(exp_handler)
+        elif self.switch == "arcane":
+            if legacy_mode:
+                self.caller.msg("|rArcane beats are not available in Legacy Mode.|n")
+            else:
+                self.add_arcane_beat(exp_handler)
         elif self.switch == "spend":
-            self.spend_experience(exp_handler)
+            # Check for secondary switch (arcane)
+            if len(self.switches) > 1 and self.switches[1] == "arcane":
+                self.spend_arcane_experience(exp_handler)
+            else:
+                self.spend_experience(exp_handler)
         elif self.switch == "buy":
             self.buy_merit(exp_handler)
         elif self.switch == "refund":
@@ -93,7 +121,11 @@ class CmdExperience(Command):
         elif self.switch == "info":
             self.merit_info()
         elif self.switch == "costs":
-            self.show_costs()
+            # Check for secondary switch (arcane)
+            if len(self.switches) > 1 and self.switches[1] == "arcane":
+                self.show_arcane_costs()
+            else:
+                self.show_costs()
         else:
             self.caller.msg("Unknown switch. See 'help +xp' for usage.")
 
@@ -101,6 +133,10 @@ class CmdExperience(Command):
         """Show current experience and beats."""
         from commands.CmdLegacy import is_legacy_mode
         legacy_mode = is_legacy_mode()
+        
+        # Check if character is a Mage
+        character_template = self.caller.db.stats.get("other", {}).get("template", "Mortal")
+        is_mage = character_template.lower() in ["mage", "legacy_mage"]
         
         output = []
         output.append("|wExperience Summary|n")
@@ -120,6 +156,24 @@ class CmdExperience(Command):
                 
             output.append(f"Experience Points: |y{exp_handler.experience}|n")
             output.append(f"(5 beats = 1 experience point)")
+            
+            # Show arcane experience for Mages
+            if is_mage:
+                output.append("")
+                output.append("|mMage Arcane Experience:|n")
+                output.append("-" * 40)
+                
+                fractional_arcane_beats = self.caller.attributes.get('fractional_arcane_beats', default=0.0)
+                if fractional_arcane_beats > 0:
+                    output.append(f"Arcane Beats: |m{exp_handler.arcane_beats}|n + |m{fractional_arcane_beats:.1f}|n fractional = |m{exp_handler.total_arcane_beats:.1f}|n total")
+                else:
+                    output.append(f"Arcane Beats: |m{exp_handler.arcane_beats}|n")
+                
+                output.append(f"Arcane Experience: |M{exp_handler.arcane_experience}|n")
+                output.append(f"(5 arcane beats = 1 arcane experience)")
+                output.append("")
+                output.append("|gUse +xp/arcane <source> to add arcane beats|n")
+                output.append("|gUse +xp/costs/arcane to see arcane XP costs|n")
         
         self.caller.msg("\n".join(output))
 
@@ -143,6 +197,43 @@ class CmdExperience(Command):
         exp_handler.add_beat()
         self.caller.msg(f"|gAdded 1 beat from '{source.replace('_', ' ')}'.|n")
         self.caller.msg(f"Current beats: {exp_handler.beats}, Experience: {exp_handler.experience}")
+    
+    def add_arcane_beat(self, exp_handler):
+        """Add an arcane beat from a valid source (Mages only)."""
+        # Check if character is a Mage
+        character_template = self.caller.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() not in ["mage", "legacy_mage"]:
+            self.caller.msg("|rOnly Mages can earn Arcane Beats.|n")
+            self.caller.msg(f"Your template is: {character_template}")
+            return
+        
+        valid_sources = [
+            "obsession", "magical_condition", "spell_dramatic_failure",
+            "act_of_hubris", "legacy_tutoring", "supernatural_encounter"
+        ]
+        
+        source = self.remaining_args.strip().lower().replace(" ", "_")
+        if not source:
+            self.caller.msg("You must specify an arcane beat source. Valid sources: " + ", ".join(valid_sources))
+            return
+            
+        if source not in valid_sources:
+            self.caller.msg(f"Invalid arcane beat source '{source}'. Valid sources: " + ", ".join(valid_sources))
+            return
+        
+        # Add descriptions for each source
+        source_descriptions = {
+            "obsession": "fulfilling or making major headway into an Obsession",
+            "magical_condition": "resolving a Condition from spellcasting, Paradox, or magical effect",
+            "spell_dramatic_failure": "voluntarily making a spellcasting roll a dramatic failure",
+            "act_of_hubris": "risking an Act of Hubris against Wisdom",
+            "legacy_tutoring": "spending a scene tutoring/being tutored in a Legacy",
+            "supernatural_encounter": "having a meaningful new supernatural encounter"
+        }
+        
+        exp_handler.add_arcane_beat()
+        self.caller.msg(f"|mAdded 1 arcane beat from {source_descriptions[source]}.|n")
+        self.caller.msg(f"Current arcane beats: {exp_handler.arcane_beats}, Arcane experience: {exp_handler.arcane_experience}")
 
     def spend_experience(self, exp_handler):
         """Spend experience on attributes, skills, etc."""
@@ -475,6 +566,168 @@ class CmdExperience(Command):
         
         self.caller.msg("\n".join(output))
 
+    def spend_arcane_experience(self, exp_handler):
+        """Spend arcane experience on mage-specific abilities."""
+        # Check if character is a Mage
+        character_template = self.caller.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() not in ["mage", "legacy_mage"]:
+            self.caller.msg("|rOnly Mages can spend Arcane Experience.|n")
+            self.caller.msg(f"Your template is: {character_template}")
+            return
+        
+        if "=" not in self.remaining_args:
+            self.caller.msg("Usage: +xp/spend/arcane <stat>=<dots>")
+            return
+            
+        stat_name, target_dots_str = self.remaining_args.split("=", 1)
+        stat_name = stat_name.strip().lower()
+        
+        # Handle different arcane expenditures
+        if stat_name == "praxis":
+            # Praxis requires a spell name, not dots
+            self.caller.msg("To buy a praxis, use: +stat/mage praxis=<spell_name>")
+            self.caller.msg("Praxis cost: 1 Arcane XP (must use Arcane XP)")
+            return
+        elif stat_name in ["wisdom", "integrity"]:
+            # Wisdom costs arcane XP
+            try:
+                target_dots = int(target_dots_str.strip())
+            except ValueError:
+                self.caller.msg("Target dots must be a number.")
+                return
+            
+            current_dots = self.caller.db.stats.get("other", {}).get("integrity", 7)
+            
+            if target_dots <= current_dots:
+                self.caller.msg(f"You already have Wisdom at {current_dots} dots or higher.")
+                return
+            
+            if target_dots > 10:
+                self.caller.msg("Wisdom cannot exceed 10 dots.")
+                return
+            
+            # Calculate cost (2 Arcane XP per dot)
+            dots_to_buy = target_dots - current_dots
+            total_cost = dots_to_buy * 2
+            
+            if exp_handler.arcane_experience < total_cost:
+                self.caller.msg(f"Insufficient arcane experience. Need {total_cost} Arcane XP, have {exp_handler.arcane_experience} Arcane XP.")
+                return
+            
+            # Spend arcane experience and update stat
+            exp_handler.spend_arcane_experience(total_cost)
+            self.caller.db.stats["other"]["integrity"] = target_dots
+            
+            self.caller.msg(f"|gSpent {total_cost} Arcane XP to raise Wisdom to {target_dots} dots.|n")
+            self.caller.msg(f"Remaining arcane experience: {exp_handler.arcane_experience}")
+            
+        elif stat_name == "gnosis":
+            # Gnosis can use either regular XP or Arcane XP (5 per dot)
+            try:
+                target_dots = int(target_dots_str.strip())
+            except ValueError:
+                self.caller.msg("Target dots must be a number.")
+                return
+            
+            current_dots = self.caller.db.stats.get("advantages", {}).get("gnosis", 1)
+            
+            if target_dots <= current_dots:
+                self.caller.msg(f"You already have Gnosis at {current_dots} dots or higher.")
+                return
+            
+            if target_dots > 10:
+                self.caller.msg("Gnosis cannot exceed 10 dots.")
+                return
+            
+            # Calculate cost (5 Arcane XP per dot)
+            dots_to_buy = target_dots - current_dots
+            total_cost = dots_to_buy * 5
+            
+            if exp_handler.arcane_experience < total_cost:
+                self.caller.msg(f"Insufficient arcane experience. Need {total_cost} Arcane XP, have {exp_handler.arcane_experience} Arcane XP.")
+                return
+            
+            # Spend arcane experience and update stat
+            exp_handler.spend_arcane_experience(total_cost)
+            self.caller.db.stats["advantages"]["gnosis"] = target_dots
+            
+            self.caller.msg(f"|gSpent {total_cost} Arcane XP to raise Gnosis to {target_dots} dots.|n")
+            self.caller.msg(f"Remaining arcane experience: {exp_handler.arcane_experience}")
+            self.caller.msg(f"|mNote:|n You gained 1 free praxis with this Gnosis increase!")
+            
+        else:
+            # Check if it's an arcana
+            from world.cofd.templates.mage import MAGE_ARCANA
+            
+            # Map common names to proper arcana names
+            arcana_mapping = {
+                "death": "arcanum_death",
+                "fate": "fate",
+                "forces": "forces",
+                "life": "life",
+                "matter": "matter",
+                "mind": "mind",
+                "prime": "prime",
+                "space": "space",
+                "spirit": "spirit",
+                "time": "time"
+            }
+            
+            if stat_name in arcana_mapping:
+                arcana_name = arcana_mapping[stat_name]
+            elif stat_name in MAGE_ARCANA:
+                arcana_name = stat_name
+            else:
+                self.caller.msg(f"'{stat_name}' is not a valid mage ability that can be purchased with Arcane XP.")
+                self.caller.msg("Valid options: arcana (death, fate, forces, life, matter, mind, prime, space, spirit, time), gnosis, wisdom")
+                return
+            
+            try:
+                target_dots = int(target_dots_str.strip())
+            except ValueError:
+                self.caller.msg("Target dots must be a number.")
+                return
+            
+            current_dots = self.caller.db.stats.get("powers", {}).get(arcana_name, 0)
+            
+            if target_dots <= current_dots:
+                self.caller.msg(f"You already have {arcana_name.replace('arcanum_', '').title()} at {current_dots} dots or higher.")
+                return
+            
+            if target_dots > 5:
+                self.caller.msg("Arcana cannot exceed 5 dots.")
+                return
+            
+            # Determine gnosis limit for arcana
+            gnosis = self.caller.db.stats.get("advantages", {}).get("gnosis", 1)
+            arcana_limit = gnosis + 5  # Ruling arcana can go to Gnosis + 5
+            
+            # Calculate cost (4 Arcane XP per dot to limit, 5 per dot above limit)
+            dots_to_buy = target_dots - current_dots
+            total_cost = 0
+            
+            for dot in range(current_dots + 1, target_dots + 1):
+                if dot <= arcana_limit:
+                    total_cost += 4
+                else:
+                    total_cost += 5
+            
+            if exp_handler.arcane_experience < total_cost:
+                self.caller.msg(f"Insufficient arcane experience. Need {total_cost} Arcane XP, have {exp_handler.arcane_experience} Arcane XP.")
+                return
+            
+            # Spend arcane experience and update stat
+            exp_handler.spend_arcane_experience(total_cost)
+            
+            if "powers" not in self.caller.db.stats:
+                self.caller.db.stats["powers"] = {}
+            
+            self.caller.db.stats["powers"][arcana_name] = target_dots
+            
+            display_name = arcana_name.replace("arcanum_", "").replace("_", " ").title()
+            self.caller.msg(f"|gSpent {total_cost} Arcane XP to raise {display_name} to {target_dots} dots.|n")
+            self.caller.msg(f"Remaining arcane experience: {exp_handler.arcane_experience}")
+    
     def show_costs(self):
         """Show experience point costs."""
         output = []
@@ -487,5 +740,41 @@ class CmdExperience(Command):
         output.append("Specialties: |y1 XP|n each")
         output.append("\nUse |w+xp/list merits|n to see available merits")
         output.append("Use |w+xp/info <merit>|n for merit details")
+        
+        self.caller.msg("\n".join(output))
+    
+    def show_arcane_costs(self):
+        """Show arcane experience point costs (Mage-specific)."""
+        # Check if character is a Mage
+        character_template = self.caller.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() not in ["mage", "legacy_mage"]:
+            self.caller.msg("|rOnly Mages have Arcane Experience costs.|n")
+            self.caller.msg(f"Your template is: {character_template}")
+            return
+        
+        output = []
+        output.append("|mArcane Experience Costs (Mages Only)|n")
+        output.append("=" * 50)
+        output.append("")
+        output.append("|wCan use EITHER Regular XP or Arcane XP:|n")
+        output.append("  Arcanum (to limit):       |m4 XP|n per dot")
+        output.append("  Arcanum (above limit):    |m5 XP|n per dot")
+        output.append("  Gnosis:                   |m5 XP|n per dot")
+        output.append("  Rote:                     |m1 XP|n")
+        output.append("  Legacy Attainment (tutor):|m1 XP|n")
+        output.append("")
+        output.append("|wMUST use Arcane XP ONLY:|n")
+        output.append("  Praxis:                   |M1 Arcane XP|n")
+        output.append("  Wisdom:                   |M2 Arcane XP|n per dot")
+        output.append("  Legacy Attainment (solo): |M1 Arcane XP|n")
+        output.append("")
+        output.append("|gNote:|n Increasing Gnosis grants 1 free Praxis")
+        output.append("|gNote:|n Arcanum limit = Gnosis + 5 for ruling arcana")
+        output.append("")
+        output.append("Usage:")
+        output.append("  |w+xp/spend/arcane <arcanum>=<dots>|n  - Raise an arcanum")
+        output.append("  |w+xp/spend/arcane gnosis=<dots>|n     - Raise Gnosis")
+        output.append("  |w+xp/spend/arcane wisdom=<dots>|n     - Raise Wisdom")
+        output.append("  |w+stat/mage praxis=<spell_name>|n     - Learn a praxis (1 Arcane XP)")
         
         self.caller.msg("\n".join(output)) 
