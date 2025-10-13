@@ -848,6 +848,104 @@ class CmdSheet(MuxCommand):
                     output.append(f"  {left_formatted} {right_endowment}")
             else:
                 output.append("No endowment powers learned yet.")
+            
+            output.append("")
+        
+        # Werewolf Gifts section (individual gifts without ratings)
+        if template.lower() == "werewolf":
+            output.append(self._format_section_header("|wGIFTS (FACETS)|n"))
+            
+            from world.cofd.templates.werewolf_gifts import get_gift
+            
+            gift_list = []
+            for power_name, value in powers.items():
+                if power_name.startswith("gift:") and value == "known":
+                    # Extract gift key from "gift:gift_name"
+                    gift_key = power_name[5:]  # Remove "gift:" prefix
+                    
+                    # Look up gift data
+                    gift_data = get_gift(gift_key)
+                    if gift_data:
+                        renown = gift_data['renown'].title()
+                        rank_dots = self._format_dots(gift_data['rank'], 5, force_ascii)
+                        
+                        gift_display = f"{gift_data['name']} ({renown} {rank_dots})"
+                        gift_list.append(gift_display)
+                    else:
+                        # Gift not found, show as unknown
+                        gift_display = f"{gift_key.replace('_', ' ').title()} (Unknown Gift)"
+                        gift_list.append(gift_display)
+            
+            if gift_list:
+                # Display gifts in single column for readability
+                for gift in sorted(gift_list):
+                    output.append(f"  {gift}")
+            else:
+                output.append("No gifts learned yet.")
+            
+            output.append("")
+        
+        # Vampire Discipline Powers/Devotions/Ritual sections
+        if template.lower() == "vampire":
+            from world.cofd.templates.vampire_disciplines import get_discipline_power, ALL_DEVOTIONS
+            from world.cofd.templates.vampire_rituals import get_ritual_power
+            
+            # Collect all vampire semantic powers by category
+            vamp_powers = {}
+            
+            for power_name, value in powers.items():
+                if value == "known":
+                    if power_name.startswith("discipline_power:"):
+                        key = power_name[17:]
+                        data = get_discipline_power(key)
+                        name = data['name'] if data else key.replace('_', ' ').title()
+                        if "Discipline Powers" not in vamp_powers:
+                            vamp_powers["Discipline Powers"] = []
+                        vamp_powers["Discipline Powers"].append(name)
+                    elif power_name.startswith("devotion:"):
+                        key = power_name[9:]
+                        data = ALL_DEVOTIONS.get(key)
+                        name = data['name'] if data else key.replace('_', ' ').title()
+                        if "Devotions" not in vamp_powers:
+                            vamp_powers["Devotions"] = []
+                        vamp_powers["Devotions"].append(name)
+                    elif power_name.startswith("coil:"):
+                        key = power_name[5:]
+                        data = get_discipline_power(key)
+                        name = data['name'] if data else key.replace('_', ' ').title()
+                        if "Coils of the Dragon" not in vamp_powers:
+                            vamp_powers["Coils of the Dragon"] = []
+                        vamp_powers["Coils of the Dragon"].append(name)
+                    elif power_name.startswith("scale:"):
+                        key = power_name[6:]
+                        data = get_ritual_power(key)
+                        name = data['name'] if data else key.replace('_', ' ').title()
+                        if "Scales of the Dragon" not in vamp_powers:
+                            vamp_powers["Scales of the Dragon"] = []
+                        vamp_powers["Scales of the Dragon"].append(name)
+                    elif power_name.startswith("theban:"):
+                        key = power_name[7:]
+                        data = get_ritual_power(key)
+                        name = data['name'] if data else key.replace('_', ' ').title()
+                        if "Theban Sorcery" not in vamp_powers:
+                            vamp_powers["Theban Sorcery"] = []
+                        vamp_powers["Theban Sorcery"].append(name)
+                    elif power_name.startswith("cruac:"):
+                        key = power_name[6:]
+                        data = get_ritual_power(key)
+                        name = data['name'] if data else key.replace('_', ' ').title()
+                        if "Cruac" not in vamp_powers:
+                            vamp_powers["Cruac"] = []
+                        vamp_powers["Cruac"].append(name)
+            
+            # Display each category that has powers
+            for category in ["Discipline Powers", "Devotions", "Coils of the Dragon", 
+                           "Scales of the Dragon", "Theban Sorcery", "Cruac"]:
+                if category in vamp_powers and vamp_powers[category]:
+                    output.append(self._format_section_header(f"|w{category.upper()}|n"))
+                    for power in sorted(vamp_powers[category]):
+                        output.append(f"  {power}")
+                    output.append("")
         
         # Mortal+ specific sections (Demon-Blooded, Wolf-Blooded, Sleepwalkers/Proximus)
         if template.lower() in ["mortal_plus", "mortal plus"]:

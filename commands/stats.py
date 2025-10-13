@@ -45,9 +45,11 @@ class CmdStat(MuxCommand):
         Advantages: health, willpower, speed, defense, initiative
         Merits: All Chronicles of Darkness merits (see +xp/list merits)
         Powers: Template-specific supernatural abilities
-                - Vampire: disciplines, cruac rituals, theban miracles (animalism, pangs_of_proserpina, etc.)
+                - Vampire: disciplines (animalism, auspex), discipline powers (mesmerize, feral_whispers),
+                           devotions (quicken_sight, bend_space), coils (conquer_the_red_fear),
+                           scales (flesh_graft_treatment), theban (apple_of_eden), cruac (pangs_of_proserpina)
                 - Mage: arcana (arcanum_death, fate, forces, etc.)
-                - Werewolf: gifts & rites (gift_strength, change, sacred_hunt, etc.)
+                - Werewolf: gifts (shadow_gaze, killer_instinct), rites (sacred_hunt, bottle_spirit)
                 - Changeling: individual contracts (hostile_takeover, cloak_of_night, etc.)
                 Note: Powers that conflict with attribute/skill names use prefixes
         Bio: fullname, birthdate, concept, virtue, vice
@@ -85,8 +87,11 @@ class CmdStat(MuxCommand):
         +stat specialty/brawl=Dirty Fighting
         
         Category Prefixes (for ambiguous stats):
-        Some stats conflict between categories (e.g., 'life' is both an arcana and a bio field).
+        Some stats conflict between categories (e.g., 'telekinesis' is both a merit and a spell).
         Use category prefixes to disambiguate:
+        +stat merit/telekinesis=3 (force as merit, not spell)
+        +stat attribute/strength=3 (force as attribute, not werewolf gift)
+        +stat skill/athletics=3 (force as skill)
         +stat arcana/life=3 (force as mage arcana)
         +stat bio/life=text (force as deviant bio field)
         +stat power/strength=2 (force as werewolf gift, not attribute)
@@ -101,17 +106,25 @@ class CmdStat(MuxCommand):
         +stat unseen_sense:spirits=2
         
         Power Examples:
-        +stat animalism=3 (vampire discipline)
-        +stat pangs_of_proserpina=1 (vampire cruac ritual - level 1)
-        +stat blood_scourge=1 (vampire theban miracle - level 1)
-        +stat coil_of_the_ascendant=1 (vampire ordo dracul coil)
+        +stat animalism=3 (vampire discipline - rated 1-5)
+        +stat discipline_power=mesmerize (vampire discipline power)
+        +stat devotion=quicken_sight (vampire devotion)
+        +stat coil=conquer_the_red_fear (Coil of the Dragon)
+        +stat scale=flesh_graft_treatment (Scale of the Dragon)
+        +stat theban=apple_of_eden (Theban Sorcery miracle)
+        +stat cruac=pangs_of_proserpina (Cruac rite)
+        +stat merit/telekinesis=3 (force as merit, not spell)
+        +stat spell=telekinesis (mage spell, not merit)
         +stat arcanum_death=2 (mage arcanum - prefixed to avoid conflict)
         +stat death=2 (also works - auto-mapped to arcanum_death for mages)
         +stat forces=2 (mage arcanum - no conflict)
         +stat life=3 (mage arcanum - auto-detected based on template)
         +stat arcana/life=3 (explicit: force as arcana)
         +stat bio/life=Mortal life (explicit: force as bio field for Deviants)
-        +stat gift_strength=4 (werewolf gift - prefixed to avoid attribute conflict)
+        +stat attribute/strength=3 (force as attribute, not werewolf gift)
+        +stat power/strength=2 (force as werewolf gift, not attribute)
+        +stat gift=shadow_gaze (werewolf gift - Ithaeur)
+        +stat gift=killer_instinct (werewolf gift - Rahu)
         +stat sacred_hunt=1 (werewolf rite - rank 2)
         +stat hostile_takeover=1 (changeling contract)
         
@@ -143,7 +156,10 @@ class CmdStat(MuxCommand):
         Keys (Geist): +stat key=beasts, +stat key=stillness, +stat key=cold_wind
         Ceremonies (Geist): +stat ceremony=pass_on, +stat ceremony=ghost_trap
         Rites (Werewolf): +stat rite=sacred_hunt, +stat rite=bottle_spirit
-        Rituals (Vampire): +stat ritual=pangs_of_proserpina, +stat ritual=blood_scourge
+        Vampire Powers: +stat discipline_power=mesmerize, +stat devotion=quicken_sight,
+                        +stat coil=conquer_the_red_fear, +stat scale=flesh_graft_treatment,
+                        +stat theban=apple_of_eden, +stat cruac=pangs_of_proserpina
+        Werewolf Gifts: +stat gift=shadow_gaze, +stat gift=killer_instinct
         Contracts (Changeling): +stat contract=hostile_takeover, +stat contract=cloak_of_night
         Spells (Mage): +stat spell=create locus, +stat spell=telekinesis
         Alembics (Promethean): +stat alembic=purification, +stat alembic=human_flesh
@@ -230,8 +246,8 @@ class CmdStat(MuxCommand):
                     specialty_stat, value = args.split("=", 1)
                     specialty_keyword, skill = specialty_stat.split("/", 1)
                     return None, f"specialty/{skill.strip().lower().replace(' ', '_')}", value.strip()
-            # Check if this is a category prefix command (arcana/life, bio/life, power/strength, etc.)
-            elif args.startswith(("arcana/", "bio/", "power/", "discipline/", "gift/")):
+            # Check if this is a category prefix command (arcana/life, bio/life, power/strength, merit/telekinesis, etc.)
+            elif args.startswith(("arcana/", "bio/", "power/", "discipline/", "gift/", "merit/", "skill/", "attribute/")):
                 # Format: category/stat=value
                 category_stat, value = args.split("=", 1)
                 category, stat = category_stat.split("/", 1)
@@ -251,6 +267,15 @@ class CmdStat(MuxCommand):
                 elif category in ["power", "discipline", "gift"]:
                     # Generic power category
                     return None, f"power:{stat}", value.strip()
+                elif category == "merit":
+                    # Merit - mark explicitly as merit to avoid collisions with spells/powers
+                    return None, f"merit:{stat}", value.strip()
+                elif category == "skill":
+                    # Skill - mark explicitly as skill
+                    return None, f"skill:{stat}", value.strip()
+                elif category == "attribute":
+                    # Attribute - mark explicitly as attribute
+                    return None, f"attribute:{stat}", value.strip()
                 else:
                     # Unknown category, treat normally
                     return None, stat, value.strip()
@@ -280,10 +305,11 @@ class CmdStat(MuxCommand):
                     stat = stat.replace(" ", "_")
                     return None, stat, None  # None value signals removal
                 
-                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, endowment=hellfire, spell=create_locus, etc.
-                semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment", "endowment", "spell"]
+                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, endowment=hellfire, spell=create_locus, gift=shadow_gaze, etc.
+                semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment", "endowment", "spell",
+                                   "discipline_power", "devotion", "coil", "scale", "theban", "cruac", "gift"]
                 if stat in semantic_prefixes:
-                    # this is semantic syntax like key=beasts
+                    # this is semantic syntax like key=beasts or cruac=pangs_of_proserpina
                     power_type = stat
                     # For endowments, keep spaces; for spells and others, convert to underscores
                     if power_type == "endowment":
@@ -368,7 +394,7 @@ class CmdStat(MuxCommand):
         # Determine stat category and validate
         stat_set = False
         
-        # Handle category prefixes (power:stat or bio:stat)
+        # Handle category prefixes (power:stat, bio:stat, merit:stat, skill:stat, attribute:stat)
         force_category = None
         if stat.startswith("power:"):
             force_category = "power"
@@ -376,10 +402,25 @@ class CmdStat(MuxCommand):
         elif stat.startswith("bio:"):
             force_category = "bio"
             stat = stat[4:]  # Remove "bio:" prefix
+        elif stat.startswith("merit:"):
+            force_category = "merit"
+            stat = stat[6:]  # Remove "merit:" prefix
+        elif stat.startswith("skill:"):
+            force_category = "skill"
+            stat = stat[6:]  # Remove "skill:" prefix
+        elif stat.startswith("attribute:"):
+            force_category = "attribute"
+            stat = stat[10:]  # Remove "attribute:" prefix
         
         # Check attributes
-        if stat in ["strength", "dexterity", "stamina", "presence", "manipulation", 
+        if force_category == "attribute" or (force_category is None and stat in ["strength", "dexterity", "stamina", "presence", "manipulation", 
+                   "composure", "intelligence", "wits", "resolve"]):
+            # If forced as attribute but not valid, error
+            if force_category == "attribute" and stat not in ["strength", "dexterity", "stamina", "presence", "manipulation", 
                    "composure", "intelligence", "wits", "resolve"]:
+                self.caller.msg(f"'{stat}' is not a valid attribute. Valid attributes: strength, dexterity, stamina, presence, manipulation, composure, intelligence, wits, resolve")
+                return
+            
             if isinstance(value, int) and 1 <= value <= 5:
                 target.db.stats["attributes"][stat] = value
                 stat_set = True
@@ -388,10 +429,19 @@ class CmdStat(MuxCommand):
                 return
         
         # Check skills
-        elif stat in ["academics", "computer", "crafts", "investigation", "medicine", "occult", "politics", "science",
+        elif force_category == "skill" or (force_category is None and stat in ["academics", "computer", "crafts", "investigation", "medicine", "occult", "politics", "science",
                      "athletics", "brawl", "drive", "firearms", "larceny", "stealth", 
                      "survival", "weaponry", "animal_ken", "empathy", "expression", 
-                     "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"]:
+                     "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"]):
+            # If forced as skill but not valid, error
+            valid_skills = ["academics", "computer", "crafts", "investigation", "medicine", "occult", "politics", "science",
+                          "athletics", "brawl", "drive", "firearms", "larceny", "stealth", 
+                          "survival", "weaponry", "animal_ken", "empathy", "expression", 
+                          "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"]
+            if force_category == "skill" and stat not in valid_skills:
+                self.caller.msg(f"'{stat}' is not a valid skill. Use |y+lookup skills|n to see valid skills.")
+                return
+            
             if isinstance(value, int) and 0 <= value <= 5:
                 target.db.stats["skills"][stat] = value
                 stat_set = True
@@ -876,10 +926,12 @@ class CmdStat(MuxCommand):
             target.db.stats["specialties"][skill_name].append(value.strip().title())
             stat_set = True
         
-        # Check merits FIRST (allow setting for unapproved characters, redirect approved to XP system)
+        # Check merits (allow setting for unapproved characters, redirect approved to XP system)
         # Also handle instanced merits with colon syntax (e.g., unseen_sense:ghosts)
         # This must come before semantic power check since both use colons
-        if not stat_set:
+        # Run if: forced as merit OR no category specified
+        # Skip if: forced as power, bio, attribute, or skill (already handled)
+        if not stat_set and (force_category == "merit" or force_category is None):
             try:
                 from world.cofd.merits.general_merits import merits_dict as general_merits_dict
                 from world.cofd.merits.mage_merits import mage_merits_dict
@@ -912,6 +964,11 @@ class CmdStat(MuxCommand):
                     if base_merit_name in merit_dict:
                         merit = merit_dict[base_merit_name]
                         break
+                
+                # If merit/ was forced and merit not found, give error
+                if force_category == "merit" and not merit:
+                    self.caller.msg(f"No merit found named '{stat}'. Use |y+lookup merits|n to see available merits.")
+                    return
                 
                 if merit:
                     
@@ -1413,7 +1470,13 @@ class CmdStat(MuxCommand):
                 if dots > 0 or dots == "known":  # Show powers with dots or marked as known
                     # Clean up display name - remove prefixes and format properly
                     display_name = power_name
-                    if power_name.startswith('discipline_'):
+                    power_prefix = None
+                    
+                    # Handle colon-based semantic prefixes (spell:, endowment:, discipline_power:, devotion:, etc.)
+                    if ':' in power_name:
+                        power_prefix, display_name = power_name.split(':', 1)
+                    # Handle old underscore prefixes for backward compatibility
+                    elif power_name.startswith('discipline_'):
                         display_name = power_name[11:]  # Remove 'discipline_'
                     elif power_name.startswith('arcanum_'):
                         display_name = power_name[8:]   # Remove 'arcanum_'
@@ -1424,13 +1487,27 @@ class CmdStat(MuxCommand):
                     elif power_name.startswith('rite_'):
                         display_name = power_name[5:]   # Remove 'rite_'
                     
+                    # Add type indicator for vampire and werewolf semantic powers
+                    type_indicator = ""
+                    if power_prefix in ["discipline_power", "devotion", "coil", "scale", "theban", "cruac", "gift"]:
+                        type_indicators = {
+                            "discipline_power": "[Power]",
+                            "devotion": "[Dev]",
+                            "coil": "[Coil]",
+                            "scale": "[Scale]",
+                            "theban": "[Thb]",
+                            "cruac": "[Cru]",
+                            "gift": "[Gift]"
+                        }
+                        type_indicator = f" {type_indicators.get(power_prefix, '')}"
+                    
                     # Check if this template uses individual powers (no dots) or rated powers
                     if template in individual_power_templates or dots == "known":
                         # For Changeling/Promethean or semantic powers, just show the power name
-                        power_display = f"{display_name.replace('_', ' ').title()}"
+                        power_display = f"{display_name.replace('_', ' ').title()}{type_indicator}"
                     else:
                         # For others, show dots
-                        power_display = f"{display_name.replace('_', ' ').title()} ({dots} dots)"
+                        power_display = f"{display_name.replace('_', ' ').title()}{type_indicator} ({dots} dots)"
                     power_list.append(power_display)
             
             if power_list:

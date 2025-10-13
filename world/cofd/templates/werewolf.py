@@ -16,18 +16,15 @@ WEREWOLF_AUSPICES = [
     "cahalith", "elodoth", "irraka", "ithaeur", "rahu"
 ]
 
-# Valid renown types
-WEREWOLF_RENOWN = [
-    "cunning", "glory", "honor", "purity", "wisdom"
-]
+# Renown types for werewolves (used for gift acquisition)
+WEREWOLF_RENOWN = ["cunning", "glory", "honor", "purity", "wisdom"]
 
-# Valid werewolf gifts (prefix conflicting names only)
-WEREWOLF_GIFTS = [
-    "change", "gift_death", "dominance", "elements", "insight", "inspiration", "knowledge",
-    "nature", "rage", "gift_strength", "technology", "travel", "war", "weather"
-]
+# Note: Werewolf gifts (facets) are managed via the werewolf_gifts.py module
+# This uses the semantic syntax: +stat gift=shadow_gaze
+# Gifts are individual abilities learned based on renown
 
 # Valid werewolf rites (individual rites by rank)
+# Rites use semantic syntax: +stat rite=sacred_hunt
 WEREWOLF_RITES = [
     # Rank 1 Rites
     "chain_rage", "messenger", "banish", "harness_the_cycle", "totemic_empowerment",
@@ -43,6 +40,9 @@ WEREWOLF_RITES = [
     # Rank 5 Rites
     "devour", "forge_alliance", "urfarahs_bane", "veil", "great_hunt", "shadow_distortion", "unleash_shadow"
 ]
+
+# For template validation, we include rites but gifts are validated via werewolf_gifts.py
+WEREWOLF_POWERS = WEREWOLF_RITES  # Rites only for backward compatibility
 
 WEREWOLF_LODGES = [
     "Cull", "Cherufe", "Dream Eaters", "Dreaming", "Eaters of the Dead", "Hollow Rivers",
@@ -66,7 +66,7 @@ WEREWOLF_TEMPLATE = {
     "supernatural_power_stat": "primal_urge",
     "starting_power_stat": 1,
     "resource_pool": "essence",
-    "power_systems": WEREWOLF_GIFTS + WEREWOLF_RITES,
+    "power_systems": WEREWOLF_POWERS,
     "anchors": ["bone", "blood"],
     "merit_categories": ["physical", "social", "mental", "supernatural", "fighting", "style", "werewolf"],
     "field_validations": {
@@ -92,8 +92,8 @@ register_template(WEREWOLF_TEMPLATE)
 
 # Power list helper functions
 def get_primary_powers():
-    """Get list of primary werewolf powers (gifts rated 1-5)."""
-    return WEREWOLF_GIFTS.copy()
+    """Get list of primary werewolf powers (renown for gift acquisition)."""
+    return WEREWOLF_RENOWN.copy()
 
 
 def get_secondary_powers():
@@ -102,5 +102,10 @@ def get_secondary_powers():
 
 
 def get_all_powers():
-    """Get all werewolf powers for validation."""
-    return (WEREWOLF_GIFTS + WEREWOLF_RITES).copy() 
+    """Get all werewolf powers for validation (rites only - gifts validated separately)."""
+    return WEREWOLF_RITES.copy()
+
+
+def get_renown_types():
+    """Get list of werewolf renown types."""
+    return WEREWOLF_RENOWN.copy() 

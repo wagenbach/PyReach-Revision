@@ -24,10 +24,24 @@ from world.cofd.merits.minor_template_merits import (
     general_supernatural_merits
 )
 from world.cofd.templates.vampire import VAMPIRE_CLANS, VAMPIRE_COVENANTS, VAMPIRE_DISCIPLINES
+from world.cofd.templates.vampire_disciplines import (
+    ALL_DISCIPLINE_POWERS, DISCIPLINE_POWER_CATEGORIES,
+    ALL_COILS, COILS_BY_MYSTERY,
+    ALL_BLOODLINE_DISCIPLINES, BLOODLINE_DISCIPLINES_BY_BLOODLINE,
+    ALL_DEVOTIONS, DEVOTIONS_BY_TYPE
+)
+from world.cofd.templates.vampire_rituals import (
+    ALL_SCALES, SCALES_BY_MYSTERY,
+    ALL_THEBAN, THEBAN_BY_RANK,
+    ALL_CRUAC, CRUAC_BY_RANK,
+    ALL_BLOODLINE_DEVOTIONS_EXTENDED, PENUMBRAE_CRUAC
+)
 from world.cofd.templates.mage import MAGE_PATHS, MAGE_ORDERS, MAGE_ARCANA, LEGACIES_BY_PATH, LEGACIES_BY_ORDER, UNLINKED_LEGACIES, ALL_LEGACIES
 from world.cofd.templates.demon import DEMON_INCARNATIONS, DEMON_AGENDAS, DEMON_EMBEDS, DEMON_EXPLOITS
 from world.cofd.templates.mortal_plus import ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS
 from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_LODGES
+from world.cofd.templates.werewolf_gifts import ALL_WEREWOLF_GIFTS
+from world.cofd.templates.changeling_contracts import ALL_CHANGELING_CONTRACTS
 from world.cofd.templates.changeling import CHANGELING_SEEMINGS, CHANGELING_COURTS, CHANGELING_KITHS, CHANGELING_ENTITLEMENTS
 from world.cofd.templates.promethean import (
     PROMETHEAN_TRANSMUTATIONS, PROMETHEAN_ALEMBICS, 
@@ -37,7 +51,7 @@ from world.cofd.templates.legacy_promethean import ATHANORS_BY_LINEAGE
 from world.cofd.templates.hunter_endowments import ADVANCED_ARMORY, ANIMAL_CONTROL_KIT, BENEDICTION, CASTIGATION, DREAMSCAPE, ELIXIR, ENKOIMESIS, GOETIC_GOSPEL, HORROR_WITHIN, INFUSION, INK, INSPIRATION, LIVES_REMEMBERED, PERISPIRITISM, RELIC, RITES_DU_CHEVAL, RITES_OF_DENIAL, SEITOKUTEN, TELEINFORMATICS, THAUMATECHNOLOGY, XENOTECHNOLOGY
 from world.cofd.templates.hunter import HUNTER_CONSPIRACIES, HUNTER_COMPACTS, HUNTER_TACTICS, HUNTER_ENDOWMENTS
 from world.cofd.templates.mummy import MUMMY_GUILDS, MUMMY_DECREES, MUMMY_JUDGES, MUMMY_UTTERANCES, MUMMY_AFFINITIES
-from world.cofd.templates.geist import GEIST_BURDENS, GEIST_KREWE_TYPES, GEIST_HAUNTS, GEIST_KEYS, GEIST_CEREMONIES
+from world.cofd.templates.geist import GEIST_BURDENS, GEIST_KREWE_TYPES, GEIST_HAUNTS, GEIST_KEYS, GEIST_CEREMONIES, ALL_HAUNTS, GEIST_KEY_DETAILS
 from world.cofd.templates.deviant import DEVIANT_ORIGINS, DEVIANT_CLADES, DEVIANT_SCARS, DEVIANT_VARIATIONS, DEVIANT_ADAPTATIONS
 from world.cofd.templates.mortal_plus import (
     ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS, PROXIMUS_FAMILIES,
@@ -80,7 +94,23 @@ class LookupData:
         self.vampire_data = {
             'clans': VAMPIRE_CLANS,
             'covenants': VAMPIRE_COVENANTS,
-            'disciplines': VAMPIRE_DISCIPLINES
+            'disciplines': VAMPIRE_DISCIPLINES,
+            'discipline_powers': ALL_DISCIPLINE_POWERS,
+            'discipline_power_categories': DISCIPLINE_POWER_CATEGORIES,
+            'coils': ALL_COILS,
+            'coils_by_mystery': COILS_BY_MYSTERY,
+            'bloodline_disciplines': ALL_BLOODLINE_DISCIPLINES,
+            'bloodline_disciplines_by_bloodline': BLOODLINE_DISCIPLINES_BY_BLOODLINE,
+            'devotions': ALL_DEVOTIONS,
+            'devotions_by_type': DEVOTIONS_BY_TYPE,
+            'scales': ALL_SCALES,
+            'scales_by_mystery': SCALES_BY_MYSTERY,
+            'theban': ALL_THEBAN,
+            'theban_by_rank': THEBAN_BY_RANK,
+            'cruac': ALL_CRUAC,
+            'cruac_by_rank': CRUAC_BY_RANK,
+            'bloodline_devotions_extended': ALL_BLOODLINE_DEVOTIONS_EXTENDED,
+            'penumbrae_cruac': PENUMBRAE_CRUAC
         }
         
         self.mage_data = {
@@ -123,7 +153,9 @@ class LookupData:
             'burdens': GEIST_BURDENS,
             'krewe_types': GEIST_KREWE_TYPES,
             'haunts': GEIST_HAUNTS,
+            'haunts_detailed': ALL_HAUNTS,
             'keys': GEIST_KEYS,
+            'keys_detailed': GEIST_KEY_DETAILS,
             'ceremonies': GEIST_CEREMONIES
         }
         
@@ -140,12 +172,14 @@ class LookupData:
         self.werewolf_data = {
             'auspices': WEREWOLF_AUSPICES,
             'tribes': WEREWOLF_TRIBES,
-            'lodges': WEREWOLF_LODGES
+            'lodges': WEREWOLF_LODGES,
+            'gifts': ALL_WEREWOLF_GIFTS
         }
         
         # Changeling data
         self.changeling_data = {
             'seemings': CHANGELING_SEEMINGS,
+            'contracts': ALL_CHANGELING_CONTRACTS,
             'courts': CHANGELING_COURTS,
             'kiths': CHANGELING_KITHS,
             'entitlements': CHANGELING_ENTITLEMENTS
@@ -275,6 +309,62 @@ class LookupData:
         for discipline in self.vampire_data['disciplines']:
             if search_term in discipline.lower():
                 results.append(('discipline', discipline, None))
+        
+        # Search discipline powers
+        for power_key, power_data in self.vampire_data['discipline_powers'].items():
+            if (search_term in power_key.lower() or 
+                search_term in power_data['name'].lower() or
+                search_term in power_data['description'].lower()):
+                results.append(('discipline_power', power_data['name'], power_data))
+        
+        # Search ritual powers (Scales, Theban, Cruac)
+        for ritual_key, ritual_data in self.vampire_data['scales'].items():
+            if (search_term in ritual_key.lower() or
+                search_term in ritual_data['name'].lower() or
+                search_term in ritual_data['description'].lower()):
+                results.append(('ritual', ritual_data['name'], ritual_data))
+        
+        for miracle_key, miracle_data in self.vampire_data['theban'].items():
+            if (search_term in miracle_key.lower() or
+                search_term in miracle_data['name'].lower() or
+                search_term in miracle_data['description'].lower()):
+                results.append(('ritual', miracle_data['name'], miracle_data))
+        
+        for rite_key, rite_data in self.vampire_data['cruac'].items():
+            if (search_term in rite_key.lower() or
+                search_term in rite_data['name'].lower() or
+                search_term in rite_data['description'].lower()):
+                results.append(('ritual', rite_data['name'], rite_data))
+        
+        # Search werewolf gifts
+        for gift_key, gift_data in self.werewolf_data['gifts'].items():
+            if (search_term in gift_key.lower() or
+                search_term in gift_data['name'].lower() or
+                search_term in gift_data['description'].lower()):
+                results.append(('gift', gift_data['name'], gift_data))
+        
+        # Search changeling contracts
+        for contract_key, contract_data in self.changeling_data['contracts'].items():
+            if (search_term in contract_key.lower() or
+                search_term in contract_data['name'].lower() or
+                search_term in contract_data['description'].lower()):
+                results.append(('contract', contract_data['name'], contract_data))
+        
+        # Search geist keys
+        for key_name, key_data in self.geist_data['keys_detailed'].items():
+            if (search_term in key_name.lower() or
+                search_term in key_data['name'].lower() or
+                search_term in key_data['description'].lower()):
+                results.append(('key', key_data['name'], key_data))
+        
+        # Search geist haunts
+        for haunt_name, haunt_powers in self.geist_data['haunts_detailed'].items():
+            for power_key, power_data in haunt_powers.items():
+                if (search_term in haunt_name.lower() or
+                    search_term in power_key.lower() or
+                    search_term in power_data['name'].lower() or
+                    search_term in power_data['description'].lower()):
+                    results.append(('haunt', power_data['name'], power_data))
         
         # Search arcana
         for arcanum in self.mage_data['arcana']:
@@ -450,22 +540,35 @@ def get_skill_description(skill_name):
 def get_discipline_description(discipline_name):
     """Get description for a vampire discipline."""
     descriptions = {
+        # Standard clan disciplines
         "animalism": "Command and communicate with animals",
         "auspex": "Supernatural senses and perception",
-        "bloodworking": "Manipulate and weaponize blood",
-        "cachexy": "Inflict disease and decay",
         "celerity": "Supernatural speed and reflexes",
-        "coils of the dragon": "Ordo Dracul transcendence techniques",
-        "cruac": "Circle of the Crone blood sorcery",
         "dominate": "Mental control and command",
         "majesty": "Supernatural presence and awe",
         "nightmare": "Inspire terror and fear",
         "obfuscate": "Concealment and stealth",
-        "praestantia": "Enhanced physical capabilities",
         "protean": "Shapechanging and transformation",
         "resilience": "Supernatural toughness",
-        "theban sorcery": "Lancea et Sanctum divine magic",
-        "vigor": "Supernatural strength"
+        "vigor": "Supernatural strength",
+        # Bloodline disciplines
+        "bloodworking": "Manipulate and weaponize blood (bloodline)",
+        "cachexy": "Inflict disease and decay (Morbus bloodline)",
+        "crochan": "Blood healing and oaths (Bron bloodline)",
+        "dead_signal": "God-Machine connection (Jharana bloodline)",
+        "praestantia": "Enhanced physical capabilities (bloodline)",
+        "chary": "Shadow manipulation (bloodline)",
+        "vitiate": "Corruption and decay (bloodline)",
+        # Covenant disciplines (rated 1-5)
+        "cruac": "Circle of the Crone blood sorcery (rated 1-5)",
+        "theban_sorcery": "Lancea et Sanctum divine magic (rated 1-5)",
+        # Ordo Dracul (these shouldn't appear here but included for completeness)
+        "coils of the dragon": "Ordo Dracul transcendence techniques",
+        "coil_of_the_ascendant": "Overcome daysleep and sunlight (Ordo Dracul)",
+        "coil_of_the_voivode": "Blood bond mastery (Ordo Dracul)",
+        "coil_of_the_wyrm": "Frenzy mastery (Ordo Dracul)",
+        "coil_of_zirnitra": "Supernatural merits (Ordo Dracul)",
+        "coil_of_ziva": "Humanity transcendence (Ordo Dracul)"
     }
     return descriptions.get(discipline_name, "Vampire supernatural power")
 

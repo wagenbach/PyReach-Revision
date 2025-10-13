@@ -6,6 +6,14 @@ Handles semantic power syntax and power validation.
 from world.cofd.templates.promethean import ALL_ALEMBICS, PROMETHEAN_BESTOWMENTS
 from world.cofd.templates.hunter_endowments import ALL_ENDOWMENT_POWERS
 from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
+from world.cofd.templates.vampire_disciplines import (
+    ALL_DISCIPLINE_POWERS, ALL_DEVOTIONS
+)
+from world.cofd.templates.vampire_rituals import (
+    ALL_SCALES, ALL_THEBAN, ALL_CRUAC
+)
+from world.cofd.templates.werewolf_gifts import ALL_WEREWOLF_GIFTS
+from world.cofd.templates.changeling_contracts import ALL_CHANGELING_CONTRACTS
 
 
 def get_valid_semantic_powers(power_type):
@@ -36,6 +44,7 @@ def get_valid_semantic_powers(power_type):
             "urfarahs_bane", "veil", "great_hunt", "shadow_distortion", "unleash_shadow"
         ],
         "ritual": [
+            # Legacy keyword - kept for backward compatibility, but specific keywords preferred
             "ban_of_the_spiteful_bastard", "mantle_of_amorous_fire", "pangs_of_proserpina", 
             "pool_of_forbidden_truths", "rigor_mortis", "cheval", "mantle_of_the_beasts_breath", 
             "the_hydras_vitae", "shed_the_virulent_bowels", "curse_of_aphrodites_favor", 
@@ -53,6 +62,14 @@ def get_valid_semantic_powers(power_type):
             "curse_of_isolation", "gift_of_lazarus", "great_prophecy", "stigmata", "trials_of_job", 
             "apocalypse", "the_judgment_fast", "orison_of_voices", "sins_of_the_ancestors", "transubstatiation"
         ],
+        "discipline_power": list(ALL_DISCIPLINE_POWERS.keys()),
+        "devotion": list(ALL_DEVOTIONS.keys()),
+        "coil": list(ALL_DISCIPLINE_POWERS.keys()),  # Coils are in ALL_DISCIPLINE_POWERS
+        "scale": list(ALL_SCALES.keys()),
+        "theban": list(ALL_THEBAN.keys()),
+        "cruac": list(ALL_CRUAC.keys()),
+        "gift": list(ALL_WEREWOLF_GIFTS.keys()),
+        "contract": list(ALL_CHANGELING_CONTRACTS.keys()),
         "spell": list(ALL_MAGE_SPELLS.keys()),
         "alembic": ALL_ALEMBICS,
         "bestowment": [b.lower().replace(" ", "_") for b in PROMETHEAN_BESTOWMENTS],
@@ -76,7 +93,14 @@ def get_template_requirements(power_type):
         "key": ["geist"],
         "ceremony": ["geist"],
         "rite": ["werewolf"],
-        "ritual": ["vampire"],
+        "ritual": ["vampire"],  # Legacy keyword for backward compatibility
+        "discipline_power": ["vampire"],
+        "devotion": ["vampire"],
+        "coil": ["vampire"],
+        "scale": ["vampire"],
+        "theban": ["vampire"],
+        "cruac": ["vampire"],
+        "gift": ["werewolf"],
         "contract": ["changeling"],
         "spell": ["mage", "legacy_mage"],
         "alembic": ["promethean"],
@@ -89,11 +113,12 @@ def get_template_requirements(power_type):
 
 def handle_semantic_power(character, power_type, power_name, value, caller):
     """
-    Handle semantic power syntax like key=beasts, ceremony=pass_on, spell=telekinesis, alembic=purification, endowment=hellfire.
+    Handle semantic power syntax like key=beasts, ceremony=pass_on, spell=telekinesis, etc.
     
     Args:
         character: The character object
-        power_type (str): Type of power (key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment)
+        power_type (str): Type of power (key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment,
+                                          discipline_power, devotion, coil, scale, theban, cruac)
         power_name (str): Name of the specific power
         value: The value to set (usually "known" or 1)
         caller: The caller object (for messages)
@@ -108,7 +133,7 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
     
     # Validate power type
     if not valid_powers:
-        return False, f"Invalid power type: {power_type}\nValid types: key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment"
+        return False, f"Invalid power type: {power_type}\nValid types: key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment, discipline_power, devotion, coil, scale, theban, cruac"
     
     # Validate power name
     if power_name not in valid_powers:
@@ -116,13 +141,17 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
             return False, f"Invalid spell: {power_name}\nUse +lookup spells to browse spells or +lookup <spell_name> for details. There are {len(valid_powers)} spells available."
         elif power_type == "endowment":
             return False, f"Invalid endowment: {power_name}\nUse +lookup endowments to browse endowments or +lookup <endowment_name> for details. There are {len(valid_powers)} endowments available."
+        elif power_type in ["discipline_power", "devotion", "coil"]:
+            return False, f"Invalid {power_type.replace('_', ' ')}: {power_name}\nUse +lookup {power_type.split('_')[0]}s to browse or +lookup <power_name> for details. There are {len(valid_powers)} available."
+        elif power_type in ["scale", "theban", "cruac"]:
+            return False, f"Invalid {power_type}: {power_name}\nUse +lookup {power_type} to browse or +lookup <power_name> for details. There are {len(valid_powers)} available."
         else:
             return False, f"Invalid {power_type}: {power_name}\nValid {power_type}s: {', '.join(sorted(valid_powers)[:10])}..."
     
     # Check template compatibility
     required_templates = get_template_requirements(power_type)
     if required_templates and character_template.lower() not in required_templates:
-        return False, f"{power_type.title()}s are only available to {', '.join(required_templates).title()} characters.\nYour template is: {character_template}"
+        return False, f"{power_type.title().replace('_', ' ')}s are only available to {', '.join(required_templates).title()} characters.\nYour template is: {character_template}"
     
     # Handle different power types
     if power_type == "key":
@@ -133,6 +162,7 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
         # Keys are known/unknown - semantic syntax means they have the key
         character.db.geist_stats["keys"][power_name.replace("_", " ")] = True
         return True, f"Set {character.name} to have the {power_name.replace('_', ' ').title()} key."
+    
     elif power_type == "spell":
         # Spells are stored in powers with spell: prefix as "known"
         if "powers" not in character.db.stats:
@@ -149,6 +179,7 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
             return True, f"Set {character.name} to know {spell_data['name']} ({arcana_name} {dots_str})."
         else:
             return True, f"Set {character.name} to know {power_name.replace('_', ' ').title()} (spell)."
+    
     elif power_type == "endowment":
         # Endowments are stored in powers with endowment: prefix as "known"
         # Endowment keys use spaces, not underscores
@@ -165,8 +196,62 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
             return True, f"Set {character.name} to know {power_data['name']} ({power_data['endowment_type'].replace('_', ' ').title()}){cost_info}."
         else:
             return True, f"Set {character.name} to know {power_name.title()} (endowment)."
+    
+    elif power_type in ["discipline_power", "devotion", "coil", "scale", "theban", "cruac", "gift", "contract"]:
+        # Vampire-specific and werewolf-specific powers - store with prefixes for organization
+        if "powers" not in character.db.stats:
+            character.db.stats["powers"] = {}
+        
+        character.db.stats["powers"][f"{power_type}:{power_name}"] = "known"
+        
+        # Get power data for detailed feedback
+        power_data = None
+        display_type = ""
+        
+        if power_type == "discipline_power":
+            from world.cofd.templates.vampire_disciplines import get_discipline_power
+            power_data = get_discipline_power(power_name)
+            display_type = "Discipline Power"
+        elif power_type == "devotion":
+            if power_name in ALL_DEVOTIONS:
+                power_data = ALL_DEVOTIONS[power_name]
+            display_type = "Devotion"
+        elif power_type == "coil":
+            if power_name in ALL_DISCIPLINE_POWERS:
+                power_data = ALL_DISCIPLINE_POWERS[power_name]
+            display_type = "Coil of the Dragon"
+        elif power_type == "scale":
+            if power_name in ALL_SCALES:
+                power_data = ALL_SCALES[power_name]
+            display_type = "Scale of the Dragon"
+        elif power_type == "theban":
+            if power_name in ALL_THEBAN:
+                power_data = ALL_THEBAN[power_name]
+            display_type = "Theban Sorcery"
+        elif power_type == "cruac":
+            if power_name in ALL_CRUAC:
+                power_data = ALL_CRUAC[power_name]
+            display_type = "Cruac Rite"
+        elif power_type == "gift":
+            if power_name in ALL_WEREWOLF_GIFTS:
+                power_data = ALL_WEREWOLF_GIFTS[power_name]
+            display_type = "Werewolf Gift"
+        elif power_type == "contract":
+            if power_name in ALL_CHANGELING_CONTRACTS:
+                power_data = ALL_CHANGELING_CONTRACTS[power_name]
+            display_type = "Changeling Contract"
+        
+        if power_data and 'name' in power_data:
+            # Add renown info for gifts
+            if power_type == "gift" and 'renown' in power_data:
+                renown = power_data['renown'].title()
+                return True, f"Set {character.name} to know {power_data['name']} ({renown} {display_type})."
+            return True, f"Set {character.name} to know {power_data['name']} ({display_type})."
+        else:
+            return True, f"Set {character.name} to know {power_name.replace('_', ' ').title()} ({display_type})."
+    
     else:
-        # Ceremonies, rites, rituals, contracts, alembics, bestowments go to regular powers as known abilities (stored as 1)
+        # Ceremonies, rites, rituals (legacy), contracts, alembics, bestowments go to regular powers as known abilities (stored as 1)
         if "powers" not in character.db.stats:
             character.db.stats["powers"] = {}
         
