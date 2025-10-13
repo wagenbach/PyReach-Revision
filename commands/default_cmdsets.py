@@ -40,7 +40,6 @@ from .admin_area_init import CmdInitAreaManager
 from .mystery_commands import CmdMystery
 from .storyteller_admin import CmdStoryteller, CmdStorytellerWho
 from .jobs.jobs_commands import CmdJobs
-from commands.CmdFinger import CmdFinger
 from commands.commonmux.commonmux_cmdset import CommonMuxCmdSet
 from .lookup import CmdLookup
 from .voting import CmdVote, CmdRecommend, CmdVoteAdmin
@@ -87,7 +86,6 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdRecalc())
         self.add(CmdAspiration())
         self.add(CmdIntegrity())
-        self.add(CmdFinger())
         self.add(CmdLookup())
         self.add(CmdLegacy())
         # Voting and recommendations

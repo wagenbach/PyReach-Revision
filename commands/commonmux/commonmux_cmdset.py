@@ -9,21 +9,21 @@ from evennia import CmdSet
 from commands.commonmux.CmdAlias import CmdAlias
 from commands.commonmux.CmdAlts import CmdAlts
 from commands.commonmux.CmdEmit import CmdEmit
-from commands.commonmux.CmdGain import CmdGain
 from commands.commonmux.CmdLanguage import CmdLanguage
 from commands.commonmux.CmdOOCChat import CmdOOCChat, CmdUnpuppet
 from commands.commonmux.CmdPage import CmdPage
-from commands.commonmux.CmdPool import CmdPool
+from commands.commonmux.CmdPool import CmdPool, CmdGain, CmdSpend
 from commands.commonmux.CmdPose import CmdPose
 from commands.commonmux.CmdSay import CmdSay
 from commands.commonmux.CmdShortDesc import CmdShortDesc
-from commands.commonmux.CmdSpend import CmdSpend
 from commands.commonmux.CmdStaff import CmdStaff
 from commands.commonmux.CmdTableTalk import CmdTableTalk
 from commands.commonmux.CmdTxt import CmdText
 from commands.commonmux.CmdWatch import CmdWatch
 from commands.commonmux.CmdWeather import CmdWeather
 from commands.commonmux.CmdWho import CmdWho, CmdCensus
+from commands.commonmux.notes import CmdNote
+from commands.commonmux.CmdFinger import CmdFinger
 
 
 class CommonMuxCmdSet(CmdSet):
@@ -41,6 +41,7 @@ class CommonMuxCmdSet(CmdSet):
         self.add(CmdAlias())
         self.add(CmdAlts())
         self.add(CmdEmit())
+        self.add(CmdFinger())
         self.add(CmdOOCChat())
         self.add(CmdPose())
         self.add(CmdSay())
@@ -58,6 +59,7 @@ class CommonMuxCmdSet(CmdSet):
         self.add(CmdWeather())
         self.add(CmdWho())
         self.add(CmdCensus())
+        self.add(CmdNote())
         
         # Game mechanics commands
         self.add(CmdPool())

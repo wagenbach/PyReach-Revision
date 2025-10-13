@@ -11,6 +11,10 @@ class CmdNote(MuxCommand):
     Usage:
         +note [title]/[category]=[Note Text]     - Create a new note
         +note                                    - View all your notes
+        +note [title]                            - View a specific note
+        +note [player]                           - Staff: View all notes on a player
+        +note [player]=[title]                   - Staff: View specific note on a player
+        +note [player]/[title]/[category]=[text] - Staff: Create note for a player
         +note/edit [title]=[New text]           - Edit an existing note
         +note/delete [title]                    - Delete a note (player or staff)
         +note/approve [character]=[title]       - Approve a note (staff only, locks editing)
@@ -25,6 +29,10 @@ class CmdNote(MuxCommand):
     Examples:
         +note My Backstory/Background=I was born in a small town...
         +note
+        +note My Backstory                       - View your "My Backstory" note
+        +note Alice                              - Staff: View all of Alice's notes
+        +note Alice=My Backstory                 - Staff: View Alice's "My Backstory" note
+        +note Alice/New Note/Background=Text...  - Staff: Create note for Alice
         +note/edit My Backstory=I was actually born in a large city...
         +note/delete My Backstory
         +note/show My Backstory
@@ -40,11 +48,11 @@ class CmdNote(MuxCommand):
         """Execute the command"""
         if not self.switches:
             if not self.args:
-                # View all notes
+                # View all your notes
                 self.view_notes()
             else:
-                # Create a new note
-                self.create_note()
+                # Parse args to determine what action to take
+                self.parse_no_switch_args()
         else:
             switch = self.switches[0].lower()
             
@@ -60,6 +68,26 @@ class CmdNote(MuxCommand):
                 self.show_note()
             else:
                 self.caller.msg("Invalid switch. See 'help +note' for usage.")
+    
+    def parse_no_switch_args(self):
+        """Parse args when no switch is provided to determine action."""
+        # Count slashes to help determine format
+        slash_count = self.args.count("/")
+        has_equals = "=" in self.args
+        
+        if slash_count == 2 and has_equals:
+            # Format: player/title/category=text (staff creating note for player)
+            self.staff_create_note()
+        elif slash_count == 1 and has_equals:
+            # Format: title/category=text (player creating note)
+            self.create_note()
+        elif has_equals and slash_count == 0:
+            # Format: player=title (staff viewing specific note)
+            self.staff_view_specific_note()
+        elif not has_equals and slash_count == 0:
+            # Format: [title or player name]
+            # Try to find as note title first, then as player name if staff
+            self.view_note_or_player()
     
     def create_note(self):
         """Create a new note: +note [title]/[category]=[Note Text]"""
@@ -138,8 +166,245 @@ class CmdNote(MuxCommand):
             )
         
         output = ["|wYour Notes|n", str(table)]
-        output.append("\nUse '+note/show <title>' to view the full text of a note.")
+        output.append("\nUse '+note <title>' to view the full text of a note.")
         self.caller.msg("\n".join(output))
+    
+    def view_note_or_player(self):
+        """View a specific note on self, or view all notes on a player (staff)."""
+        search_term = self.args.strip()
+        
+        # First, try to find as a note on the caller
+        notes = self.caller.db.notes or []
+        found_note = None
+        for note in notes:
+            if note["title"].lower() == search_term.lower():
+                found_note = note
+                break
+        
+        if found_note:
+            # Found a note with this title on caller
+            self.display_single_note(found_note, self.caller)
+            return
+        
+        # Not found as a note title - if staff, try as player name
+        if self.caller.check_permstring("builders"):
+            self.staff_view_all_notes(search_term)
+        else:
+            self.caller.msg(f"You don't have a note titled '{search_term}'.")
+    
+    def display_single_note(self, note, character):
+        """Display a single note."""
+        output = []
+        output.append("|w" + "=" * 78 + "|n")
+        output.append(f"|wNote:|n {note['title']}")
+        output.append(f"|wCategory:|n {note['category']}")
+        output.append(f"|wCharacter:|n {character.name}")
+        output.append(f"|wCreated:|n {note['created']}")
+        output.append(f"|wLast Modified:|n {note['modified']}")
+        
+        if note["approved"]:
+            output.append(f"|wStatus:|n |gApproved|n")
+            if "approved_by" in note:
+                output.append(f"|wApproved by:|n {note['approved_by']} on {note.get('approved_date', 'Unknown')}")
+        else:
+            output.append(f"|wStatus:|n |yDraft|n")
+        
+        output.append("|w" + "=" * 78 + "|n")
+        output.append(note["text"])
+        output.append("|w" + "=" * 78 + "|n")
+        
+        self.caller.msg("\n".join(output))
+    
+    def staff_view_all_notes(self, player_name):
+        """Staff: View all notes on a player."""
+        if not self.caller.check_permstring("builders"):
+            self.caller.msg("Only staff can view other players' notes.")
+            return
+        
+        # Search for the character
+        character = search_object(player_name)
+        
+        if not character:
+            self.caller.msg(f"Could not find character '{player_name}'.")
+            return
+        
+        if len(character) > 1:
+            self.caller.msg(f"Multiple matches found for '{player_name}'. Please be more specific.")
+            return
+        
+        character = character[0]
+        
+        # Check if it's a character object
+        if not character.has_account:
+            self.caller.msg(f"'{player_name}' is not a character.")
+            return
+        
+        notes = character.db.notes or []
+        
+        if not notes:
+            self.caller.msg(f"{character.name} has no notes.")
+            return
+        
+        # Create a table for displaying notes
+        table = evtable.EvTable(
+            "|wTitle|n",
+            "|wCategory|n",
+            "|wStatus|n",
+            "|wCreated|n",
+            border="cells",
+            width=78
+        )
+        
+        for note in notes:
+            status = "|gApproved|n" if note["approved"] else "|yDraft|n"
+            table.add_row(
+                note["title"],
+                note["category"],
+                status,
+                note["created"]
+            )
+        
+        output = [f"|w{character.name}'s Notes|n", str(table)]
+        output.append(f"\nUse '+note {character.name}=<title>' to view the full text of a note.")
+        self.caller.msg("\n".join(output))
+    
+    def staff_view_specific_note(self):
+        """Staff: View a specific note on a player: +note [player]=[title]"""
+        if not self.caller.check_permstring("builders"):
+            self.caller.msg("Only staff can view other players' notes.")
+            return
+        
+        if "=" not in self.args:
+            self.caller.msg("Usage: +note [player]=[title]")
+            return
+        
+        try:
+            player_name, title = self.args.split("=", 1)
+            player_name = player_name.strip()
+            title = title.strip()
+        except ValueError:
+            self.caller.msg("Usage: +note [player]=[title]")
+            return
+        
+        if not player_name or not title:
+            self.caller.msg("Both player name and note title must be provided.")
+            return
+        
+        # Search for the character
+        character = search_object(player_name)
+        
+        if not character:
+            self.caller.msg(f"Could not find character '{player_name}'.")
+            return
+        
+        if len(character) > 1:
+            self.caller.msg(f"Multiple matches found for '{player_name}'. Please be more specific.")
+            return
+        
+        character = character[0]
+        
+        # Check if it's a character object
+        if not character.has_account:
+            self.caller.msg(f"'{player_name}' is not a character.")
+            return
+        
+        notes = character.db.notes or []
+        
+        # Find the note
+        found_note = None
+        for note in notes:
+            if note["title"].lower() == title.lower():
+                found_note = note
+                break
+        
+        if not found_note:
+            self.caller.msg(f"{character.name} doesn't have a note titled '{title}'.")
+            return
+        
+        # Display the note
+        self.display_single_note(found_note, character)
+    
+    def staff_create_note(self):
+        """Staff: Create a note for a player: +note [player]/[title]/[category]=[text]"""
+        if not self.caller.check_permstring("builders"):
+            self.caller.msg("Only staff can create notes for other players.")
+            return
+        
+        # Should have format: player/title/category=text
+        if self.args.count("/") != 2 or "=" not in self.args:
+            self.caller.msg("Usage: +note [player]/[title]/[category]=[text]")
+            return
+        
+        try:
+            # Split on = first
+            lhs, rhs = self.args.split("=", 1)
+            # Then split lhs on /
+            parts = lhs.split("/")
+            if len(parts) != 3:
+                raise ValueError
+            
+            player_name = parts[0].strip()
+            title = parts[1].strip()
+            category = parts[2].strip()
+            text = rhs.strip()
+        except ValueError:
+            self.caller.msg("Usage: +note [player]/[title]/[category]=[text]")
+            return
+        
+        if not player_name or not title or not category or not text:
+            self.caller.msg("All fields (player, title, category, and text) must be provided.")
+            return
+        
+        # Search for the character
+        character = search_object(player_name)
+        
+        if not character:
+            self.caller.msg(f"Could not find character '{player_name}'.")
+            return
+        
+        if len(character) > 1:
+            self.caller.msg(f"Multiple matches found for '{player_name}'. Please be more specific.")
+            return
+        
+        character = character[0]
+        
+        # Check if it's a character object
+        if not character.has_account:
+            self.caller.msg(f"'{player_name}' is not a character.")
+            return
+        
+        # Initialize notes if not exists
+        if not character.db.notes:
+            character.db.notes = []
+        
+        # Check if a note with this title already exists
+        existing_note = None
+        for note in character.db.notes:
+            if note["title"].lower() == title.lower():
+                existing_note = note
+                break
+        
+        if existing_note:
+            self.caller.msg(f"{character.name} already has a note titled '{title}'. Use +note/approve to approve it or have them edit it.")
+            return
+        
+        # Create the note
+        new_note = {
+            "title": title,
+            "category": category,
+            "text": text,
+            "approved": False,
+            "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "modified": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "created_by_staff": self.caller.name
+        }
+        
+        character.db.notes.append(new_note)
+        self.caller.msg(f"|gNote created for {character.name}:|n '{title}' in category '{category}'")
+        
+        # Notify the character owner if they're online
+        if character.sessions.all():
+            character.msg(f"|gStaff member {self.caller.name} has created a note for you: '{title}'|n")
     
     def edit_note(self):
         """Edit an existing note: +note/edit [title]=[New text]"""

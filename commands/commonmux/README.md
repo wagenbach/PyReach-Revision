@@ -58,20 +58,20 @@ commonmux/
 ├── CmdAlias.py                 # Alias management
 ├── CmdAlts.py                  # Alt character management
 ├── CmdEmit.py                  # Room emits
-├── CmdGain.py                  # Resource gain
+├── CmdFinger.py                # OOC/IC Character information
 ├── CmdLanguage.py              # Language system
 ├── CmdPage.py                  # Private messaging
-├── CmdPool.py                  # Dice pool management
+├── CmdPool.py                  # Resource/power point management
 ├── CmdPose.py                  # Posing/emoting
 ├── CmdSay.py                   # In-character speech
-├── CmdShortDesc.py             # Short descriptions
-├── CmdSpend.py                 # Resource spending
+├── CmdShortDesc.py             # Short character descriptions
 ├── CmdStaff.py                 # Staff roster
 ├── CmdTableTalk.py             # OOC table talk
 ├── CmdTxt.py                   # Text messages
 ├── CmdWatch.py                 # Watching/monitoring
 ├── CmdWeather.py               # Weather system
-└── CmdWho.py                   # Who list and census
+├── CmdWho.py                   # Who list and census
+└── notes.py                    # Set notes on characters
 ```
 
 ## Integration
@@ -247,7 +247,7 @@ If this is not something you feel is necessary, then just ignore the above instr
 
 You can disable this command in default_cmdsets.py if your game does not take place in the modern day. Nothing else is reliant on this command and it should not break anything to remove it.
 
-#### CmdGain, CmdPool, CmdSpend
+#### CmdPool
 
 As far as I know, this requires the characters.py typeclass from PyReach since all pools are based around Chronicles of Darkness 1st and 2nd editions. We derive most of the values for these pools from stats, which is done through the caller.db.stats.get() method. Willpower is derived from the sum of attributes Resolve + Composure, and each power stat pool (blood, essence, mana, etc.) is derived based on the supernatural power advantage. If you are not using PyReach, disable these commands.
 
@@ -277,7 +277,7 @@ class CommonMuxCmdSet(CmdSet):
 Commands are organized by functionality in the commandset for better maintainability:
 - Character and roleplay commands (alias, alts, emit, pose, say, etc.)
 - Communication commands (page, text)
-- Information and social commands (staff, watch, weather, who, census)
+- Information and social commands (staff, finger, watch, weather, who, census)
 - Game mechanics commands (pool, spend, gain, language)
 
 ## See Also
