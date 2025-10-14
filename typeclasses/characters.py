@@ -411,6 +411,9 @@ class Character(ObjectParent, DefaultCharacter):
             else:
                 caller.msg("No derived stats could be calculated with current attributes.")
         
+        # Mark stats as modified so Evennia persists the changes
+        self.db.stats = self.db.stats
+        
         return updated_stats
 
     def calculate_power_pools(self, caller=None):
@@ -478,6 +481,10 @@ class Character(ObjectParent, DefaultCharacter):
         # Send message to caller if provided
         if caller and updated_pools:
             caller.msg(f"Updated power pools: {', '.join(updated_pools)}")
+        
+        # Mark stats as modified so Evennia persists the changes
+        if updated_pools:
+            self.db.stats = self.db.stats
         
         return updated_pools
 

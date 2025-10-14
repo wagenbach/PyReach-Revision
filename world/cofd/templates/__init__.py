@@ -48,6 +48,7 @@ from . import legacy_werewolf
 from . import legacy_geist
 from . import legacy_promethean
 from . import legacy_hunter
+from . import legacy_changingbreeds
 
 
 # Template power list utilities
@@ -82,6 +83,7 @@ def get_template_primary_powers(template_name):
         'legacy_geist': legacy_geist,
         'legacy_promethean': legacy_promethean,
         'legacy_hunter': legacy_hunter,
+        'legacy_changingbreeds': legacy_changingbreeds,
     }
     
     module = template_modules.get(template_name)
@@ -127,6 +129,7 @@ def get_template_secondary_powers(template_name):
         'legacy_geist': legacy_geist,
         'legacy_promethean': legacy_promethean,
         'legacy_hunter': legacy_hunter,
+        'legacy_changingbreeds': legacy_changingbreeds,
     }
     
     module = template_modules.get(template_name)
@@ -167,6 +170,7 @@ def get_template_all_powers(template_name):
         'legacy_geist': legacy_geist,
         'legacy_promethean': legacy_promethean,
         'legacy_hunter': legacy_hunter,
+        'legacy_changingbreeds': legacy_changingbreeds,
     }
     
     module = template_modules.get(template_name)

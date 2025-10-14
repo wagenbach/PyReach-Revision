@@ -57,8 +57,8 @@ Set and manage all character statistics including bio fields.
 
 **Template-Specific Fields:**
 - **Vampire:** mask, dirge, clan, covenant
-- **Werewolf:** bone, blood, auspice, tribe
-- **Mage:** path, order
+- **Werewolf:** bone, blood, auspice, tribe, deed_name
+- **Mage:** path, order, shadow_name, cabal
 - **Changeling:** seeming, court, kith
 - **Geist:** burden, archetype, krewe
 - **And more** for each Chronicles of Darkness splat
@@ -148,6 +148,42 @@ Set and fulfill character aspirations for beats.
 +aspiration/add 1 Find my missing sister
 +aspiration/fulfill 1
 ```
+
+---
+
+### +shift - Werewolf Shapeshifting
+Transform between the five forms of the Uratha (Werewolf characters only).
+
+```
++shift <form>                - Transform into specified form
++shift/list                  - Show all available forms
++shift/info <form>           - Show detailed form information
++form                        - Quick reference for current form
+```
+
+**The Five Forms:**
+- **Hishu** - Human form (default, only form allowing XP spending)
+- **Dalu** - Near-Man form (Str +1, Sta +1, Man -1, Size +1)
+- **Gauru** - War form (Str +3, Dex +1, Sta +2, Size +2, LIMITED DURATION)
+- **Urshul** - Near-Wolf form (Str +2, Dex +2, Sta +2, Man -1, Size +1)
+- **Urhan** - Wolf form (Dex +2, Sta +1, Man -1, Size -1)
+
+**Important Restrictions:**
+- Can only use `+stat`, `+xp/spend`, and `+xp/buy` while in Hishu form
+- Form bonuses are temporary - returning to Hishu restores base stats
+- Gauru form has limited duration (Stamina + Primal Urge turns)
+- Derived stats (Health, Speed, Defense, Initiative) auto-recalculate
+
+**Examples:**
+```
++shift gauru        - Transform into war form
++shift hishu        - Return to human form
++shift/list         - See all forms
++shift/info urshul  - Learn about near-wolf form
++form               - Check current form
+```
+
+**See Also:** [Shapeshifting Guide](../commands/SHAPESHIFTING_GUIDE.md) for complete details.
 
 ---
 
@@ -858,6 +894,7 @@ Enable/disable legacy mode for 1st Edition Chronicles of Darkness.
 | `+xp` | Experience management |
 | `+pool` | Manage resource pools |
 | `+health` | Track health/damage |
+| `+shift` | Werewolf shapeshifting |
 | `+combat` | Combat system |
 | `+mystery` | Investigation system |
 | `+hangouts` | Travel to gathering places |

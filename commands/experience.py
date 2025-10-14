@@ -240,6 +240,13 @@ class CmdExperience(Command):
         if "=" not in self.remaining_args:
             self.caller.msg("Usage: +xp/spend <stat>=<dots>")
             return
+        
+        # Check if werewolf character is in a form that allows stat modification
+        from commands.shapeshifting import can_modify_stats_while_shifted
+        can_modify, reason = can_modify_stats_while_shifted(self.caller)
+        if not can_modify:
+            self.caller.msg(f"|r{reason}|n")
+            return
             
         stat_name, target_dots_str = self.remaining_args.split("=", 1)
         stat_name = stat_name.strip().lower()
@@ -329,6 +336,13 @@ class CmdExperience(Command):
         """Purchase a merit with experience."""
         if not self.remaining_args:
             self.caller.msg("Usage: +xp/buy <merit>=[dots]")
+            return
+        
+        # Check if werewolf character is in a form that allows stat modification
+        from commands.shapeshifting import can_modify_stats_while_shifted
+        can_modify, reason = can_modify_stats_while_shifted(self.caller)
+        if not can_modify:
+            self.caller.msg(f"|r{reason}|n")
             return
             
         parts = self.remaining_args.split("=", 1)

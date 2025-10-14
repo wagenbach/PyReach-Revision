@@ -2,6 +2,7 @@ from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import evtable
 from evennia import search_object
 from datetime import datetime
+from utils.text import process_special_characters
 
 
 class CmdNote(MuxCommand):
@@ -210,7 +211,8 @@ class CmdNote(MuxCommand):
             output.append(f"|wStatus:|n |yDraft|n")
         
         output.append("|w" + "=" * 78 + "|n")
-        output.append(note["text"])
+        processed_text = process_special_characters(note["text"])
+        output.append(processed_text)
         output.append("|w" + "=" * 78 + "|n")
         
         self.caller.msg("\n".join(output))
@@ -663,7 +665,8 @@ class CmdNote(MuxCommand):
             output.append(f"|wStatus:|n |yDraft|n")
         
         output.append("|w" + "=" * 78 + "|n")
-        output.append(found_note["text"])
+        processed_text = process_special_characters(found_note["text"])
+        output.append(processed_text)
         output.append("|w" + "=" * 78 + "|n")
         
         note_display = "\n".join(output)

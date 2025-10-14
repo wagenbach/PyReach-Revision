@@ -45,7 +45,7 @@ class TemplateRegistry:
             TemplateDefinition or None
         """
         self._load_templates()
-        return self._cache.get(name.lower())
+        return self._cache.get(name.lower().replace(" ", "_"))
     
     def get_all_templates(self, legacy_mode=None):
         """

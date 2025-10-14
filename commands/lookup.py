@@ -1672,8 +1672,8 @@ class CmdLookup(MuxCommand):
         
         bestowments = sorted([b.lower().replace(" ", "_") for b in LOOKUP_DATA.promethean_data['bestowments']])
         
-        # Display in columns
-        col_width = 30
+        # Display in columns (adjusted to 25 chars to fit 78-char limit: 2 indent + 25*3 = 77)
+        col_width = 25
         for i in range(0, len(bestowments), 3):
             row = bestowments[i:i+3]
             msg += "  " + "".join([f"|y{b.replace('_', ' ').title():<{col_width}}|n" for b in row]) + "\n"
@@ -2259,8 +2259,8 @@ class CmdLookup(MuxCommand):
         
         embeds = sorted([e.lower().replace(" ", "_") for e in LOOKUP_DATA.demon_data['embeds']])
         
-        # Display in columns
-        col_width = 30
+        # Display in columns (adjusted to 25 chars to fit 78-char limit: 2 indent + 25*3 = 77)
+        col_width = 25
         for i in range(0, len(embeds), 3):
             row = embeds[i:i+3]
             msg += "  " + "".join([f"|r{e.replace('_', ' ').title():<{col_width}}|n" for e in row]) + "\n"
@@ -2277,8 +2277,8 @@ class CmdLookup(MuxCommand):
         
         exploits = sorted([e.lower().replace(" ", "_") for e in LOOKUP_DATA.demon_data['exploits']])
         
-        # Display in columns
-        col_width = 30
+        # Display in columns (adjusted to 25 chars to fit 78-char limit: 2 indent + 25*3 = 77)
+        col_width = 25
         for i in range(0, len(exploits), 3):
             row = exploits[i:i+3]
             msg += "  " + "".join([f"|r{e.replace('_', ' ').title():<{col_width}}|n" for e in row]) + "\n"
@@ -2588,8 +2588,8 @@ class CmdLookup(MuxCommand):
         
         types = sorted(LOOKUP_DATA.mortal_plus_data['types'])
         
-        # Display in columns
-        col_width = 26
+        # Display in columns (adjusted to 25 chars to fit 78-char limit: 2 indent + 25*3 = 77)
+        col_width = 25
         for i in range(0, len(types), 3):
             row = types[i:i+3]
             msg += "  " + "".join([f"|w{t:<{col_width}}|n" for t in row]) + "\n"
@@ -2605,8 +2605,8 @@ class CmdLookup(MuxCommand):
         
         powers = sorted([p.title() for p in LOOKUP_DATA.mortal_plus_data['psychic_powers']])
         
-        # Display in two columns
-        col_width = 26
+        # Display in columns (adjusted to 25 chars to fit 78-char limit: 2 indent + 25*3 = 77)
+        col_width = 25
         for i in range(0, len(powers), 3):
             row = powers[i:i+3]
             msg += "  " + "".join([f"|c{p:<{col_width}}|n" for p in row]) + "\n"

@@ -44,14 +44,22 @@ class CmdGroups(MuxCommand):
         +group/synccleanup         - Remove orphaned group attributes (staff only)
         +group/test <character>    - Test group assignment for a character
         
+    Mystery Cult Commands (for cabals):
+        +group/set <id>/<level>=<type>:<name>[:<desc>] - Set Mystery Cult benefit (staff/leader)
+        +group/clear <id>/<level>  - Clear Mystery Cult benefit (staff/leader)
+        +group/check <id>=<char>   - Check what benefits a character should have
+        +group/template <name>     - View example mystery cult template
+        
     Group Types:
         coterie - Vampire groups
         pack - Werewolf groups
         cabal - Mage groups
         motley - Changeling groups
-        conspiracy - Hunter groups
+        krewe - Geist groups
+        cell - local Hunter groups
         agency - Mortal organizations
-        cult - Religious/occult groups
+        cult - Mummy cults
+        mystery cult - Mystery Cults
         other - Generic groups
     """
     
@@ -131,6 +139,46 @@ class CmdGroups(MuxCommand):
                     member_line += " |y(Leader)|n"
                 output.append(member_line)
             output.append("")
+        
+        # Group merits
+        merits = group.get_all_merits()
+        if merits:
+            output.append("|wGroup Merits:|n")
+            for merit_name, rating in merits.items():
+                dots = "•" * rating
+                output.append(f"  {merit_name}: {dots} ({rating})")
+            output.append("")
+        
+        # Totem info (if pack)
+        if group.group_type == 'pack':
+            totem_info = group.get_totem_info()
+            if totem_info and totem_info.get('name'):
+                totem_points = group.calculate_totem_points()
+                output.append("|wTotem:|n")
+                output.append(f"  {totem_info['name']} (Rank {'•' * totem_info['rank']})")
+                if totem_info.get('concept'):
+                    output.append(f"  {totem_info['concept']}")
+                output.append(f"  {totem_points} totem points from pack members")
+                if totem_info.get('advantage'):
+                    adv = totem_info['advantage']
+                    output.append(f"  Pack Advantage: {adv.get('type', 'Unknown').title()} - {adv.get('name', 'None')}")
+                output.append("")
+        
+        # Mystery Cult benefits (if cabal)
+        if group.group_type == 'cabal':
+            benefits = group.get_all_mystery_benefits()
+            has_benefits = any(benefits.get(level, {}).get('name') for level in range(1, 6))
+            
+            if has_benefits:
+                output.append("|wMystery Cult Initiation Benefits:|n")
+                for level in range(1, 6):
+                    benefit = benefits.get(level, {})
+                    if benefit.get('name'):
+                        benefit_type = benefit.get('type', 'other').title()
+                        benefit_name = benefit.get('name', '')
+                        output.append(f"  Level {level} ({benefit_type}): {benefit_name}")
+                output.append("  Use +mysterycult for full details")
+                output.append("")
         
         # Private notes (if accessible)
         if group.notes and (is_staff or is_member):
@@ -648,6 +696,128 @@ class CmdGroups(MuxCommand):
                 self.test_groups()
                 return
             
+            # Mystery Cult template view
+            if switch == "template":
+                from world.cofd.group_data import EXAMPLE_MYSTERY_CULTS
+                
+                template_name = self.args.strip().lower()
+                
+                output = ["|wExample Mystery Cults:|n"]
+                output.append("")
+                
+                if template_name == "mammon" or template_name == "chosen of mammon":
+                    cult = EXAMPLE_MYSTERY_CULTS['Chosen of Mammon']
+                    output.append("|yChosen of Mammon|n")
+                    output.append(cult['description'])
+                    output.append("")
+                    output.append("|wInitiation Benefits:|n")
+                    for level, benefit in cult['benefits'].items():
+                        output.append(f"  {level}: {benefit}")
+                elif template_name == "sisters" or template_name == "machine gun" or template_name == "bomb":
+                    cult = EXAMPLE_MYSTERY_CULTS['Sisters of the Machine Gun, Brothers of the Bomb']
+                    output.append("|ySisters of the Machine Gun, Brothers of the Bomb|n")
+                    output.append(cult['description'])
+                    output.append("")
+                    output.append("|wInitiation Benefits:|n")
+                    for level, benefit in cult['benefits'].items():
+                        output.append(f"  {level}: {benefit}")
+                else:
+                    output.append("Available templates:")
+                    output.append("  mammon - Chosen of Mammon")
+                    output.append("  sisters - Sisters of the Machine Gun, Brothers of the Bomb")
+                
+                self.caller.msg("\n".join(output))
+                return
+            
+            # Mystery Cult check
+            if switch == "check":
+                if "=" not in self.args:
+                    self.caller.msg("Usage: +group/check <id>=<character>")
+                    return
+                
+                group_id, character_name = self.args.split("=", 1)
+                try:
+                    group_id = int(group_id.strip())
+                except ValueError:
+                    self.caller.msg("Group ID must be a number.")
+                    return
+                
+                group = get_group_by_id(group_id)
+                if not group:
+                    self.caller.msg(f"Group #{group_id} does not exist.")
+                    return
+                
+                if group.group_type != 'cabal':
+                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult (cabal). Use +group/check only for cabals.")
+                    return
+                
+                character = self.caller.search(character_name.strip(), global_search=True)
+                if not character:
+                    return
+                
+                if not group.is_member(character):
+                    self.caller.msg(f"{character.name} is not a member of '{group.name}'.")
+                    return
+                
+                benefits = group.get_character_mystery_benefits(character)
+                
+                output = [f"|wMystery Cult Benefits for {character.name}|n"]
+                output.append(f"Cult: {group.name} (#{group.group_id})")
+                output.append("")
+                
+                if not benefits:
+                    output.append(f"{character.name} has no Mystery Cult Initiation merit or it is at 0 dots.")
+                else:
+                    output.append(f"|wBenefits {character.name} should have:|n")
+                    for level, benefit in benefits:
+                        benefit_type = benefit.get('type', 'other').title()
+                        benefit_name = benefit.get('name', '')
+                        benefit_desc = benefit.get('description', '')
+                        
+                        output.append(f"Level {level} ({benefit_type}): {benefit_name}")
+                        if benefit_desc:
+                            output.append(f"  {benefit_desc}")
+                
+                self.caller.msg("\n".join(output))
+                return
+            
+            # Mystery Cult clear
+            if switch == "clear":
+                if "/" not in self.args:
+                    self.caller.msg("Usage: +group/clear <id>/<level>")
+                    return
+                
+                group_id, level_str = self.args.split("/", 1)
+                
+                try:
+                    group_id = int(group_id.strip())
+                    level = int(level_str.strip())
+                except ValueError:
+                    self.caller.msg("Group ID and level must be numbers.")
+                    return
+                
+                group = get_group_by_id(group_id)
+                if not group:
+                    self.caller.msg(f"Group #{group_id} does not exist.")
+                    return
+                
+                if group.group_type != 'cabal':
+                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult (cabal). Use +group/clear only for cabals.")
+                    return
+                
+                is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
+                is_leader = group.leader == self.caller
+                
+                if not is_staff and not is_leader:
+                    self.caller.msg("You don't have permission to modify Mystery Cult benefits.")
+                    return
+                
+                if group.clear_mystery_benefit(level):
+                    self.caller.msg(f"Cleared Level {level} benefit for '{group.name}'.")
+                else:
+                    self.caller.msg("Failed to clear benefit. Level must be 1-5.")
+                return
+            
             # Auto assignment
             if switch == "auto":
                 self.assign_auto_groups(self.args.strip())
@@ -697,6 +867,67 @@ class CmdGroups(MuxCommand):
                         return
                 
                 self.caller.msg("Usage: +group/title <id>/<char>=<title>")
+                return
+            
+            # Mystery Cult set (special format with level)
+            if switch == "set":
+                if "/" not in self.args or "=" not in self.args:
+                    self.caller.msg("Usage: +group/set <id>/<level>=<type>:<name>[:<description>]")
+                    return
+                
+                group_level, benefit_info = self.args.split("=", 1)
+                parts = group_level.split("/", 1)
+                
+                if len(parts) != 2:
+                    self.caller.msg("Usage: +group/set <id>/<level>=<type>:<name>[:<description>]")
+                    return
+                
+                try:
+                    group_id = int(parts[0].strip())
+                    level = int(parts[1].strip())
+                except ValueError:
+                    self.caller.msg("Group ID and level must be numbers.")
+                    return
+                
+                group = get_group_by_id(group_id)
+                if not group:
+                    self.caller.msg(f"Group #{group_id} does not exist.")
+                    return
+                
+                if group.group_type != 'cabal':
+                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult (cabal). Use +group/set only for cabals.")
+                    return
+                
+                is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
+                is_leader = group.leader == self.caller
+                
+                if not is_staff and not is_leader:
+                    self.caller.msg("You don't have permission to modify Mystery Cult benefits.")
+                    return
+                
+                if level < 1 or level > 5:
+                    self.caller.msg("Level must be between 1 and 5.")
+                    return
+                
+                benefit_parts = benefit_info.split(":")
+                if len(benefit_parts) < 2:
+                    self.caller.msg("Usage: +group/set <id>/<level>=<type>:<name>[:<description>]")
+                    self.caller.msg("Types: specialty, merit, skill, other")
+                    return
+                
+                benefit_type = benefit_parts[0].strip()
+                benefit_name = benefit_parts[1].strip()
+                benefit_desc = benefit_parts[2].strip() if len(benefit_parts) > 2 else ''
+                
+                valid_types = ['specialty', 'merit', 'skill', 'other']
+                if benefit_type.lower() not in valid_types:
+                    self.caller.msg(f"Type must be one of: {', '.join(valid_types)}")
+                    return
+                
+                if group.set_mystery_benefit(level, benefit_type, benefit_name, benefit_desc):
+                    self.caller.msg(f"Set Level {level} benefit for '{group.name}': {benefit_type.title()} - {benefit_name}")
+                else:
+                    self.caller.msg("Failed to set benefit.")
                 return
             
             # Commands with = format
@@ -950,4 +1181,579 @@ class CmdRoster(MuxCommand):
             return
         
         # View specific group roster
-        self.view_group_roster(self.args.strip()) 
+        self.view_group_roster(self.args.strip())
+
+
+class CmdGroupMerit(MuxCommand):
+    """
+    Manage group-specific merits.
+    
+    Usage:
+        +groupmerit <group id>                  - View all merits for a group
+        +groupmerit/set <group id>=<merit>:<rating> - Set a group merit (staff or leader)
+        +groupmerit/remove <group id>=<merit>   - Remove a group merit (staff or leader)
+        +groupmerit/list <group type>           - List available merits for a group type
+        +groupmerit/calc <group id>             - Calculate merit contributions from members
+        
+    Group-specific merits vary by type:
+    - Packs: Den, Directed Rage, Magnanimous Totem, Moon's Grace, Territorial Advantage
+    - Krewes: Krewe Allies, Cenote, Krewe Contacts, Krewe Library, Krewe Resources, etc.
+    - Cults: Cult Allies, Devotees, Fanatical, Ritualistic Cult, Secretive, Wayward Cult, etc.
+    - Cabals: Mystery Cult Initiation (with benefits at each level)
+    - Cells: Safe Place, plus Cell Tactics for combat coordination
+    - Motleys: Motley Hollow, Motley Workshop, Motley Token, Stable Trod, etc.
+    
+    Examples:
+        +groupmerit 1
+        +groupmerit/set 1=Den:3
+        +groupmerit/remove 1=Den
+        +groupmerit/list pack
+    """
+    
+    key = "+groupmerit"
+    aliases = ["+gmerit"]
+    locks = "cmd:all()"
+    help_category = "Social and Communications"
+    
+    def func(self):
+        """Execute the command."""
+        from world.cofd.group_data import GROUP_TYPE_MERITS
+        
+        if not self.args and not self.switches:
+            self.caller.msg("Usage: +groupmerit <group id> or use /list to see available merits")
+            return
+        
+        # List available merits for a group type
+        if "list" in self.switches:
+            group_type = self.args.strip().lower()
+            if group_type not in GROUP_TYPE_MERITS:
+                self.caller.msg(f"Unknown group type. Available: {', '.join(GROUP_TYPE_MERITS.keys())}")
+                return
+            
+            merits = GROUP_TYPE_MERITS[group_type]
+            output = [f"|wAvailable Merits for {group_type.title()}:|n"]
+            output.append("")
+            
+            for merit_name, merit_data in merits.items():
+                rating_range = f"{'•' * merit_data['min']} to {'•' * merit_data['max']}"
+                output.append(f"|y{merit_name}|n ({rating_range})")
+                output.append(f"  {merit_data['description']}")
+                if 'effects' in merit_data:
+                    for rating, effect in merit_data['effects'].items():
+                        output.append(f"  {rating} dots: {effect}")
+                if 'prerequisites' in merit_data:
+                    output.append(f"  Prerequisites: {', '.join(merit_data['prerequisites'])}")
+                output.append(f"  Source: {merit_data['source']}")
+                output.append("")
+            
+            self.caller.msg("\n".join(output))
+            return
+        
+        # Get group
+        try:
+            group_id = int(self.args.split("=")[0].strip() if "=" in self.args else self.args.strip())
+        except ValueError:
+            self.caller.msg("Group ID must be a number.")
+            return
+        
+        group = get_group_by_id(group_id)
+        if not group:
+            self.caller.msg(f"Group #{group_id} does not exist.")
+            return
+        
+        # Check permissions for modifying commands
+        is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
+        is_leader = group.leader == self.caller
+        
+        # View merits
+        if not self.switches:
+            merits = group.get_all_merits()
+            
+            if not merits:
+                self.caller.msg(f"Group '{group.name}' has no merits set.")
+                return
+            
+            output = [f"|wMerits for {group.name}|n (#{group.group_id})"]
+            output.append("")
+            
+            for merit_name, rating in merits.items():
+                dots = "•" * rating
+                output.append(f"{merit_name}: {dots} ({rating})")
+            
+            self.caller.msg("\n".join(output))
+            return
+        
+        # Set merit
+        if "set" in self.switches:
+            if not is_staff and not is_leader:
+                self.caller.msg("You don't have permission to set group merits.")
+                return
+            
+            if "=" not in self.args:
+                self.caller.msg("Usage: +groupmerit/set <group id>=<merit>:<rating>")
+                return
+            
+            _, merit_info = self.args.split("=", 1)
+            if ":" not in merit_info:
+                self.caller.msg("Usage: +groupmerit/set <group id>=<merit>:<rating>")
+                return
+            
+            merit_name, rating = merit_info.split(":", 1)
+            merit_name = merit_name.strip()
+            
+            try:
+                rating = int(rating.strip())
+            except ValueError:
+                self.caller.msg("Rating must be a number.")
+                return
+            
+            if rating < 0 or rating > 5:
+                self.caller.msg("Rating must be between 0 and 5.")
+                return
+            
+            group.set_merit(merit_name, rating)
+            self.caller.msg(f"Set {merit_name} to {rating} dots for group '{group.name}'.")
+            return
+        
+        # Remove merit
+        if "remove" in self.switches:
+            if not is_staff and not is_leader:
+                self.caller.msg("You don't have permission to remove group merits.")
+                return
+            
+            if "=" not in self.args:
+                self.caller.msg("Usage: +groupmerit/remove <group id>=<merit>")
+                return
+            
+            _, merit_name = self.args.split("=", 1)
+            merit_name = merit_name.strip()
+            
+            group.remove_merit(merit_name)
+            self.caller.msg(f"Removed {merit_name} from group '{group.name}'.")
+            return
+        
+        # Calculate contributions
+        if "calc" in self.switches:
+            # Show which members contribute to group merits via their character sheets
+            output = [f"|wMerit Contributions for {group.name}|n"]
+            output.append("")
+            
+            for member in group.members:
+                if hasattr(member, 'db') and member.db.stats:
+                    merits = member.db.stats.get('merits', {})
+                    relevant_merits = []
+                    
+                    # Check for merits that might contribute to group
+                    for merit_name, merit_value in merits.items():
+                        if isinstance(merit_value, dict):
+                            rating = merit_value.get('rating', 0)
+                        else:
+                            rating = merit_value
+                        
+                        if rating > 0 and merit_name in ['Totem', 'Den', 'Safe Place', 'Cult']:
+                            relevant_merits.append(f"{merit_name} {rating}")
+                    
+                    if relevant_merits:
+                        output.append(f"{member.name}: {', '.join(relevant_merits)}")
+            
+            if len(output) == 2:
+                output.append("No members have relevant merits.")
+            
+            self.caller.msg("\n".join(output))
+            return
+
+
+class CmdTotem(MuxCommand):
+    """
+    Manage pack totems (for werewolf packs).
+    
+    Usage:
+        +totem <group id>                       - View totem information
+        +totem/name <group id>=<name>           - Set totem name (staff or leader)
+        +totem/concept <group id>=<concept>     - Set totem concept (staff or leader)
+        +totem/aspiration <group id>=<text>     - Set totem aspiration (staff or leader)
+        +totem/ban <group id>=<text>            - Set totem ban (staff or leader)
+        +totem/attr <group id>=<power>/<finesse>/<resistance> - Set totem attributes (staff or leader)
+        +totem/influence <group id>=<type>:<dots> - Set totem influence (staff or leader)
+        +totem/numen/add <group id>=<numen>     - Add a numen (staff or leader)
+        +totem/numen/remove <group id>=<numen>  - Remove a numen (staff or leader)
+        +totem/numen/list                       - List available numina
+        +totem/advantage <group id>=<type>:<name>:<rating> - Set pack advantage (staff or leader)
+        +totem/calc <group id>                  - Calculate totem points from members
+        +totem/notes <group id>=<text>          - Set totem notes (staff or leader)
+        
+    The totem is built from the combined Totem merit dots of pack members.
+    Total totem points determine attributes, rank, and advantages granted to the pack.
+    
+    Examples:
+        +totem 1
+        +totem/name 1=Silver Wind
+        +totem/concept 1=Swift storm spirit
+        +totem/attr 1=3/4/2
+        +totem/numen/add 1=Speed
+        +totem/advantage 1=attribute:Dexterity:1
+    """
+    
+    key = "+totem"
+    locks = "cmd:all()"
+    help_category = "Social and Communications"
+    
+    def func(self):
+        """Execute the command."""
+        from world.cofd.group_data import (
+            SPIRIT_NUMINA, get_advantage_experience, get_numina_count,
+            MAX_ESSENCE_BY_RANK, get_rank_from_attributes
+        )
+        
+        if not self.args and not self.switches:
+            self.caller.msg("Usage: +totem <group id> or use /calc to calculate totem points")
+            return
+        
+        # List numina
+        if "numen" in self.switches and "list" in self.switches:
+            output = ["|wAvailable Spirit Numina:|n"]
+            output.append("")
+            
+            for numen_name, numen_data in SPIRIT_NUMINA.items():
+                cost = numen_data.get('cost', 'Variable')
+                output.append(f"|y{numen_name}|n")
+                output.append(f"  Cost: {cost}")
+                output.append(f"  {numen_data['description']}")
+                if 'prerequisites' in numen_data:
+                    output.append(f"  Prerequisites: {', '.join(numen_data['prerequisites'])}")
+                if numen_data.get('reaching'):
+                    output.append(f"  |c(Reaching)|n")
+                output.append("")
+                
+                # Break into pages if too long
+                if len(output) > 40:
+                    self.caller.msg("\n".join(output))
+                    output = []
+            
+            if output:
+                self.caller.msg("\n".join(output))
+            return
+        
+        # Get group
+        try:
+            group_id = int(self.args.split("=")[0].strip() if "=" in self.args else self.args.strip())
+        except ValueError:
+            self.caller.msg("Group ID must be a number.")
+            return
+        
+        group = get_group_by_id(group_id)
+        if not group:
+            self.caller.msg(f"Group #{group_id} does not exist.")
+            return
+        
+        # Check permissions
+        is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
+        is_leader = group.leader == self.caller
+        
+        # Calculate totem points
+        if "calc" in self.switches:
+            totem_points = group.calculate_totem_points()
+            available_exp = get_advantage_experience(totem_points)
+            max_numina = get_numina_count(totem_points)
+            
+            output = [f"|wTotem Points for {group.name}|n"]
+            output.append("")
+            output.append(f"Total Totem Points: {totem_points}")
+            output.append(f"Available Advantage Experiences: {available_exp}")
+            output.append(f"Maximum Numina: {max_numina}")
+            output.append("")
+            output.append("|wMember Contributions:|n")
+            
+            for member in group.members:
+                if hasattr(member, 'db') and member.db.stats:
+                    merits = member.db.stats.get('merits', {})
+                    totem_merit = merits.get('Totem', 0)
+                    if isinstance(totem_merit, dict):
+                        totem_merit = totem_merit.get('rating', 0)
+                    if totem_merit > 0:
+                        output.append(f"  {member.name}: {totem_merit} dots")
+            
+            self.caller.msg("\n".join(output))
+            return
+        
+        # View totem
+        if not self.switches:
+            totem_info = group.get_totem_info()
+            
+            if not totem_info or not totem_info.get('name'):
+                self.caller.msg(f"Group '{group.name}' does not have a totem set up yet.")
+                self.caller.msg("Use +totem/name to begin setting up the totem.")
+                return
+            
+            totem_points = group.calculate_totem_points()
+            attrs = totem_info['attributes']
+            total_attrs = sum(attrs.values())
+            rank = totem_info['rank']
+            
+            # Calculate derived stats
+            corpus = attrs['power'] + attrs['resistance']
+            willpower = attrs['finesse'] + attrs['resistance']
+            defense = min(attrs['finesse'], attrs['resistance'])
+            initiative = attrs['finesse'] + attrs['resistance']
+            
+            output = [f"|y{totem_info['name']}|n"]
+            output.append(f"Totem for {group.name} (#{group.group_id})")
+            output.append("")
+            
+            if totem_info.get('concept'):
+                output.append(f"|wConcept:|n {totem_info['concept']}")
+            
+            if totem_info.get('aspiration'):
+                output.append(f"|wAspiration:|n {totem_info['aspiration']}")
+            
+            if totem_info.get('ban'):
+                output.append(f"|wBan:|n {totem_info['ban']}")
+            
+            output.append("")
+            output.append(f"|wRank:|n {'•' * rank} ({rank})")
+            output.append(f"|wTotem Points:|n {totem_points}")
+            output.append("")
+            
+            output.append("|wAttributes:|n")
+            output.append(f"  Power: {attrs['power']}")
+            output.append(f"  Finesse: {attrs['finesse']}")
+            output.append(f"  Resistance: {attrs['resistance']}")
+            output.append(f"  Total: {total_attrs}")
+            output.append("")
+            
+            output.append("|wDerived Stats:|n")
+            output.append(f"  Corpus: {corpus}")
+            output.append(f"  Willpower: {willpower}")
+            output.append(f"  Defense: {defense}")
+            output.append(f"  Initiative: {initiative}")
+            output.append(f"  Essence: {totem_info['essence']['current']}/{totem_info['essence']['max']}")
+            output.append("")
+            
+            if totem_info.get('influence'):
+                output.append("|wInfluence:|n")
+                for inf_type, dots in totem_info['influence'].items():
+                    output.append(f"  {inf_type}: {'•' * dots} ({dots})")
+                output.append("")
+            
+            if totem_info.get('numina'):
+                output.append("|wNumina:|n")
+                for numen in totem_info['numina']:
+                    output.append(f"  • {numen}")
+                max_numina = get_numina_count(totem_points)
+                output.append(f"  ({len(totem_info['numina'])}/{max_numina} numina)")
+                output.append("")
+            
+            if totem_info.get('advantage'):
+                adv = totem_info['advantage']
+                output.append("|wPack Advantage:|n")
+                output.append(f"  {adv.get('type', 'Unknown').title()}: {adv.get('name', 'None')}")
+                if adv.get('rating', 0) > 1:
+                    output.append(f"  Rating: {adv.get('rating')}")
+                output.append("")
+            
+            if totem_info.get('notes'):
+                output.append("|wNotes:|n")
+                output.append(totem_info['notes'])
+            
+            self.caller.msg("\n".join(output))
+            return
+        
+        # Modification commands require permission
+        if not is_staff and not is_leader:
+            self.caller.msg("You don't have permission to modify the totem.")
+            return
+        
+        # Set name
+        if "name" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/name <group id>=<name>")
+                return
+            
+            _, name = self.args.split("=", 1)
+            group.set_totem_property('name', name.strip())
+            self.caller.msg(f"Set totem name to '{name.strip()}' for group '{group.name}'.")
+            return
+        
+        # Set concept
+        if "concept" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/concept <group id>=<concept>")
+                return
+            
+            _, concept = self.args.split("=", 1)
+            group.set_totem_property('concept', concept.strip())
+            self.caller.msg(f"Set totem concept for group '{group.name}'.")
+            return
+        
+        # Set aspiration
+        if "aspiration" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/aspiration <group id>=<text>")
+                return
+            
+            _, aspiration = self.args.split("=", 1)
+            group.set_totem_property('aspiration', aspiration.strip())
+            self.caller.msg(f"Set totem aspiration for group '{group.name}'.")
+            return
+        
+        # Set ban
+        if "ban" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/ban <group id>=<text>")
+                return
+            
+            _, ban = self.args.split("=", 1)
+            group.set_totem_property('ban', ban.strip())
+            self.caller.msg(f"Set totem ban for group '{group.name}'.")
+            return
+        
+        # Set attributes
+        if "attr" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/attr <group id>=<power>/<finesse>/<resistance>")
+                return
+            
+            _, attr_string = self.args.split("=", 1)
+            parts = attr_string.split("/")
+            
+            if len(parts) != 3:
+                self.caller.msg("Usage: +totem/attr <group id>=<power>/<finesse>/<resistance>")
+                return
+            
+            try:
+                power = int(parts[0].strip())
+                finesse = int(parts[1].strip())
+                resistance = int(parts[2].strip())
+            except ValueError:
+                self.caller.msg("Attributes must be numbers.")
+                return
+            
+            totem_points = group.calculate_totem_points()
+            total_attrs = power + finesse + resistance
+            
+            if total_attrs > totem_points:
+                self.caller.msg(f"Total attributes ({total_attrs}) cannot exceed totem points ({totem_points}).")
+                return
+            
+            # Check that no single attribute has more than half the total
+            if power > totem_points // 2 or finesse > totem_points // 2 or resistance > totem_points // 2:
+                self.caller.msg(f"No single attribute can have more than half the total totem points ({totem_points // 2}).")
+                return
+            
+            # Each attribute must have at least 1
+            if power < 1 or finesse < 1 or resistance < 1:
+                self.caller.msg("Each attribute must have at least 1 dot.")
+                return
+            
+            group.set_totem_attribute('power', power)
+            group.set_totem_attribute('finesse', finesse)
+            group.set_totem_attribute('resistance', resistance)
+            
+            self.caller.msg(f"Set totem attributes for '{group.name}': Power {power}, Finesse {finesse}, Resistance {resistance}")
+            return
+        
+        # Set influence
+        if "influence" in self.switches:
+            if "=" not in self.args or ":" not in self.args:
+                self.caller.msg("Usage: +totem/influence <group id>=<type>:<dots>")
+                return
+            
+            _, influence_info = self.args.split("=", 1)
+            influence_type, dots = influence_info.split(":", 1)
+            
+            try:
+                dots = int(dots.strip())
+            except ValueError:
+                self.caller.msg("Dots must be a number.")
+                return
+            
+            if dots < 1 or dots > 5:
+                self.caller.msg("Influence dots must be between 1 and 5.")
+                return
+            
+            group.set_totem_influence(influence_type.strip(), dots)
+            self.caller.msg(f"Set totem influence {influence_type.strip()} to {dots} dots for group '{group.name}'.")
+            return
+        
+        # Add numen
+        if "numen" in self.switches and "add" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/numen/add <group id>=<numen>")
+                return
+            
+            _, numen_name = self.args.split("=", 1)
+            numen_name = numen_name.strip()
+            
+            # Check if it's a valid numen
+            if numen_name not in SPIRIT_NUMINA:
+                self.caller.msg(f"Unknown numen '{numen_name}'. Use +totem/numen/list to see available numina.")
+                return
+            
+            # Check if we've reached the limit
+            totem_points = group.calculate_totem_points()
+            max_numina = get_numina_count(totem_points)
+            totem_info = group.get_totem_info()
+            current_numina = len(totem_info.get('numina', [])) if totem_info else 0
+            
+            if current_numina >= max_numina:
+                self.caller.msg(f"Totem already has maximum numina ({max_numina}) for {totem_points} totem points.")
+                return
+            
+            group.add_totem_numen(numen_name)
+            self.caller.msg(f"Added numen '{numen_name}' to totem for group '{group.name}'.")
+            return
+        
+        # Remove numen
+        if "numen" in self.switches and "remove" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/numen/remove <group id>=<numen>")
+                return
+            
+            _, numen_name = self.args.split("=", 1)
+            group.remove_totem_numen(numen_name.strip())
+            self.caller.msg(f"Removed numen '{numen_name.strip()}' from totem for group '{group.name}'.")
+            return
+        
+        # Set advantage
+        if "advantage" in self.switches:
+            if "=" not in self.args or self.args.count(":") < 1:
+                self.caller.msg("Usage: +totem/advantage <group id>=<type>:<name>[:<rating>]")
+                self.caller.msg("Types: attribute, skill, specialty, merit")
+                return
+            
+            _, adv_info = self.args.split("=", 1)
+            parts = adv_info.split(":")
+            
+            if len(parts) < 2:
+                self.caller.msg("Usage: +totem/advantage <group id>=<type>:<name>[:<rating>]")
+                return
+            
+            adv_type = parts[0].strip().lower()
+            adv_name = parts[1].strip()
+            adv_rating = 1
+            
+            if len(parts) >= 3:
+                try:
+                    adv_rating = int(parts[2].strip())
+                except ValueError:
+                    self.caller.msg("Rating must be a number.")
+                    return
+            
+            if adv_type not in ['attribute', 'skill', 'specialty', 'merit']:
+                self.caller.msg("Type must be: attribute, skill, specialty, or merit")
+                return
+            
+            group.set_totem_advantage(adv_type, adv_name, adv_rating)
+            self.caller.msg(f"Set pack advantage to {adv_type} '{adv_name}' (rating {adv_rating}) for group '{group.name}'.")
+            return
+        
+        # Set notes
+        if "notes" in self.switches:
+            if "=" not in self.args:
+                self.caller.msg("Usage: +totem/notes <group id>=<text>")
+                return
+            
+            _, notes = self.args.split("=", 1)
+            group.set_totem_property('notes', notes.strip())
+            self.caller.msg(f"Set totem notes for group '{group.name}'.")
+            return

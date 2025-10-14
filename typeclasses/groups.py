@@ -23,11 +23,12 @@ class Group(DefaultObject):
     GROUP_TYPES = [
         ('coterie', 'Coterie'),      # Vampire groups
         ('pack', 'Pack'),            # Werewolf groups  
-        ('cabal', 'Cabal'),          # Mage groups
+        ('cabal', 'Cabal'),          # Mage Mystery Cults
         ('motley', 'Motley'),        # Changeling groups
-        ('conspiracy', 'Conspiracy'), # Hunter groups
+        ('krewe', 'Krewe'),          # Geist groups
+        ('cell', 'Cell'),            # Hunter cells
         ('agency', 'Agency'),        # Mortal organizations
-        ('cult', 'Cult'),            # Religious/occult groups
+        ('cult', 'Cult'),            # Mummy cults
         ('other', 'Other'),          # Generic groups
     ]
     
@@ -44,6 +45,35 @@ class Group(DefaultObject):
         self.db.members = []
         self.db.member_data = {}  # Store member titles, roles, etc.
         self.db.created_at = self.date_created
+        
+        # Group merits and stats
+        self.db.merits = {}  # Store group-specific merits
+        self.db.stats = {}   # Store additional group stats
+        
+        # Totem system (for packs and similar groups)
+        self.db.totem = {
+            'name': '',
+            'concept': '',
+            'aspiration': '',
+            'ban': '',
+            'rank': 1,
+            'attributes': {'power': 0, 'finesse': 0, 'resistance': 0},
+            'essence': {'current': 0, 'max': 0},
+            'influence': {},  # Dict of influence types and dots
+            'numina': [],  # List of numina names
+            'advantage': {},  # The advantage granted to pack members
+            'notes': ''
+        }
+        
+        # Mystery Cult benefits (for cabals)
+        # Stores what benefits are granted at each initiation level
+        self.db.mystery_cult_benefits = {
+            1: {'type': '', 'name': '', 'description': ''},
+            2: {'type': '', 'name': '', 'description': ''},
+            3: {'type': '', 'name': '', 'description': ''},
+            4: {'type': '', 'name': '', 'description': ''},
+            5: {'type': '', 'name': '', 'description': ''}
+        }
         
         # Auto-assign group ID
         self._assign_group_id()
@@ -280,6 +310,237 @@ class Group(DefaultObject):
     def get_online_count(self):
         """Get the number of online members."""
         return len(self.get_online_members())
+    
+    # Merit Management
+    def set_merit(self, merit_name, rating):
+        """Set a group merit rating."""
+        if not self.db.merits:
+            self.db.merits = {}
+        self.db.merits[merit_name] = int(rating)
+    
+    def get_merit(self, merit_name):
+        """Get a group merit rating."""
+        if not self.db.merits:
+            return 0
+        return self.db.merits.get(merit_name, 0)
+    
+    def remove_merit(self, merit_name):
+        """Remove a group merit."""
+        if self.db.merits and merit_name in self.db.merits:
+            del self.db.merits[merit_name]
+    
+    def get_all_merits(self):
+        """Get all group merits."""
+        if not self.db.merits:
+            return {}
+        return self.db.merits.copy()
+    
+    # Totem Management
+    def calculate_totem_points(self):
+        """Calculate total totem points from member contributions."""
+        total = 0
+        for member in self.members:
+            if hasattr(member, 'db') and member.db.stats:
+                merits = member.db.stats.get('merits', {})
+                totem_merit = merits.get('Totem', 0)
+                if isinstance(totem_merit, dict):
+                    totem_merit = totem_merit.get('rating', 0)
+                total += int(totem_merit)
+        return total
+    
+    def set_totem_attribute(self, attribute, value):
+        """Set a totem attribute (power, finesse, or resistance)."""
+        if not self.db.totem:
+            self.db.totem = {
+                'name': '', 'concept': '', 'aspiration': '', 'ban': '',
+                'rank': 1, 'attributes': {'power': 0, 'finesse': 0, 'resistance': 0},
+                'essence': {'current': 0, 'max': 0}, 'influence': {},
+                'numina': [], 'advantage': {}, 'notes': ''
+            }
+        
+        attribute = attribute.lower()
+        if attribute in ['power', 'finesse', 'resistance']:
+            self.db.totem['attributes'][attribute] = int(value)
+            self._recalculate_totem_derived_stats()
+    
+    def _recalculate_totem_derived_stats(self):
+        """Recalculate totem's derived stats based on attributes."""
+        if not self.db.totem:
+            return
+        
+        attrs = self.db.totem['attributes']
+        total_attrs = sum(attrs.values())
+        
+        # Determine rank based on total attributes
+        if total_attrs <= 5:
+            rank = 1
+        elif total_attrs <= 10:
+            rank = 2
+        elif total_attrs <= 15:
+            rank = 3
+        elif total_attrs <= 20:
+            rank = 4
+        else:
+            rank = 5
+        
+        self.db.totem['rank'] = rank
+        
+        # Calculate max essence (lower of totem points or rank maximum)
+        totem_points = self.calculate_totem_points()
+        rank_max_essence = {1: 10, 2: 15, 3: 20, 4: 25, 5: 50}
+        self.db.totem['essence']['max'] = min(totem_points, rank_max_essence.get(rank, 10))
+        
+        # Corpus = Power + Resistance (spirits use this as health)
+        # Willpower = Finesse + Resistance
+        # Size is typically 3-5 for spirits
+        # Defense = Finesse or Resistance (whichever is lower)
+        # Initiative = Finesse + Resistance
+    
+    def add_totem_numen(self, numen_name):
+        """Add a numen to the totem."""
+        if not self.db.totem:
+            self.db.totem = {
+                'name': '', 'concept': '', 'aspiration': '', 'ban': '',
+                'rank': 1, 'attributes': {'power': 0, 'finesse': 0, 'resistance': 0},
+                'essence': {'current': 0, 'max': 0}, 'influence': {},
+                'numina': [], 'advantage': {}, 'notes': ''
+            }
+        
+        if numen_name not in self.db.totem['numina']:
+            self.db.totem['numina'].append(numen_name)
+    
+    def remove_totem_numen(self, numen_name):
+        """Remove a numen from the totem."""
+        if self.db.totem and numen_name in self.db.totem['numina']:
+            self.db.totem['numina'].remove(numen_name)
+    
+    def set_totem_property(self, property_name, value):
+        """Set a totem property (name, concept, aspiration, ban, notes)."""
+        if not self.db.totem:
+            self.db.totem = {
+                'name': '', 'concept': '', 'aspiration': '', 'ban': '',
+                'rank': 1, 'attributes': {'power': 0, 'finesse': 0, 'resistance': 0},
+                'essence': {'current': 0, 'max': 0}, 'influence': {},
+                'numina': [], 'advantage': {}, 'notes': ''
+            }
+        
+        if property_name in ['name', 'concept', 'aspiration', 'ban', 'notes']:
+            self.db.totem[property_name] = value
+    
+    def set_totem_influence(self, influence_type, dots):
+        """Set totem influence."""
+        if not self.db.totem:
+            self.db.totem = {
+                'name': '', 'concept': '', 'aspiration': '', 'ban': '',
+                'rank': 1, 'attributes': {'power': 0, 'finesse': 0, 'resistance': 0},
+                'essence': {'current': 0, 'max': 0}, 'influence': {},
+                'numina': [], 'advantage': {}, 'notes': ''
+            }
+        
+        self.db.totem['influence'][influence_type] = int(dots)
+    
+    def set_totem_advantage(self, advantage_type, advantage_name, rating=1):
+        """Set the advantage granted by the totem to pack members."""
+        if not self.db.totem:
+            self.db.totem = {
+                'name': '', 'concept': '', 'aspiration': '', 'ban': '',
+                'rank': 1, 'attributes': {'power': 0, 'finesse': 0, 'resistance': 0},
+                'essence': {'current': 0, 'max': 0}, 'influence': {},
+                'numina': [], 'advantage': {}, 'notes': ''
+            }
+        
+        self.db.totem['advantage'] = {
+            'type': advantage_type,  # 'attribute', 'skill', 'specialty', or 'merit'
+            'name': advantage_name,
+            'rating': int(rating)
+        }
+    
+    def get_totem_info(self):
+        """Get formatted totem information."""
+        if not self.db.totem or not self.db.totem.get('name'):
+            return None
+        
+        return self.db.totem.copy()
+    
+    # Mystery Cult Management
+    def set_mystery_benefit(self, level, benefit_type, name, description=''):
+        """Set a mystery cult benefit at a specific initiation level."""
+        if not self.db.mystery_cult_benefits:
+            self.db.mystery_cult_benefits = {
+                1: {'type': '', 'name': '', 'description': ''},
+                2: {'type': '', 'name': '', 'description': ''},
+                3: {'type': '', 'name': '', 'description': ''},
+                4: {'type': '', 'name': '', 'description': ''},
+                5: {'type': '', 'name': '', 'description': ''}
+            }
+        
+        if level < 1 or level > 5:
+            return False
+        
+        valid_types = ['specialty', 'merit', 'skill', 'other']
+        if benefit_type.lower() not in valid_types:
+            return False
+        
+        self.db.mystery_cult_benefits[level] = {
+            'type': benefit_type.lower(),
+            'name': name,
+            'description': description
+        }
+        return True
+    
+    def get_mystery_benefit(self, level):
+        """Get mystery cult benefit at a specific level."""
+        if not self.db.mystery_cult_benefits:
+            return None
+        return self.db.mystery_cult_benefits.get(level, None)
+    
+    def get_all_mystery_benefits(self):
+        """Get all mystery cult benefits."""
+        if not self.db.mystery_cult_benefits:
+            return {}
+        return self.db.mystery_cult_benefits.copy()
+    
+    def clear_mystery_benefit(self, level):
+        """Clear a mystery cult benefit at a specific level."""
+        if not self.db.mystery_cult_benefits:
+            return False
+        
+        if level < 1 or level > 5:
+            return False
+        
+        self.db.mystery_cult_benefits[level] = {
+            'type': '',
+            'name': '',
+            'description': ''
+        }
+        return True
+    
+    def get_character_mystery_benefits(self, character):
+        """
+        Get the benefits a character should have based on their Mystery Cult Initiation level.
+        Returns a list of benefits the character is entitled to.
+        """
+        if not hasattr(character, 'db') or not character.db.stats:
+            return []
+        
+        merits = character.db.stats.get('merits', {})
+        initiation_merit = merits.get('Mystery Cult Initiation', 0)
+        
+        if isinstance(initiation_merit, dict):
+            initiation_level = initiation_merit.get('rating', 0)
+        else:
+            initiation_level = initiation_merit
+        
+        if initiation_level <= 0:
+            return []
+        
+        benefits = []
+        for level in range(1, min(initiation_level + 1, 6)):
+            benefit = self.get_mystery_benefit(level)
+            if benefit and benefit.get('name'):
+                benefits.append((level, benefit))
+        
+        return benefits
     
     def delete(self):
         """Override delete to clean up associated data."""

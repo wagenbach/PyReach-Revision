@@ -37,7 +37,16 @@ from world.cofd.templates.vampire_rituals import (
     ALL_BLOODLINE_DEVOTIONS_EXTENDED, PENUMBRAE_CRUAC
 )
 from world.cofd.templates.mage import MAGE_PATHS, MAGE_ORDERS, MAGE_ARCANA, LEGACIES_BY_PATH, LEGACIES_BY_ORDER, UNLINKED_LEGACIES, ALL_LEGACIES
-from world.cofd.templates.demon import DEMON_INCARNATIONS, DEMON_AGENDAS, DEMON_EMBEDS, DEMON_EXPLOITS
+from world.cofd.templates.demon import DEMON_INCARNATIONS, DEMON_AGENDAS, DEMON_EMBEDS, DEMON_EXPLOITS_LIST
+from world.cofd.templates.demon_form import (
+    DEMON_MODIFICATIONS, DEMON_TECHNOLOGIES, DEMON_PROPULSIONS, DEMON_PROCESSES,
+    ALL_DEMON_MODIFICATIONS, ALL_DEMON_TECHNOLOGIES, ALL_DEMON_PROPULSIONS, ALL_DEMON_PROCESSES
+)
+from world.cofd.templates.demon_powers import (
+    ALL_EMBEDS, DEMON_EXPLOITS,
+    EMBEDS_BY_INCARNATION, EMBEDS_CACOPHONY, EMBEDS_INSTRUMENTAL, EMBEDS_MUNDANE, EMBEDS_VOCAL,
+    ALL_EMBED_NAMES, ALL_EXPLOIT_NAMES
+)
 from world.cofd.templates.mortal_plus import ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS
 from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_LODGES
 from world.cofd.templates.werewolf_gifts import ALL_WEREWOLF_GIFTS
@@ -50,12 +59,24 @@ from world.cofd.templates.promethean import (
 from world.cofd.templates.legacy_promethean import ATHANORS_BY_LINEAGE
 from world.cofd.templates.hunter_endowments import ADVANCED_ARMORY, ANIMAL_CONTROL_KIT, BENEDICTION, CASTIGATION, DREAMSCAPE, ELIXIR, ENKOIMESIS, GOETIC_GOSPEL, HORROR_WITHIN, INFUSION, INK, INSPIRATION, LIVES_REMEMBERED, PERISPIRITISM, RELIC, RITES_DU_CHEVAL, RITES_OF_DENIAL, SEITOKUTEN, TELEINFORMATICS, THAUMATECHNOLOGY, XENOTECHNOLOGY
 from world.cofd.templates.hunter import HUNTER_CONSPIRACIES, HUNTER_COMPACTS, HUNTER_TACTICS, HUNTER_ENDOWMENTS
-from world.cofd.templates.mummy import MUMMY_GUILDS, MUMMY_DECREES, MUMMY_JUDGES, MUMMY_UTTERANCES, MUMMY_AFFINITIES
+from world.cofd.templates.mummy import (
+    MUMMY_GUILDS, MUMMY_DECREES, MUMMY_JUDGES,
+    MUMMY_AFFINITIES_DATA, MUMMY_UTTERANCES_DATA,
+    ALL_AFFINITY_NAMES, ALL_UTTERANCE_NAMES
+)
 from world.cofd.templates.geist import GEIST_BURDENS, GEIST_KREWE_TYPES, GEIST_HAUNTS, GEIST_KEYS, GEIST_CEREMONIES, ALL_HAUNTS, GEIST_KEY_DETAILS
 from world.cofd.templates.deviant import DEVIANT_ORIGINS, DEVIANT_CLADES, DEVIANT_SCARS, DEVIANT_VARIATIONS, DEVIANT_ADAPTATIONS
 from world.cofd.templates.mortal_plus import (
     ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS, PROXIMUS_FAMILIES,
     DEMON_BLOODED_LEVELS, GAME_LINE_HERITAGE, WOLF_BLOODED_TELLS
+)
+from world.cofd.templates.changing_breeds_favors import (
+    CHANGING_BREED_FAVORS, CHANGING_BREED_ASPECTS,
+    ALL_FAVOR_NAMES, ALL_ASPECT_NAMES, TRICKSTER_ONLY_ASPECTS
+)
+from world.cofd.templates.legacy_changingbreeds import (
+    LEGACY_CHANGING_BREEDS, CHANGING_BREED_CATEGORIES,
+    CHANGING_BREED_ACCORDS, ACCORD_SPECIALTIES, RESPECT_TYPES
 )
 import re
 
@@ -126,8 +147,23 @@ class LookupData:
         self.demon_data = {
             'incarnations': DEMON_INCARNATIONS,
             'agendas': DEMON_AGENDAS,
-            'embeds': DEMON_EMBEDS,
-            'exploits': DEMON_EXPLOITS
+            'embeds': ALL_EMBEDS,
+            'exploits': DEMON_EXPLOITS,
+            'embed_names': ALL_EMBED_NAMES,
+            'exploit_names': ALL_EXPLOIT_NAMES,
+            'embeds_by_incarnation': EMBEDS_BY_INCARNATION,
+            'embeds_cacophony': EMBEDS_CACOPHONY,
+            'embeds_instrumental': EMBEDS_INSTRUMENTAL,
+            'embeds_mundane': EMBEDS_MUNDANE,
+            'embeds_vocal': EMBEDS_VOCAL,
+            'modifications': DEMON_MODIFICATIONS,
+            'technologies': DEMON_TECHNOLOGIES,
+            'propulsions': DEMON_PROPULSIONS,
+            'processes': DEMON_PROCESSES,
+            'modification_names': ALL_DEMON_MODIFICATIONS,
+            'technology_names': ALL_DEMON_TECHNOLOGIES,
+            'propulsion_names': ALL_DEMON_PROPULSIONS,
+            'process_names': ALL_DEMON_PROCESSES
         }
         
         self.mortal_plus_data = {
@@ -144,8 +180,10 @@ class LookupData:
             'guilds': MUMMY_GUILDS,
             'decrees': MUMMY_DECREES,
             'judges': MUMMY_JUDGES,
-            'utterances': MUMMY_UTTERANCES,
-            'affinities': MUMMY_AFFINITIES
+            'utterances': MUMMY_UTTERANCES_DATA,
+            'affinities': MUMMY_AFFINITIES_DATA,
+            'utterance_names': ALL_UTTERANCE_NAMES,
+            'affinity_names': ALL_AFFINITY_NAMES
         }
         
         # Geist data
@@ -166,6 +204,19 @@ class LookupData:
             'scars': DEVIANT_SCARS,
             'variations': DEVIANT_VARIATIONS,
             'adaptations': DEVIANT_ADAPTATIONS
+        }
+        
+        self.changing_breeds_data = {
+            'breeds': LEGACY_CHANGING_BREEDS,
+            'categories': CHANGING_BREED_CATEGORIES,
+            'accords': CHANGING_BREED_ACCORDS,
+            'accord_specialties': ACCORD_SPECIALTIES,
+            'respect_types': RESPECT_TYPES,
+            'favors': CHANGING_BREED_FAVORS,
+            'aspects': CHANGING_BREED_ASPECTS,
+            'favor_names': ALL_FAVOR_NAMES,
+            'aspect_names': ALL_ASPECT_NAMES,
+            'trickster_aspects': TRICKSTER_ONLY_ASPECTS
         }
         
         # Werewolf data
@@ -370,6 +421,68 @@ class LookupData:
         for arcanum in self.mage_data['arcana']:
             if search_term in arcanum.lower():
                 results.append(('arcanum', arcanum, None))
+        
+        # Search mummy affinities
+        for affinity_key, affinity_data in self.mummy_data['affinities'].items():
+            if (search_term in affinity_key.lower() or
+                search_term in affinity_data['name'].lower() or
+                search_term in affinity_data['description'].lower()):
+                results.append(('affinity', affinity_data['name'], affinity_data))
+        
+        # Search mummy utterances
+        for utterance_key, utterance_data in self.mummy_data['utterances'].items():
+            if (search_term in utterance_key.lower() or
+                search_term in utterance_data['name'].lower() or
+                search_term in utterance_data['description'].lower()):
+                results.append(('utterance', utterance_data['name'], utterance_data))
+        
+        # Search demon modifications
+        for mod_key, mod_data in self.demon_data['modifications'].items():
+            if (search_term in mod_key.lower() or
+                search_term in mod_data['name'].lower() or
+                search_term in mod_data['system'].lower() or
+                search_term in mod_data['appearance'].lower()):
+                results.append(('demon_modification', mod_data['name'], mod_data))
+        
+        # Search demon technologies
+        for tech_key, tech_data in self.demon_data['technologies'].items():
+            if (search_term in tech_key.lower() or
+                search_term in tech_data['name'].lower() or
+                search_term in tech_data['system'].lower() or
+                search_term in tech_data['appearance'].lower()):
+                results.append(('demon_technology', tech_data['name'], tech_data))
+        
+        # Search demon propulsions
+        for prop_key, prop_data in self.demon_data['propulsions'].items():
+            if (search_term in prop_key.lower() or
+                search_term in prop_data['name'].lower() or
+                search_term in prop_data['system'].lower() or
+                search_term in prop_data['appearance'].lower()):
+                results.append(('demon_propulsion', prop_data['name'], prop_data))
+        
+        # Search demon processes
+        for proc_key, proc_data in self.demon_data['processes'].items():
+            if (search_term in proc_key.lower() or
+                search_term in proc_data['name'].lower() or
+                search_term in proc_data['system'].lower() or
+                search_term in proc_data['appearance'].lower()):
+                results.append(('demon_process', proc_data['name'], proc_data))
+        
+        # Search demon embeds
+        for embed_key, embed_data in self.demon_data['embeds'].items():
+            if (search_term in embed_key.lower() or
+                search_term in embed_data['name'].lower() or
+                search_term in embed_data.get('description', '').lower() or
+                search_term in embed_data.get('effect', '').lower()):
+                results.append(('demon_embed', embed_data['name'], embed_data))
+        
+        # Search demon exploits
+        for exploit_key, exploit_data in self.demon_data['exploits'].items():
+            if (search_term in exploit_key.lower() or
+                search_term in exploit_data['name'].lower() or
+                search_term in exploit_data.get('description', '').lower() or
+                search_term in exploit_data.get('effect', '').lower()):
+                results.append(('demon_exploit', exploit_data['name'], exploit_data))
         
         return results
     

@@ -44,6 +44,8 @@ class CmdStat(MuxCommand):
         Specialties: specialty/[skill]=[specialty name] (requires dots in skill)
         Advantages: health, willpower, speed, defense, initiative
         Merits: All Chronicles of Darkness merits (see +xp/list merits)
+        Favors: Innate breed abilities (Legacy Changing Breeds only)
+        Aspects: Supernatural powers (Legacy Changing Breeds only)
         Powers: Template-specific supernatural abilities
                 - Vampire: disciplines (animalism, auspex), discipline powers (mesmerize, feral_whispers),
                            devotions (quicken_sight, bend_space), coils (conquer_the_red_fear),
@@ -51,15 +53,21 @@ class CmdStat(MuxCommand):
                 - Mage: arcana (arcanum_death, fate, forces, etc.)
                 - Werewolf: gifts (shadow_gaze, killer_instinct), rites (sacred_hunt, bottle_spirit)
                 - Changeling: individual contracts (hostile_takeover, cloak_of_night, etc.)
+                - Demon: embeds (authenticate, overclock), exploits (blowback, cloak_of_night)
                 Note: Powers that conflict with attribute/skill names use prefixes
+        
+        Demon Characters:
+                Use +stat embed=<name> to learn Embeds (innate abilities)
+                Use +stat exploit=<name> to learn Exploits (advanced techniques)
+                Use +stat first_key=<embed_name> to designate your First Key (must be an Embed you know)
         Bio: fullname, birthdate, concept, virtue, vice
-        template Bio: path, order, legacy, shadow_name, cabal, mask, dirge, 
+        Template Bio: path, order, legacy, shadow_name, cabal, mask, dirge, 
                    clan, covenant, bone, blood, auspice, tribe, lodge, pack, 
                    totem, deed_name, seeming, court, kith, burden, archetype, 
                    krewe, lineage, refinement, athanor, creator, pilgrimage, 
                    throng, profession, organization, creed, incarnation, 
                    agenda, agency, hunger, family, inheritance, origin, 
-                   clade, divergence
+                   clade, divergence, accord, breed, nahual (legacy_changingbreeds)
         Other: integrity, size, beats, experience, template (staff only)
         
         Template-specific integrity names can also be used:
@@ -104,6 +112,17 @@ class CmdStat(MuxCommand):
         +stat allies=1
         +stat unseen_sense:ghosts=2
         +stat unseen_sense:spirits=2
+        
+        Changing Breeds Examples (Legacy Mode):
+        +stat template=Legacy Changing Breeds
+        +stat accord=Den-Warder
+        +stat breed=Rajan (weretiger breed)
+        +stat nahual=Bastet (werecats)
+        +stat pack=The Night Stalkers
+        +stat favor:darksight=1
+        +stat favor:fang_and_claw=3
+        +stat aspect:nine_lives=5
+        +stat aspect:shadow_bond=3
         
         Power Examples:
         +stat animalism=3 (vampire discipline - rated 1-5)
@@ -165,6 +184,8 @@ class CmdStat(MuxCommand):
         Alembics (Promethean): +stat alembic=purification, +stat alembic=human_flesh
         Bestowments (Promethean): +stat bestowment=spare_parts, +stat bestowment=titans_strength
         Endowments (Hunter): +stat endowment=hellfire, +stat endowment=wrathful sword of st michael
+        Affinities (Mummy): +stat bestial_majesty=known, +stat divine_countenance=known
+        Utterances (Mummy): +stat awaken_the_dead_ba_1=known, +stat fury_of_sekhmet_sheut_1=known
 
         Category Powers (1-5 dots):
         Haunts (Geist): +stat boneyard=3, +stat curse=2
@@ -369,6 +390,13 @@ class CmdStat(MuxCommand):
             if not is_npc and target.db.approved:
                 self.caller.msg("Your character is approved. Only staff can modify your stats.")
                 return
+            
+            # Check if werewolf character is in a form that allows stat modification
+            from .shapeshifting import can_modify_stats_while_shifted
+            can_modify, reason = can_modify_stats_while_shifted(target)
+            if not can_modify:
+                self.caller.msg(f"|r{reason}|n")
+                return
         
        
         # Initialize stats if needed
@@ -394,7 +422,7 @@ class CmdStat(MuxCommand):
         # Determine stat category and validate
         stat_set = False
         
-        # Handle category prefixes (power:stat, bio:stat, merit:stat, skill:stat, attribute:stat)
+        # Handle category prefixes (power:stat, bio:stat, merit:stat, skill:stat, attribute:stat, favor:stat, aspect:stat)
         force_category = None
         if stat.startswith("power:"):
             force_category = "power"
@@ -405,6 +433,12 @@ class CmdStat(MuxCommand):
         elif stat.startswith("merit:"):
             force_category = "merit"
             stat = stat[6:]  # Remove "merit:" prefix
+        elif stat.startswith("favor:"):
+            force_category = "favor"
+            stat = stat[6:]  # Remove "favor:" prefix
+        elif stat.startswith("aspect:"):
+            force_category = "aspect"
+            stat = stat[7:]  # Remove "aspect:" prefix
         elif stat.startswith("skill:"):
             force_category = "skill"
             stat = stat[6:]  # Remove "skill:" prefix
@@ -424,6 +458,16 @@ class CmdStat(MuxCommand):
             if isinstance(value, int) and 1 <= value <= 5:
                 target.db.stats["attributes"][stat] = value
                 stat_set = True
+                
+                # Update base_attributes for werewolves in Hishu form
+                template = target.db.stats.get("other", {}).get("template", "").lower()
+                if template == "werewolf":
+                    current_form = getattr(target.db, 'current_form', 'hishu')
+                    if current_form == 'hishu':
+                        # Update the base attributes so shapeshifting uses the new value
+                        if not hasattr(target.db, 'base_attributes') or target.db.base_attributes is None:
+                            target.db.base_attributes = {}
+                        target.db.base_attributes[stat] = value
             else:
                 self.caller.msg("Attributes must be between 1 and 5.")
                 return
@@ -461,7 +505,7 @@ class CmdStat(MuxCommand):
                 return
         
         # Check bio fields
-        elif stat in ["fullname", "full_name", "birthdate", "concept", "virtue", "vice", "sire"]:
+        elif stat in ["fullname", "full_name", "birthdate", "concept", "virtue", "vice", "sire", "first_key"]:
             # Map alternate names and handle space conversions
             bio_field = stat
             if stat in ["full_name", "fullname"]:
@@ -492,6 +536,28 @@ class CmdStat(MuxCommand):
                         # Get the proper capitalized name
                         vice_info = get_vice_info(value_lower)
                         value = vice_info["name"]
+            
+            # Special validation for first_key (Demon only)
+            if stat == "first_key":
+                template = target.db.stats.get("other", {}).get("template", "Mortal")
+                if template.lower() != "demon":
+                    self.caller.msg(f"First Key can only be set for Demon characters. Your template is: {template}")
+                    return
+                
+                # Validate that the value is an embed the demon has
+                value_lower = str(value).lower().replace(" ", "_")
+                powers = target.db.stats.get("powers", {})
+                embed_key = f"embed:{value_lower}"
+                
+                if embed_key not in powers or powers[embed_key] != "known":
+                    self.caller.msg(f"'{value}' is not a known Embed. Use +stat embed=<name> to learn it first.")
+                    self.caller.msg("To see your embeds, use: +stat")
+                    return
+                
+                # Get the proper name from the embed data
+                from world.cofd.templates.demon_powers import ALL_EMBEDS
+                if value_lower in ALL_EMBEDS:
+                    value = ALL_EMBEDS[value_lower]['name']
             
             # Validate length for string fields
             if isinstance(value, str) and len(value) > 50:
@@ -720,34 +786,46 @@ class CmdStat(MuxCommand):
             
             legacy_mode = is_legacy_mode()
             
+            # Normalize template name (handle spaces and capitalization)
+            value_normalized = value.lower().replace(" ", "_")
+            
             if legacy_mode:
                 # In legacy mode, only allow legacy templates and exclude 2nd edition only templates
                 valid_templates = [
                     "legacy_vampire", "legacy_werewolf", "legacy_mage", "legacy_changeling", 
-                    "legacy_geist", "legacy_promethean", "legacy_hunter", "mortal"
+                    "legacy_geist", "legacy_promethean", "legacy_hunter", "legacy_changingbreeds", 
+                    "legacy_changing_breeds", "mortal"
                 ]
                 
-                if value.lower() not in valid_templates:
-                    self.caller.msg("Invalid template for Legacy Mode. Valid legacy templates: Legacy Vampire, Legacy Werewolf, Legacy Mage, Legacy Changeling, Legacy Geist, Legacy Promethean, Legacy Hunter, Mortal")
+                if value_normalized not in valid_templates:
+                    self.caller.msg("Invalid template for Legacy Mode. Valid legacy templates: Legacy Vampire, Legacy Werewolf, Legacy Mage, Legacy Changeling, Legacy Geist, Legacy Promethean, Legacy Hunter, Legacy Changing Breeds, Mortal")
                     return
             else:
                 # In modern mode, allow all templates except legacy ones
                 valid_templates = [
                     "changeling", "vampire", "werewolf", "mage", "geist", 
                     "deviant", "demon", "hunter", "promethean", 
-                    "mortal+", "mortal plus", "mortal"
+                    "mortal+", "mortal_plus", "mortal"
                 ]
                 
-                if value.lower() not in valid_templates:
+                if value_normalized not in valid_templates:
                     self.caller.msg("Invalid template. Valid templates: Changeling, Vampire, Werewolf, Mage, Geist, Deviant, Demon, Hunter, Promethean, Mortal+, Mortal")
                     return
             
             # Completely wipe character stats for clean slate
             old_template = target.db.stats.get("other", {}).get("template", "Mortal") if target.db.stats else "Mortal"
             
+            # Store template value - normalize display name for special cases
+            if value_normalized == "legacy_changingbreeds" or value_normalized == "legacy_changing_breeds":
+                value = "Legacy Changing Breeds"
+            elif value_normalized == "mortal_plus" or value_normalized == "mortal+":
+                value = "Mortal+"
+            else:
+                value = value.title()
+            
             # Confirm the nuclear option
             self.caller.msg(f"|rWARNING:|n This will completely wipe all of {target.name}'s stats!")
-            self.caller.msg(f"Changing template from {old_template} to {value.title()}...")
+            self.caller.msg(f"Changing template from {old_template} to {value}...")
             
             # Nuclear option: completely wipe stats but initialize with defaults
             target.db.stats = {
@@ -829,7 +907,65 @@ class CmdStat(MuxCommand):
                 target.msg(f"Your template has been changed to {value.title()} by {self.caller.name}.")
                 target.msg("All your stats have been wiped clean. Use +stat to set new stats.")
             
+            # Initialize werewolf form data if setting to Werewolf template
+            if value.title() == "Werewolf":
+                # Set default form to Hishu
+                target.db.current_form = "hishu"
+                # Store base attributes for shapeshifting
+                target.db.base_attributes = {
+                    "strength": target.db.stats["attributes"]["strength"],
+                    "dexterity": target.db.stats["attributes"]["dexterity"],
+                    "stamina": target.db.stats["attributes"]["stamina"],
+                    "manipulation": target.db.stats["attributes"]["manipulation"]
+                }
+                # Store base size
+                target.db.base_size = target.db.stats.get("other", {}).get("size", 5)
+                self.caller.msg(f"|gInitialized {target.name} in Hishu (human) form. Ready for shapeshifting.|n")
+            
             stat_set = True
+        
+        # Handle breed stat (for Changing Breeds in Legacy Mode)
+        elif stat == "breed":
+            # Check if legacy mode is active
+            try:
+                from commands.CmdLegacy import is_legacy_mode
+                if not is_legacy_mode():
+                    self.caller.msg("|rBreed stat is only available in Legacy Mode. Use |w+legacy on|r first.|n")
+                    return
+            except:
+                self.caller.msg("|rCould not check legacy mode status.|n")
+                return
+            
+            # Validate breed exists
+            try:
+                from world.cofd.changing_breeds_data import get_breed_info, list_all_breeds
+                breed_info = get_breed_info(value)
+                if not breed_info:
+                    breeds_list = ", ".join(list_all_breeds())
+                    self.caller.msg(f"|rUnknown breed '{value}'. Available breeds: {breeds_list}|n")
+                    return
+                
+                # Set the breed
+                target.db.stats["other"]["breed"] = value.lower().replace(" ", "_")
+                self.caller.msg(f"Set {target.name}'s breed to {breed_info['display_name']}.")
+                
+                # Initialize changing breed form data
+                target.db.current_form = "human"
+                target.db.base_attributes = {
+                    "strength": target.db.stats["attributes"]["strength"],
+                    "dexterity": target.db.stats["attributes"]["dexterity"],
+                    "stamina": target.db.stats["attributes"]["stamina"],
+                    "manipulation": target.db.stats["attributes"]["manipulation"]
+                }
+                target.db.base_size = target.db.stats.get("other", {}).get("size", 5)
+                self.caller.msg(f"|gInitialized {target.name} as {breed_info['display_name']} in human form. Ready for shapeshifting.|n")
+                
+                # Show breed info
+                self.caller.msg(f"|wBreed Bonus:|n {breed_info['breed_bonus']}")
+                stat_set = True
+            except ImportError:
+                self.caller.msg("|rChanging Breeds data not available.|n")
+                return
         
         # Other stats
         elif stat in ["integrity", "size", "beats", "experience"]:
@@ -846,6 +982,14 @@ class CmdStat(MuxCommand):
                 
             target.db.stats["other"][stat] = value
             stat_set = True
+            
+            # Update base_size for werewolves in Hishu form
+            if stat == "size":
+                template = target.db.stats.get("other", {}).get("template", "").lower()
+                if template == "werewolf":
+                    current_form = getattr(target.db, 'current_form', 'hishu')
+                    if current_form == 'hishu':
+                        target.db.base_size = value
         
         # Template-specific integrity names (aliases for integrity)
         elif stat.lower() in ["humanity", "wisdom", "pilgrimage", "clarity", "cover", "harmony", "synergy", "satiety"]:
@@ -998,11 +1142,188 @@ class CmdStat(MuxCommand):
                 # If merit system not available, fall through to custom stat
                 pass
         
+        # Favors (Changing Breeds innate breed abilities)
+        if not stat_set and force_category == "favor":
+            character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+            
+            if character_template.lower().replace(" ", "_") != "legacy_changingbreeds":
+                self.caller.msg("|rFavors are only available for Legacy Changing Breeds characters.|n")
+                return
+            
+            favor_name = stat.lower().replace(" ", "_")
+            
+            # Initialize favors dict if needed
+            if "favors" not in target.db.stats:
+                target.db.stats["favors"] = {}
+            
+            # Handle removal
+            if value == "" or value is None:
+                if favor_name in target.db.stats["favors"]:
+                    del target.db.stats["favors"][favor_name]
+                    target.db.stats = target.db.stats  # Trigger persistence
+                    self.caller.msg(f"Removed favor: {favor_name.replace('_', ' ').title()}")
+                else:
+                    self.caller.msg(f"You don't have the favor: {favor_name.replace('_', ' ').title()}")
+                return
+            
+            # Validate value
+            if not isinstance(value, int):
+                try:
+                    value = int(value)
+                except ValueError:
+                    # Some favors don't have dots, just set as boolean
+                    value = 1
+            
+            # Set the favor
+            target.db.stats["favors"][favor_name] = {
+                "dots": value,
+                "max_dots": 5
+            }
+            target.db.stats = target.db.stats  # Trigger persistence
+            self.caller.msg(f"Set favor {favor_name.replace('_', ' ').title()} to {value} {'dot' if value == 1 else 'dots'}.")
+            stat_set = True
+        
+        # Aspects (Changing Breeds purchased supernatural abilities)
+        if not stat_set and force_category == "aspect":
+            character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+            
+            if character_template.lower().replace(" ", "_") != "legacy_changingbreeds":
+                self.caller.msg("|rAspects are only available for Legacy Changing Breeds characters.|n")
+                return
+            
+            aspect_name = stat.lower().replace(" ", "_")
+            
+            # Initialize aspects dict if needed
+            if "aspects" not in target.db.stats:
+                target.db.stats["aspects"] = {}
+            
+            # Handle removal
+            if value == "" or value is None:
+                if aspect_name in target.db.stats["aspects"]:
+                    del target.db.stats["aspects"][aspect_name]
+                    target.db.stats = target.db.stats  # Trigger persistence
+                    self.caller.msg(f"Removed aspect: {aspect_name.replace('_', ' ').title()}")
+                else:
+                    self.caller.msg(f"You don't have the aspect: {aspect_name.replace('_', ' ').title()}")
+                return
+            
+            # Validate value
+            if not isinstance(value, int):
+                try:
+                    value = int(value)
+                except ValueError:
+                    # Some aspects don't have dots, just set as boolean
+                    value = 1
+            
+            # Set the aspect
+            target.db.stats["aspects"][aspect_name] = {
+                "dots": value,
+                "max_dots": 5
+            }
+            target.db.stats = target.db.stats  # Trigger persistence
+            self.caller.msg(f"Set aspect {aspect_name.replace('_', ' ').title()} to {value} {'dot' if value == 1 else 'dots'}.")
+            stat_set = True
+        
         # Semantic power syntax (key:beasts, ceremony:pass_on, etc.)
         # This comes after merit check since both use colons
         if not stat_set and ":" in stat:
             power_type, power_name = stat.split(":", 1)
-            return self._handle_semantic_power(target, power_type, power_name, value)
+            
+            # Check if this is actually a favor or aspect that didn't get caught by prefix handler
+            if power_type.lower() in ["favor", "favors"]:
+                # Redirect to favor handling
+                force_category = "favor"
+                stat = power_name
+                # Fall through to favor handler below
+            elif power_type.lower() in ["aspect", "aspects"]:
+                # Redirect to aspect handling  
+                force_category = "aspect"
+                stat = power_name
+                # Fall through to aspect handler below
+            else:
+                return self._handle_semantic_power(target, power_type, power_name, value)
+        
+        # Favors check (again, in case redirected from semantic power syntax)
+        if not stat_set and force_category == "favor":
+            character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+            
+            if character_template.lower().replace(" ", "_") != "legacy_changingbreeds":
+                self.caller.msg("|rFavors are only available for Legacy Changing Breeds characters.|n")
+                return
+            
+            favor_name = stat.lower().replace(" ", "_")
+            
+            # Initialize favors dict if needed
+            if "favors" not in target.db.stats:
+                target.db.stats["favors"] = {}
+            
+            # Handle removal
+            if value == "" or value is None:
+                if favor_name in target.db.stats["favors"]:
+                    del target.db.stats["favors"][favor_name]
+                    target.db.stats = target.db.stats  # Trigger persistence
+                    self.caller.msg(f"Removed favor: {favor_name.replace('_', ' ').title()}")
+                else:
+                    self.caller.msg(f"You don't have the favor: {favor_name.replace('_', ' ').title()}")
+                return
+            
+            # Validate value
+            if not isinstance(value, int):
+                try:
+                    value = int(value)
+                except ValueError:
+                    # Some favors don't have dots, just set as boolean
+                    value = 1
+            
+            # Set the favor
+            target.db.stats["favors"][favor_name] = {
+                "dots": value,
+                "max_dots": 5
+            }
+            target.db.stats = target.db.stats  # Trigger persistence
+            self.caller.msg(f"Set favor {favor_name.replace('_', ' ').title()} to {value} {'dot' if value == 1 else 'dots'}.")
+            stat_set = True
+        
+        # Aspects check (again, in case redirected from semantic power syntax)
+        if not stat_set and force_category == "aspect":
+            character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+            
+            if character_template.lower().replace(" ", "_") != "legacy_changingbreeds":
+                self.caller.msg("|rAspects are only available for Legacy Changing Breeds characters.|n")
+                return
+            
+            aspect_name = stat.lower().replace(" ", "_")
+            
+            # Initialize aspects dict if needed
+            if "aspects" not in target.db.stats:
+                target.db.stats["aspects"] = {}
+            
+            # Handle removal
+            if value == "" or value is None:
+                if aspect_name in target.db.stats["aspects"]:
+                    del target.db.stats["aspects"][aspect_name]
+                    target.db.stats = target.db.stats  # Trigger persistence
+                    self.caller.msg(f"Removed aspect: {aspect_name.replace('_', ' ').title()}")
+                else:
+                    self.caller.msg(f"You don't have the aspect: {aspect_name.replace('_', ' ').title()}")
+                return
+            
+            # Validate value
+            if not isinstance(value, int):
+                try:
+                    value = int(value)
+                except ValueError:
+                    # Some aspects don't have dots, just set as boolean
+                    value = 1
+            
+            # Set the aspect
+            target.db.stats["aspects"][aspect_name] = {
+                "dots": value,
+                "max_dots": 5
+            }
+            target.db.stats = target.db.stats  # Trigger persistence
+            self.caller.msg(f"Set aspect {aspect_name.replace('_', ' ').title()} to {value} {'dot' if value == 1 else 'dots'}.")
+            stat_set = True
         
         # Check powers (template-specific supernatural abilities)
         # Skip if force_category is "bio"
@@ -1122,6 +1443,9 @@ class CmdStat(MuxCommand):
             
             # Clean up misplaced stats
             target.cleanup_misplaced_stats(self.caller)
+            
+            # Mark stats as modified so Evennia persists the changes
+            target.db.stats = target.db.stats
     
     def _calculate_power_pools_fallback(self, target, stat, value):
         """Fallback method to calculate power pools when the typeclass method isn't available"""
@@ -1178,6 +1502,8 @@ class CmdStat(MuxCommand):
         
         if pool_updated:
             self.caller.msg(f"Updated power pool: {pool_updated}")
+            # Mark stats as modified so Evennia persists the changes
+            target.db.stats = target.db.stats
     
     def remove_stat_direct(self, target_name, stat):
         """

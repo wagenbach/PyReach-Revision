@@ -14,6 +14,7 @@ from world.cofd.templates.vampire_rituals import (
 )
 from world.cofd.templates.werewolf_gifts import ALL_WEREWOLF_GIFTS
 from world.cofd.templates.changeling_contracts import ALL_CHANGELING_CONTRACTS
+from world.cofd.templates.demon_powers import ALL_EMBEDS, DEMON_EXPLOITS, ALL_EMBED_NAMES, ALL_EXPLOIT_NAMES
 
 
 def get_valid_semantic_powers(power_type):
@@ -73,7 +74,9 @@ def get_valid_semantic_powers(power_type):
         "spell": list(ALL_MAGE_SPELLS.keys()),
         "alembic": ALL_ALEMBICS,
         "bestowment": [b.lower().replace(" ", "_") for b in PROMETHEAN_BESTOWMENTS],
-        "endowment": ALL_ENDOWMENT_POWERS
+        "endowment": ALL_ENDOWMENT_POWERS,
+        "embed": ALL_EMBED_NAMES,
+        "exploit": ALL_EXPLOIT_NAMES
     }
     
     return valid_powers.get(power_type, [])
@@ -105,7 +108,9 @@ def get_template_requirements(power_type):
         "spell": ["mage", "legacy_mage"],
         "alembic": ["promethean"],
         "bestowment": ["promethean"],
-        "endowment": ["hunter"]
+        "endowment": ["hunter"],
+        "embed": ["demon"],
+        "exploit": ["demon"]
     }
     
     return template_requirements.get(power_type, [])
@@ -133,7 +138,7 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
     
     # Validate power type
     if not valid_powers:
-        return False, f"Invalid power type: {power_type}\nValid types: key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment, discipline_power, devotion, coil, scale, theban, cruac"
+        return False, f"Invalid power type: {power_type}\nValid types: key, ceremony, rite, ritual, contract, spell, alembic, bestowment, endowment, discipline_power, devotion, coil, scale, theban, cruac, embed, exploit"
     
     # Validate power name
     if power_name not in valid_powers:
@@ -145,6 +150,10 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
             return False, f"Invalid {power_type.replace('_', ' ')}: {power_name}\nUse +lookup {power_type.split('_')[0]}s to browse or +lookup <power_name> for details. There are {len(valid_powers)} available."
         elif power_type in ["scale", "theban", "cruac"]:
             return False, f"Invalid {power_type}: {power_name}\nUse +lookup {power_type} to browse or +lookup <power_name> for details. There are {len(valid_powers)} available."
+        elif power_type == "embed":
+            return False, f"Invalid embed: {power_name}\nUse +lookup embeds to browse embeds or +lookup <embed_name> for details. There are {len(valid_powers)} embeds available."
+        elif power_type == "exploit":
+            return False, f"Invalid exploit: {power_name}\nUse +lookup exploits to browse exploits or +lookup <exploit_name> for details. There are {len(valid_powers)} exploits available."
         else:
             return False, f"Invalid {power_type}: {power_name}\nValid {power_type}s: {', '.join(sorted(valid_powers)[:10])}..."
     
@@ -249,6 +258,36 @@ def handle_semantic_power(character, power_type, power_name, value, caller):
             return True, f"Set {character.name} to know {power_data['name']} ({display_type})."
         else:
             return True, f"Set {character.name} to know {power_name.replace('_', ' ').title()} ({display_type})."
+    
+    elif power_type == "embed":
+        # Embeds are stored in powers with embed: prefix as "known"
+        if "powers" not in character.db.stats:
+            character.db.stats["powers"] = {}
+        
+        character.db.stats["powers"][f"embed:{power_name}"] = "known"
+        
+        # Get embed data to show more info
+        if power_name in ALL_EMBEDS:
+            embed_data = ALL_EMBEDS[power_name]
+            incarnation = embed_data.get('incarnation', 'Mundane')
+            return True, f"Set {character.name} to know {embed_data['name']} ({incarnation} Embed)."
+        else:
+            return True, f"Set {character.name} to know {power_name.replace('_', ' ').title()} (Embed)."
+    
+    elif power_type == "exploit":
+        # Exploits are stored in powers with exploit: prefix as "known"
+        if "powers" not in character.db.stats:
+            character.db.stats["powers"] = {}
+        
+        character.db.stats["powers"][f"exploit:{power_name}"] = "known"
+        
+        # Get exploit data to show more info
+        if power_name in DEMON_EXPLOITS:
+            exploit_data = DEMON_EXPLOITS[power_name]
+            prereq_info = f" (Prerequisite: {exploit_data['prerequisite']})" if exploit_data.get('prerequisite') else ""
+            return True, f"Set {character.name} to know {exploit_data['name']} (Exploit){prereq_info}."
+        else:
+            return True, f"Set {character.name} to know {power_name.replace('_', ' ').title()} (Exploit)."
     
     else:
         # Ceremonies, rites, rituals (legacy), contracts, alembics, bestowments go to regular powers as known abilities (stored as 1)
