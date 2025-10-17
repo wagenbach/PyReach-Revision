@@ -4,13 +4,16 @@ Hunters are ordinary people who have seen the supernatural and chosen to fight b
 """
 
 from . import register_template
-from .hunter_organizations import (
+from world.cofd.powers.hunter_organizations import (
     ALL_CONSPIRACIES, 
     ALL_COMPACTS,
     get_organization,
-    get_organization_summary
+    get_organization_summary,
+    get_compact_names,
+    get_conspiracy_names,
+    get_all_organization_names
 )
-from .hunter_tactics import (
+from world.cofd.powers.hunter_tactics import (
     ALL_TACTICS,
     ALL_MENTAL_TACTICS,
     ALL_PHYSICAL_TACTICS,
@@ -19,11 +22,11 @@ from .hunter_tactics import (
     get_tactic_summary
 )
 
-# Valid hunter conspiracies (includes historical)
-HUNTER_CONSPIRACIES = ALL_CONSPIRACIES
+# Valid hunter conspiracies (list of names for validation)
+HUNTER_CONSPIRACIES = get_conspiracy_names()
 
-# Valid hunter compacts (includes historical)
-HUNTER_COMPACTS = ALL_COMPACTS
+# Valid hunter compacts (list of names for validation)
+HUNTER_COMPACTS = get_compact_names()
 
 # Valid hunter tactics (mental, physical, and social)
 HUNTER_TACTICS = ALL_TACTICS

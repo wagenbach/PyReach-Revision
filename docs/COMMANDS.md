@@ -1,918 +1,745 @@
-# Player and Admin Commands Reference
+# Exordium to Entropy - Complete Command Reference
 
-Complete reference for all commands available in the PyReach Chronicles of Darkness MUSH system.
+**Version:** Chronicles of Darkness 2nd Edition  
+**Last Updated:** October 2025
+
+**IMPORTANT NOTE:** All character-targeting commands support **both character names and aliases** and search **globally** by default (you can target any character anywhere in the game world).
+
+---
 
 ## Table of Contents
 
-1. [Character Commands](#character-commands)
-2. [Sheet & Stats](#sheet--stats)
-3. [Experience & Advancement](#experience--advancement)
-4. [Combat Commands](#combat-commands)
-5. [Social & Investigation](#social--investigation)
-6. [Movement & Travel](#movement--travel)
-7. [Groups & Organizations](#groups--organizations)
-8. [Notes & Journals](#notes--journals)
-9. [Communication](#communication)
-10. [Admin Commands](#admin-commands)
-11. [Building Commands](#building-commands)
+1. [Character Creation & Development](#character-creation--development)
+2. [Communication Commands](#communication-commands)
+3. [Roleplaying Tools](#roleplaying-tools)
+4. [Combat System](#combat-system)
+5. [Game Systems](#game-systems)
+6. [Group & Organization Commands](#group--organization-commands)
+7. [Mystery & Investigation](#mystery--investigation)
+8. [Information & Reference](#information--reference)
+9. [Building & World Management](#building--world-management)
+10. [Staff & Admin Commands](#staff--admin-commands)
+11. [Jobs & Request System](#jobs--request-system)
+12. [Bulletin Board System](#bulletin-board-system)
 
 ---
 
-## Character Commands
+## Character Creation & Development
 
-### +sheet - View Character Sheet
-Display your character sheet with all stats, pools, and information.
+### `+sheet` (aliases: `sheet`)
+Display your character sheet with all stats, merits, and current status.
+- **Usage:**
+  - `+sheet` - View your own sheet
+  - `+sheet <character>` - View another character's sheet (if permitted)
+- **Switches:**
+  - `/full` - Show complete detailed sheet
+  - `/compact` - Show condensed version
+  - `/legacy` - Show legacy mode sheet (if enabled)
+  - `/show` - Show your sheet to the room
+  - `/show <player>` - Show your sheet to specific player (requires them online)
+- **Notes:**
+  - Supports character aliases
+  - **Works on offline characters** - view any character's sheet anytime
+  - Only `/show` switch requires target to be online
 
-```
-+sheet                    - View your own character sheet
-+sheet <character>        - View another character's sheet
-+sheet/ascii              - Force ASCII display (no Unicode dots)
-```
+### `+stat` (aliases: `+stats`)
+Set and manage character statistics including attributes, skills, merits, and more.
+- **Usage:**
+  - `+stat <stat>=<value>` - Set a stat on yourself
+  - `+stat <name>/<stat>=<value>` - Set stat on someone else (staff only)
+  - `+stat/list [name]` - List all stats
+  - `+stat/remove <stat>` - Remove a stat
+- **Examples:**
+  - `+stat strength=3`
+  - `+stat wits=4`
+  - `+stat brawl=2`
+- **Notes:**
+  - Supports character aliases
+  - **Works on offline characters** - staff can modify stats anytime
 
-**Features:**
-- UTF-8 Unicode dots (● ○) or ASCII (* -) for compatible clients
-- Template-specific power stats (Gnosis, Wyrd, Primal Urge, etc.)
-- Biographical information display
-- Health and willpower tracking
-- Equipment and conditions
+### `+recalc` (aliases: `recalc`)
+Recalculate derived statistics (health, willpower, defense, etc.) based on current stats.
+- **Usage:** `+recalc [character]`
 
----
+### `+xp` (aliases: `+experience`)
+Manage experience points, beats, and character advancement.
+- **Usage:**
+  - `+xp` - Show current XP and beats
+  - `+xp/beat <source>` - Add a beat
+  - `+xp/spend <stat>=<dots>` - Spend XP on advancement
+  - `+xp/buy <merit>=[dots]` - Purchase a merit
+  - `+xp/costs` - Show XP costs
+  - `+xp/list merits [category]` - List available merits
+  - `+xp/info <merit>` - Show merit details
+- **Beat Sources:** dramatic_failure, exceptional_success, conditions, aspirations, story, scene, session, roleplay
 
-### +stat - Manage Character Statistics
-Set and manage all character statistics including bio fields.
+### `+aspiration` (aliases: `+asp`)
+Manage character aspirations (goals that drive story and earn beats).
+- **Usage:**
+  - `+aspiration/list` - Show your aspirations
+  - `+aspiration/add <number> <description>` - Add/update aspiration
+  - `+aspiration/remove <number>` - Remove aspiration
+  - `+aspiration/fulfill <number>` - Fulfill aspiration and earn beat
 
-```
-+stat <stat>=<value>          - Set a stat value
-+stat/remove <stat>           - Remove a stat
-+stat/list                    - View all stats and bio info
-+stat <character>/<stat>=<value> - Staff: set stat for another character
-```
+### `+health`
+Manage character health track and damage.
+- **Usage:**
+  - `+health` - View your health
+  - `+health <character>` - View another's health (staff)
+  - `+health/damage <type> <amount>` - Apply damage (bashing, lethal, aggravated)
+  - `+health/heal <type> <amount>` - Heal damage
+  - `+health/set <health string>` - Set exact health track
 
-**Bio Fields:**
-- `fullname` - Full character name
-- `birthdate` - Date of birth
-- `concept` - Character concept/profession
-- `virtue` - Highest moral principle
-- `vice` - Greatest moral failing
+### `+integrity`
+Manage character Integrity stat and breaking points.
+- **Usage:**
+  - `+integrity` - View your integrity
+  - `+integrity/check <level>` - Make breaking point roll
+  - `+integrity/set <value>` - Set integrity (staff only)
 
-**Template-Specific Fields:**
-- **Vampire:** mask, dirge, clan, covenant
-- **Werewolf:** bone, blood, auspice, tribe, deed_name
-- **Mage:** path, order, shadow_name, cabal
-- **Changeling:** seeming, court, kith
-- **Geist:** burden, archetype, krewe
-- **And more** for each Chronicles of Darkness splat
-
-**Examples:**
-```
-+stat fullname=John Smith
-+stat concept=Detective
-+stat virtue=Justice
-+stat clan=Gangrel              # Vampire only
-+stat auspice=Rahu              # Werewolf only
-```
-
----
-
-### +pool - Manage Resource Pools
-Manage willpower and supernatural resource pools.
-
-```
-+pool                         - Show all available pools
-+pool <pool>                  - Show specific pool status
-+pool/<pool>/spend [amount]   - Spend from pool (default: 1)
-+pool/<pool>/gain [amount]    - Gain pool points (default: 1)
-+pool/<pool>/set <current>/<max> - Set pool values (staff only)
-+pool/<pool>/reset            - Reset pool to maximum (staff only)
-```
-
-**Available Pools by Template:**
-- **Universal:** willpower
-- **Werewolf:** essence (based on Primal Urge)
-- **Vampire:** blood (based on Blood Potency)
-- **Changeling:** glamour (based on Wyrd)
-- **Mage:** mana (based on Gnosis)
-- **Geist:** plasm (based on Synergy)
-- **Deviant:** instability
-- **Demon:** aether
-- **Promethean:** pyros
-
-**Examples:**
-```
-+pool/willpower/spend 2
-+pool/blood/gain 3
-+pool/essence
-```
+### `+legacy`
+Toggle between Chronicles of Darkness 2e and Legacy (oWoD) mode.
+- **Usage:**
+  - `+legacy` - Check current mode
+  - `+legacy/on` - Enable legacy mode
+  - `+legacy/off` - Disable legacy mode
+  - `+legacy/info` - Show mode differences
 
 ---
 
-### +health - Manage Health and Damage
-Track character health and damage types.
+## Communication Commands
 
-```
-+health                       - Show current health status
-+health/damage <amount> [type] - Take damage (bashing default)
-+health/heal <amount> [type]  - Heal damage
-+health/set <level> <type>    - Set specific health box (staff)
-+health/clear                 - Clear all damage (staff)
-+health/max <amount>          - Set maximum health (staff)
-```
-
-**Damage Types:**
-- **bashing** (b) - Bruises, fatigue (cyan /)
-- **lethal** (l) - Cuts, bullets (red X)
-- **aggravated** (a) - Fire, supernatural (bright red *)
-
-**Examples:**
-```
-+health/damage 2 lethal
-+health/heal 1 bashing
-+health
-```
-
----
-
-### +aspiration - Manage Character Aspirations
-Set and fulfill character aspirations for beats.
-
-```
-+aspiration/list              - List your current aspirations
-+aspiration/add <number> <description> - Add/update aspiration (1-3)
-+aspiration/remove <number>   - Remove an aspiration
-+aspiration/fulfill <number>  - Mark fulfilled and gain a beat
-```
-
-**Examples:**
-```
-+aspiration/list
-+aspiration/add 1 Find my missing sister
-+aspiration/fulfill 1
-```
-
----
-
-### +shift - Werewolf Shapeshifting
-Transform between the five forms of the Uratha (Werewolf characters only).
-
-```
-+shift <form>                - Transform into specified form
-+shift/list                  - Show all available forms
-+shift/info <form>           - Show detailed form information
-+form                        - Quick reference for current form
-```
-
-**The Five Forms:**
-- **Hishu** - Human form (default, only form allowing XP spending)
-- **Dalu** - Near-Man form (Str +1, Sta +1, Man -1, Size +1)
-- **Gauru** - War form (Str +3, Dex +1, Sta +2, Size +2, LIMITED DURATION)
-- **Urshul** - Near-Wolf form (Str +2, Dex +2, Sta +2, Man -1, Size +1)
-- **Urhan** - Wolf form (Dex +2, Sta +1, Man -1, Size -1)
-
-**Important Restrictions:**
-- Can only use `+stat`, `+xp/spend`, and `+xp/buy` while in Hishu form
-- Form bonuses are temporary - returning to Hishu restores base stats
-- Gauru form has limited duration (Stamina + Primal Urge turns)
-- Derived stats (Health, Speed, Defense, Initiative) auto-recalculate
-
-**Examples:**
-```
-+shift gauru        - Transform into war form
-+shift hishu        - Return to human form
-+shift/list         - See all forms
-+shift/info urshul  - Learn about near-wolf form
-+form               - Check current form
-```
-
-**See Also:** [Shapeshifting Guide](../commands/SHAPESHIFTING_GUIDE.md) for complete details.
-
----
-
-### +condition - Manage Conditions
-Track temporary conditions affecting your character.
-
-```
-+condition/list               - List your active conditions
-+condition/add <condition>    - Add a condition
-+condition/remove <condition> - Remove a condition
-+condition/info <condition>   - View condition details
-```
-
----
-
-### +tilt - Manage Tilts
-Track environmental and personal tilts in combat.
-
-```
-+tilt/list                    - List active tilts
-+tilt/add <tilt>              - Add a tilt
-+tilt/remove <tilt>           - Remove a tilt
-+tilt/info <tilt>             - View tilt details
-```
-
----
-
-## Sheet & Stats
-
-### +finger - View Player Information
-Quick view of player online status and basic info.
-
-```
-+finger <player>              - View player information
-```
-
----
-
-### +lookup - Search Game Databases
-Look up merits, conditions, tilts, contracts, and other game mechanics.
-
-```
-+lookup <search term>         - Search all databases
-+lookup/merit <name>          - Look up specific merit
-+lookup/condition <name>      - Look up specific condition
-+lookup/tilt <name>           - Look up specific tilt
-+lookup/contract <name>       - Look up Changeling contract
-+lookup/gift <name>           - Look up Werewolf gift
-+lookup/discipline <name>     - Look up Vampire discipline
-```
-
-**Examples:**
-```
-+lookup fast reflexes
-+lookup/merit striking looks
-+lookup/condition stunned
-```
-
----
-
-## Experience & Advancement
-
-### +xp - Experience Point Management
-Manage beats, experience points, and character advancement.
-
-```
-+xp                           - View experience summary
-+xp/beat <source>             - Add a beat
-+xp/spend <stat>=<dots>       - Spend XP on attributes/skills
-+xp/buy <merit>=[dots]        - Purchase a merit
-+xp/refund <merit>            - Refund a merit (staff only)
-+xp/costs                     - Show XP costs
-+xp/list merits [category]    - List available merits
-+xp/info <merit>              - Show merit details
-```
-
-**Beat Sources:**
-- dramatic_failure, exceptional_success, conditions
-- aspirations, story, scene, session
-- roleplay, challenge, sacrifice
-- discovery, relationship, consequence
-- learning, growth
-
-**Experience Costs:**
-- **Attributes:** 4 XP per dot
-- **Skills:** 2 XP per dot
-- **Merits:** 1 XP per dot
-- **Integrity:** 2 XP per dot
-- **Specialties:** 1 XP each
-
-**Examples:**
-```
-+xp/beat dramatic_failure
-+xp/spend strength=4
-+xp/buy contacts=3
-+xp/list merits social
-```
-
----
-
-### +xp/arcane - Arcane Experience (Mages Only)
-Manage Mage-specific arcane experience for magical advancement.
-
-```
-+xp/arcane <source>           - Add arcane beat
-+xp/spend/arcane <stat>=<dots> - Spend arcane XP
-+xp/costs/arcane              - Show arcane XP costs
-```
-
-**Arcane Beat Sources:**
-- obsession, magical_condition
-- spell_dramatic_failure, act_of_hubris
-- legacy_tutoring, supernatural_encounter
-
-**Arcane XP Uses:**
-- Arcanum dots (4-5 XP)
-- Gnosis (5 XP)
-- Praxis (1 Arcane XP - mandatory)
-- Wisdom (2 Arcane XP - mandatory)
-- Rotes (1 XP either regular or arcane)
-
-**Examples:**
-```
-+xp/arcane obsession
-+xp/spend/arcane forces=3
-+xp/spend/arcane gnosis=2
-```
-
----
-
-### +vote & +recommend - XP Voting System
-Vote for and recommend other players for experience rewards.
-
-```
-+vote <player>=<reason>       - Vote for a player
-+recommend <player>=<reason>  - Recommend a player (stronger)
-+vote/check                   - Check your vote cooldowns
-```
-
-**Note:** System may be in weekly beats mode instead of voting mode. Use `+voteadmin/settings` (staff) to check mode.
-
----
-
-## Combat Commands
-
-### Combat Management
-
-```
-+combat/join [team]           - Join combat (optional team number)
-+combat/leave                 - Leave combat
-+combat/init [modifier]       - Roll initiative
-+combat/status                - Show combat status and turn order
-+combat/next                  - Advance to next turn
-+combat/end                   - End combat (staff only)
-+combat/team <number>         - Switch to specific team
-+combat/teams                 - Show team composition
-```
-
----
-
-### Attack Actions
-
-```
-+combat/attack <target> [weapon] - Basic attack
-+combat/attack/allout <target> [weapon] - All-out attack (+2 attack, lose Defense)
-+combat/attack/charge <target> [weapon] - Charge (+1 damage, requires movement)
-+combat/attack/specify <target>=<location> [weapon] - Targeted attack
-+combat/attack/multiple <target1>,<target2>... [weapon] - Multiple attacks
-```
-
----
-
-### Defensive Actions
-
-```
-+combat/dodge                 - Dodge (double Defense, lose next action)
-+combat/dodge/full            - Full dodge for turn (Instant)
-+combat/block <attacker>      - Block (+2 Defense vs one attacker)
-+combat/cover <rating>        - Take cover (1-4 rating)
-```
-
----
-
-### Other Combat Actions
-
-```
-+combat/move <distance>       - Move up to Speed (Reflexive)
-+combat/sprint                - Sprint (roll Strength + Athletics)
-+combat/aim <target>          - Aim (+1 per turn, max +3)
-+combat/grapple <target>      - Attempt grapple
-+combat/reload [weapon]       - Reload weapon
-+combat/ready <weapon>        - Ready/change weapon
-+combat/delay <initiative>    - Delay action to lower initiative
-```
-
----
-
-### Surrender System
-
-```
-+combat/surrender             - Offer surrender for your team
-+combat/accept <team>         - Accept surrender from team
-+combat/decline <team>        - Decline surrender from team
-```
-
----
-
-### Equipment Commands
-
-```
-+equipment                    - View your equipment inventory
-+equipment/add <item>         - Add item to inventory
-+equipment/remove <item>      - Remove item from inventory
-+equipment/equip <item>       - Equip item for combat
-+equipment/unequip <item>     - Unequip item
-
-+buy                          - View available items for purchase
-+buy <item>                   - Purchase an item
-+buyconfig                    - View purchasing configuration (staff)
-```
-
----
-
-## Social & Investigation
-
-### +mystery - Investigation System
-Investigate mysteries and manage clues (players and staff).
-
-**Player Commands:**
-```
-+mystery                      - List active mysteries
-+mystery <id>                 - View mystery details
-+mystery/progress [id]        - Show investigation progress
-+mystery/examine <object>     - Examine for clues
-+mystery/search [area]        - Search for hidden clues
-+mystery/interview <character> - Interview for information
-+mystery/research <topic>     - Research a topic
-+mystery/share <char>=<clue>  - Share a clue
-+mystery/collaborate <char>   - Begin collaborating
-```
-
-**Staff Commands:**
-```
-+mystery/create <title>=<description>
-+mystery/list [category]      - List all mysteries
-+mystery/view <id>            - Staff view
-+mystery/edit <id>/<field>=<value>
-+mystery/delete <id>
-+mystery/status <id>=<status>
-+mystery/addclue <id>=<name>/<desc>
-+mystery/grant <char>=<id>/<clue_id>
-+mystery/revoke <char>=<id>/<clue_id>
-```
-
----
-
-### +social - Social Maneuvering
-Handle social interactions and influence.
-
-```
-+social/open <target>=<goal>  - Open social maneuver
-+social/roll <target>         - Make social impression roll
-+social/close                 - Close social maneuver
-+social/status                - Check active social maneuvers
-```
-
----
-
-## Movement & Travel
-
-### +ooc & +ic - OOC/IC Movement
-Move between out-of-character and in-character areas.
-
-```
-+ooc                          - Go to OOC room
-+ic                           - Return to IC area or IC starting room
-```
-
-**Features:**
-- Stores previous location
-- Returns you to where you were
-- Prevents location desync issues
-
----
-
-### +hangouts - Travel to Gathering Places
-Quick travel to designated social spaces and group hangouts.
-
-```
-+hangouts                     - List all available hangouts
-+hangouts/public              - List only public hangouts
-+hangouts/groups              - List only group hangouts
-+hangouts <name>              - Travel to a hangout
-+hangouts/return              - Return to previous location
-```
-
-**Examples:**
-```
-+hangouts                     # See all locations
-+hangouts crimson             # Go to "The Crimson Rose"
-+hangouts/return              # Go back to where you were
-```
-
----
-
-### +join - Staff Teleport (Staff Only)
-Teleport to a player's location.
-
-```
-+join <player>                - Go to player's location
-+join/quiet <player>          - Go quietly (no messages)
-```
-
----
-
-## Groups & Organizations
-
-### +groups - View Groups
-List and view information about groups and organizations.
-
-```
-+groups                       - List all public groups
-+group <id>                   - View detailed group information
-+group/show <character>       - Show character's groups
-```
-
----
-
-### +roster - View Group Rosters
-View group membership rosters.
-
-```
-+roster                       - List available group rosters
-+roster <group name>          - View specific group roster
-+roster <group id>            - View roster by ID
-+roster/all                   - List all rosters (staff only)
-```
-
----
-
-## Notes & Journals
-
-### +note - Character Notes System
-Create and manage narrative notes on your character.
-
-```
-+note [title]/[category]=[text] - Create a new note
-+note                         - View all your notes
-+note/edit [title]=[new text] - Edit an existing note
-+note/delete [title]          - Delete a note
-+note/show [title]            - Show note to room
-+note/show [title]=[player]   - Show note to specific player
-```
-
-**Staff Commands:**
-```
-+note/approve [char]=[title]  - Approve note (locks editing)
-+note/unapprove [char]=[title] - Unapprove note (unlocks)
-```
-
-**Examples:**
-```
-+note My Backstory/Background=I was born in a small village...
-+note/edit My Backstory=I was actually born in a city...
-+note/show My Backstory
-+note/show My Backstory=Bob
-```
-
-**Features:**
-- Notes organized by category
-- Staff approval system locks notes
-- Share publicly or privately
-- Timestamps for creation and modification
-
----
-
-## Communication
-
-### +page - Private Messages
+### `page` (aliases: `tell`, `p`)
 Send private messages to other players.
+- **Usage:**
+  - `page <character>=<message>` - Send a page
+  - `page <char1>,<char2>=<message>` - Page multiple people
+  - `page <number>` - View last N pages
+  - `page/last` - View last page sent
+  - `page/idle <message>` - Set idle message
+- **Notes:** 
+  - Supports character aliases (e.g., `page Lys=Hello` finds Lysander)
+  - **Requires target to be online** - offline characters cannot receive pages
 
-```
-+page <player>=<message>      - Send a page
-+page <player1>,<player2>=<message> - Page multiple players
-```
+### `+txt` (aliases: `+text`, `+sms`)
+Send in-character text messages between characters.
+- **Usage:**
+  - `+txt <character>=<message>` - Send text
+  - `+txt/pic <character>=<description>` - Send picture
+  - `+txt/opt-in` - Enable texting system
+  - `+txt/opt-out` - Disable texting system
+  - `+txt <number>` - View text history
+- **Notes:**
+  - Supports character aliases
+  - **Requires target to be online** to receive messages
+  - Characters must opt-in to use the texting system
 
----
+### `+watch`
+Track login/logout of friends.
+- **Usage:**
+  - `+watch` - Show who you're watching that's connected
+  - `+watch/add <character>` - Add to watch list
+  - `+watch/del <character>` - Remove from watch list
+  - `+watch/who` - Show full watch list with status
+  - `+watch/on` - Turn watch notifications on
+  - `+watch/off` - Turn watch notifications off
+  - `+watch/hide` - Hide yourself from watch
+  - `+watch/unhide` - Unhide from watch
 
-### Channels
-Join and use chat channels.
+### `say` (aliases: `'`, `"`)
+Speak in-character to your current location.
+- **Usage:** `say <message>` or `"<message>`
 
-```
-addcom <alias>=<channel>      - Add channel with alias
-delcom <alias>                - Remove channel alias
-comlist                       - List your channels
-<alias> <message>             - Send message to channel
-```
+### `pose` (aliases: `:`, `emote`)
+Perform an action/emote in your current location.
+- **Usage:** 
+  - `pose <action>` or `:<action>`
+  - `:s <action>` - No-space pose
 
----
+### `+emit`
+Emit text to the room (no name prepended).
+- **Usage:** `+emit <text>`
 
-### +bbs - Bulletin Board System
-Read and post to bulletin boards.
+### `+ooc`
+Out-of-character channel communication.
+- **Usage:**
+  - `+ooc <message>` - Send OOC message
+  - `+ooc/on` - Join OOC channel
+  - `+ooc/off` - Leave OOC channel
 
-```
-+bbs                          - List all boards
-+bbs <board>                  - List posts on board
-+bbs <board>/<post>           - Read a post
-+bbs/post <board>/<title>=<text> - Create new post
-+bbs/reply <board>/<post>=<text> - Reply to post
-+bbs/edit <board>/<post>=<text> - Edit your post
-+bbs/delete <board>/<post>    - Delete your post
-```
+### `+finger`
+Display OOC information about a character.
+- **Usage:**
+  - `+finger <character>` - View someone's finger
+  - `+finger me` - View your own finger
+  - `+finger/set <attribute>=<value>` - Set finger info
+- **Attributes:** email, position, age, fame, app-age, plan, rp-prefs, themesong, quote, off-hours, temperament, vacation, url
+- **Notes:**
+  - Supports character aliases
+  - **Works on offline characters** - view info anytime
+  - Shows online/idle time if character is logged in
 
----
+### `+alts` (aliases: `alts`)
+Manage character alts (declare alternate characters).
+- **Usage:**
+  - `+alts` - Show your alts
+  - `+alts <character>` - View someone's public alts
+  - `+alts/add <character>` - Request to add as alt
+  - `+alts/confirm <code>` - Confirm alt request
+  - `+alts/del <character>` - Remove alt
+  - `+alts/pending` - View pending requests
 
-## Admin Commands
+### `alias`
+Set a short name that others can use to refer to you in ALL character-targeting commands.
+- **Usage:**
+  - `alias me=<text>` - Set your alias (2-15 alphanumeric characters)
+  - `alias/remove` - Remove your alias
+  - `alias <character>` - View someone's alias
+- **Example:** `alias me=Lys` (others can now use "Lys" instead of "Lysander" in all commands)
+- **Supported In:** page, +finger, +txt, +watch, +stat, +sheet, +combat, +mystery, +group, +condition, +tilt, +social, +note, and all other character-targeting commands
+- **Features:** Case-insensitive, globally searchable, validated for uniqueness
 
-### +migrate - Stat Migration
-Migrate legacy character stats to unified system.
-
-```
-+migrate                      - Migrate your own character
-+migrate <character>          - Migrate another character (Admin)
-```
-
----
-
-### +template - Template Management
-Manage character templates (Admin/Builder).
-
-```
-+template/list                - List all installed templates
-+template/builtin             - List built-in templates
-+template/info <template>     - Show template details
-+template/install builtin     - Install all built-in templates
-+template/uninstall <template> - Uninstall a template
-+template/reset               - Clear and reinstall built-ins
-+template/export <template>   - Export template as Python code
-+template/reload              - Reload template cache
-+template/usage               - Show template usage statistics
-```
-
----
-
-### +storyteller - Storyteller Management
-Manage Storyteller permissions (Admin).
-
-```
-+storyteller/list             - List all storytellers
-+storyteller/add <character>  - Grant Storyteller flag
-+storyteller/remove <character> - Remove Storyteller flag
-+storyteller/check [character] - Check Storyteller status
-+storyteller/info             - Show permission info
-```
-
----
-
-### +stwho - View Online Storytellers
-See which storytellers and staff are online.
-
-```
-+stwho                        - List online storytellers/staff
-```
-
----
-
-### +voteadmin - XP System Administration
-Manage XP systems (Builder).
-
-```
-+voteadmin/settings           - Show current settings
-+voteadmin/set <setting>=<value> - Set a system setting
-+voteadmin/mode <voting|weekly> - Switch XP system mode
-+voteadmin/weekly             - Show weekly beats info
-+voteadmin/distribute         - Force weekly beat distribution
-+voteadmin/script <start|stop> - Start/stop automation script
-+voteadmin/reset <character>  - Reset vote cooldowns
-+voteadmin/stats [character]  - Show voting statistics
-```
-
-**Settings:**
-- `vote_cooldown_hours` - Hours between votes (default: 168)
-- `recc_cooldown_hours` - Hours between recommendations (default: 168)
-- `vote_beats` - Beats per vote (default: 0.5)
-- `recc_beats` - Beats per recommendation (default: 1.0)
-- `weekly_beats_amount` - Weekly beats (default: 5)
-- `weekly_beats_day` - Distribution day (default: sunday)
-- `weekly_beats_time` - Distribution time (default: 00:00)
+### `+who`
+See who is currently online.
+- **Usage:** `+who`
+- **Shows:** Character names, templates, idle times
 
 ---
 
-### +jobs - Job System Management
-Manage player requests and jobs (staff functions).
+## Roleplaying Tools
 
-**Basic Commands:**
-```
-+jobs                         - List all jobs
-+jobs <#>                     - View job details
-+jobs/create <category>/<title>=<text>
-+jobs/comment <#>=<text>
-+jobs/close <#>
-+jobs/reopen <#>
-```
+### `+roll` (aliases: `roll`)
+Roll dice using Chronicles of Darkness mechanics.
+- **Usage:**
+  - `+roll <stat> + <skill>` - Roll stat + skill
+  - `+roll <number>` - Roll number of dice
+  - `+roll <stat> + <skill> +/- <modifier>` - With modifier
+- **Switches:**
+  - `/8` - 8-again
+  - `/9` - 9-again
+  - `/10` - 10-again
+  - `/rote` - Rote quality (reroll failures)
+  - `/reflex` - Reflexive action
+  - `/damage` - Damage roll
+  - `/job` - Roll to job
+- **Examples:**
+  - `+roll/8 Strength + Weaponry`
+  - `+roll/9/rote Wits + Investigation + 2`
+  - `+roll/job Manipulation + Persuasion=123`
 
-**Staff Commands:**
-```
-+jobs/assign <#>=<staff>
-+jobs/claim <#>
-+jobs/unclaim <#>
-+jobs/approve <#>
-+jobs/reject <#>
-+jobs/complete <#>=<reason>
-+jobs/cancel <#>=<reason>
-+jobs/transfer <#>=<category>
-+jobs/from <name>             - List player's jobs
-```
+### `+pool` (aliases: `pool`)
+Calculate dice pool for a given action.
+- **Usage:** `+pool <stat> + <skill> [+ modifier]`
+- **Example:** `+pool Strength + Brawl + 2`
 
-**Admin Commands:**
-```
-+jobs/clear_archive           - Clear archived jobs (DESTRUCTIVE)
-```
+### `+social`
+Manage social maneuvering mechanics (doors, leverage, impressions).
+- **Usage:**
+  - `+social/impression <target> <level>` - Set impression
+  - `+social/doors <target>` - Check doors
+  - `+social/leverage <target> <type> <description>` - Add leverage
+  - `+social/roll <target> <goal>` - Make social roll
+- **Impression Levels:** perfect, excellent, good, average, hostile
+- **Leverage Types:** soft (favors, bribes), hard (threats, blackmail)
+
+### `+note` (aliases: `+notes`)
+Manage character notes and long-form narrative content.
+- **Usage:**
+  - `+note` - List all your notes
+  - `+note <title>` - View a specific note
+  - `+note <title>/<category>=<text>` - Create note
+  - `+note/edit <title>=<new text>` - Edit note
+  - `+note/delete <title>` - Delete note
+  - `+note/show <title>` - Show note to room
+  - `+note/show <title>=<player>` - Show note to specific player
+- **Staff Commands:**
+  - `+note <player>` - View player's notes
+  - `+note/approve <character>=<title>` - Approve note
+  - `+note/unapprove <character>=<title>` - Unapprove note
+
+### `+hangouts` (aliases: `hangout`, `hangouts`)
+Find and travel to designated RP locations.
+- **Usage:**
+  - `+hangouts` - List all available hangout locations
+  - `+hangouts <name>` - Move to a specific hangout
+  - `+hangouts/return` - Return to previous location
+  - `+hangouts/public` - List only public hangouts
+  - `+hangouts/groups` - List only group hangouts
+
+### `+shortdesc`
+Set your character's short description.
+- **Usage:** `+shortdesc <description>`
+- **Example:** `+shortdesc A tall, imposing figure with piercing eyes`
+
+### `+language`
+Speak in different languages.
+- **Usage:**
+  - `+language` - List languages you know
+  - `+language <language>=<message>` - Speak in language
+  - `+language/set <language>` - Set default language
 
 ---
 
-### +npc - NPC Management
-Create and manage NPCs (Storyteller/Admin).
+## Combat System
 
-```
-+npc/create <name>            - Create an NPC
-+npc/list                     - List all NPCs
-+npc/delete <npc>             - Delete an NPC
-+npc/desc <npc>=<description> - Set NPC description
-+npc/stat <npc>/<stat>=<value> - Set NPC stat
-+npc/possess <npc>            - Possess/control an NPC
-+npc/release                  - Release NPC control
-```
+### `+combat` (aliases: `+fight`, `+init`)
+Main combat system commands.
+- **Usage:**
+  - `+combat/start` - Start combat in current location
+  - `+combat/join [team]` - Join combat
+  - `+combat/leave` - Leave combat
+  - `+combat/next` - Advance to next turn
+  - `+combat/init` - Roll initiative
+  - `+combat/status` - View combat status
+  - `+combat/end` - End combat (staff)
+- **Attack Commands:**
+  - `+combat/attack <target> [weapon]` - Make attack
+  - `+combat/dodge <attacker>` - Dodge action
+  - `+combat/parry <attacker>` - Parry action
+  - `+combat/allout <target>` - All-out attack
+  - `+combat/called <target> <penalty>` - Called shot
+- **Combat Actions:**
+  - `+combat/aim [target]` - Aim action
+  - `+combat/defend` - Total defense
+  - `+combat/move` - Move action
+  - `+combat/ready <weapon>` - Ready weapon
+- **Important:**
+  - **LOCAL ONLY:** Combat targets must be in the same room
+  - **ONLINE ONLY:** Combat targets must be currently logged in
+  - Supports character aliases for targeting
+  - Cannot attack characters in other locations or offline players
+
+### `+condition`
+Manage conditions on characters.
+- **Usage:**
+  - `+condition/list [character]` - List conditions
+  - `+condition/add <character>=<condition>` - Add condition
+  - `+condition/remove <character>=<condition>` - Remove condition
+  - `+condition/help <condition>` - Show condition info
+
+### `+tilt` (aliases: `+tilts`)
+Manage combat tilts (temporary combat conditions).
+- **Usage:**
+  - `+tilt/list [character]` - List tilts
+  - `+tilt/add <character>=<tilt>` - Add tilt
+  - `+tilt/remove <character>=<tilt>` - Remove tilt
+  - `+tilt/env/add <tilt>` - Add environmental tilt
+  - `+tilt/env/remove <tilt>` - Remove environmental tilt
+  - `+tilt/advance` - Advance all tilts by one turn
+
+### `+weapons` (aliases: `+weaponlist`)
+List available weapons and their statistics.
+- **Usage:** `+weapons [filter]`
+
+### `+gear` (aliases: `+equipped`)
+View equipped weapons and armor.
+- **Usage:** `+gear [character]`
+
+### `+chelp` (aliases: `+combathelp`)
+Display combat system help and reference.
+- **Usage:** `+chelp [topic]`
 
 ---
 
-## Building Commands
+## Game Systems
 
-### +area - Area Management
-Manage game areas and codes (Builder).
+### `+condition` (see Combat System section)
 
-```
-+area/list                    - List all areas
-+area/add <code>=<name>/<desc> - Add new area
-+area/remove <code>           - Remove area (if no rooms)
-+area/info <code>             - Show area details
-+area/rooms <code>            - List rooms in area
-+area/init                    - Initialize area manager (Admin)
-```
+### `+tilt` (see Combat System section)
+
+### `+shapeshifting`
+Manage shapeshifting forms (for applicable splats).
+- **Usage:**
+  - `+shift <form>` - Change form
+  - `+shift/list` - List available forms
+  - `+shift/info <form>` - Show form details
+
+### `+equipment`
+Manage character equipment and possessions.
+- **Usage:**
+  - `+equipment` - List your equipment
+  - `+equipment/add <item>=<description>` - Add item
+  - `+equipment/remove <item>` - Remove item
+  - `+equipment/view <item>` - View item details
+
+### `+voting`
+Participate in game votes and polls.
+- **Usage:**
+  - `+voting` - List active votes
+  - `+voting/cast <vote id>=<choice>` - Cast vote
+  - `+voting/results <vote id>` - View results (if closed)
+
+---
+
+## Group & Organization Commands
+
+### `+group` (aliases: `+groups`)
+Create and manage player groups and organizations.
+- **Usage:**
+  - `+groups` - List all public groups
+  - `+group <id>` - View group details
+  - `+group/join <id>` - Request to join group
+  - `+group/leave <id>` - Leave group
+  - `+group/members <id>` - List members
+  - `+group/info <id>` - Detailed group information
+- **Staff Commands:**
+  - `+group/create <name>` - Create group
+  - `+group/destroy <id>` - Destroy group
+  - `+group/add <id>=<character>` - Add member
+  - `+group/remove <id>=<character>` - Remove member
+  - `+group/promote <id>=<character>` - Promote to leader
+  - `+group/type <id>=<type>` - Set group type
+
+### `+roster`
+View group rosters and active members.
+- **Usage:** `+roster <group>`
+
+### `+groupmerit` (aliases: `+gmerit`)
+Manage group merits and shared resources.
+- **Usage:**
+  - `+groupmerit <group>` - View group merits
+  - `+groupmerit/add <group>=<merit>` - Add merit (staff)
+  - `+groupmerit/remove <group>=<merit>` - Remove merit (staff)
+
+### `+totem`
+Manage pack totems (Werewolf: The Forsaken).
+- **Usage:**
+  - `+totem <pack>` - View pack totem
+  - `+totem/set <pack>=<totem>` - Set totem (staff)
+
+---
+
+## Mystery & Investigation
+
+### `+mystery` (aliases: `+investigation`, `+inv`, `+mysteries`)
+Unified mystery and investigation system for players and staff.
+- **Player Commands:**
+  - `+mystery` - List active mysteries
+  - `+mystery <id>` - View mystery details
+  - `+mystery/progress [id]` - Show investigation progress
+  - `+mystery/examine <object>` - Examine object for clues
+  - `+mystery/search` - Search area for clues
+- **Staff Commands:**
+  - `+mystery/create <title>` - Create new mystery
+  - `+mystery/edit <id>/<field>=<value>` - Edit mystery
+  - `+mystery/delete <id>` - Delete mystery
+  - `+mystery/addclue <id>/<clue>=<description>` - Add clue
+  - `+mystery/grant <char>=<id>/<clue>` - Grant clue to character
+  - `+mystery/revoke <char>=<id>/<clue>` - Revoke clue
+  - `+mystery/discoveries <id> [char]` - View discoveries
+
+---
+
+## Information & Reference
+
+### `+who` (see Communication Commands)
+
+### `+finger` (see Communication Commands)
+
+### `+staff`
+List and manage staff members.
+- **Usage:**
+  - `+staff` - List all staff
+  - `+staff/duty` - Toggle duty status (staff)
+  - `+staff/dark` - Toggle visibility (staff)
+- **Admin Commands:**
+  - `+staff/position <account>=<position>` - Set position
+  - `+staff/add <account>` - Add staff
+  - `+staff/remove <account>` - Remove staff
+
+### `+storyteller` (aliases: `+st`, `+storytellers`)
+Manage storyteller flags and permissions.
+- **Usage:**
+  - `+storyteller/list` - List storytellers
+  - `+storyteller/check [char]` - Check ST status
+  - `+storyteller/info` - Show ST permissions
+- **Admin Commands:**
+  - `+storyteller/add <character>` - Grant ST flag
+  - `+storyteller/remove <character>` - Remove ST flag
+
+### `+stwho` (aliases: `+storytellerwho`)
+List online storytellers.
+- **Usage:** `+stwho`
+
+### `+weather`
+Display current weather and time information.
+- **Usage:** `+weather`
+
+### `+lookup`
+Look up rules, merit information, and game mechanics.
+- **Usage:**
+  - `+lookup <term>` - Search for rules
+  - `+lookup/merit <merit>` - Look up merit
+  - `+lookup/condition <condition>` - Look up condition
+
+---
+
+## Building & World Management
+
+### `@dig`
+Create new rooms and locations.
+- **Usage:** `@dig <roomname>[;<alias>]`
+
+### `@open`
+Create exits between rooms.
+- **Usage:** `@open <exitname>[;<alias>]=<destination>`
+
+### `@desc`
+Set descriptions on objects, rooms, and characters.
+- **Usage:** `@desc <object>=<description>`
+
+### `@set`
+Set attributes and properties on objects.
+- **Usage:** `@set <object>/<attribute>=<value>`
+
+### `@create`
+Create new objects.
+- **Usage:** `@create <objectname>`
+
+### `@destroy`
+Destroy objects (use with caution).
+- **Usage:** `@destroy <object>`
+
+### `+npc`
+Create and manage NPCs.
+- **Usage:**
+  - `+npc/create <name>` - Create NPC
+  - `+npc/set <npc>/<stat>=<value>` - Set NPC stats
+  - `+npc/list` - List your NPCs
+  - `+npc/delete <npc>` - Delete NPC
+
+---
+
+## Staff & Admin Commands
+
+### `+admin`
+Administrative commands for game management.
+- **Usage:** Various admin functions (restricted to admin+)
+
+### `+template`
+Manage character templates and splats.
+- **Usage:**
+  - `+template <character>=<template>` - Set template
+  - `+template/list` - List available templates
+
+### `+area`
+Manage game areas and zones.
+- **Usage:**
+  - `+area/create <name>` - Create area
+  - `+area/set <area>/<attribute>=<value>` - Set area properties
+
+---
+
+## Jobs & Request System
+
+### `+jobs` (aliases: `+requests`, `+request`, `+job`, `+myjobs`, `myjobs`, `myjob`)
+Request and jobs management system.
+- **Player Commands:**
+  - `+jobs` - List your jobs
+  - `+jobs/open` - List open jobs
+  - `+jobs/create <queue>=<title>/<description>` - Create new job
+  - `+jobs <id>` - View specific job
+  - `+jobs/comment <id>=<comment>` - Add comment to job
+  - `+jobs/close <id>` - Close your job (if resolved)
+- **Staff Commands:**
+  - `+jobs/all` - List all jobs
+  - `+jobs/queue <queue>` - List jobs in queue
+  - `+jobs/assign <id>=<staff>` - Assign job
+  - `+jobs/status <id>=<status>` - Change status
+  - `+jobs/priority <id>=<priority>` - Set priority
+  - `+jobs/tag <id>=<tag>` - Add tag
+  - `+jobs/approve <id>` - Approve job
+  - `+jobs/deny <id>=<reason>` - Deny job
+- **Common Queues:** BUILD, BUG, CHARGEN, EQUIP, PLOT, ADMIN, IDEA
+
+---
+
+## Bulletin Board System
+
+### `+bbs` (aliases: `bbs`, `@bbs`, `bb`, `+bb`)
+Bulletin board system for announcements and discussions.
+- **Usage:**
+  - `+bbs` - List all boards
+  - `+bbs <board>` - List posts on board
+  - `+bbs <board>/<post>` - Read specific post
+  - `+bbs/post <board>/<title>=<message>` - Create new post
+  - `+bbs/reply <board>/<post>=<message>` - Reply to post
+  - `+bbs/delete <board>/<post>` - Delete your post
+  - `+bbs/edit <board>/<post>=<new message>` - Edit your post
+  - `+bbs/subscribe <board>` - Subscribe to board
+  - `+bbs/unsubscribe <board>` - Unsubscribe from board
+  - `+bbs/search <board>=<text>` - Search posts
+- **Staff Commands:**
+  - `+bbs/create <name>` - Create new board
+  - `+bbs/remove <board>/<post>` - Remove any post
+  - `+bbs/lock <board>` - Lock board
+  - `+bbs/unlock <board>` - Unlock board
+
+### `+bbpost` (aliases: `bbpost`)
+Quick post to BBS.
+- **Usage:** `+bbpost <board>/<title>=<message>`
+
+### `+bbread` (aliases: `bbread`)
+Quick read from BBS.
+- **Usage:** `+bbread <board>/<post>`
+
+---
+
+## Special Commands
+
+### `look` (aliases: `l`)
+Look at your surroundings or specific objects.
+- **Usage:** 
+  - `look` - Look at room
+  - `look <object>` - Look at object
+  - `look <character>` - Look at character
+
+### `inventory` (aliases: `i`, `inv`)
+View your inventory.
+- **Usage:** `inventory`
+
+### `get` (aliases: `take`)
+Pick up objects.
+- **Usage:** `get <object>`
+
+### `drop`
+Drop objects from inventory.
+- **Usage:** `drop <object>`
+
+### `give`
+Give objects to others.
+- **Usage:** `give <object> to <character>`
+
+### `@password`
+Change your account password.
+- **Usage:** `@password <old password>=<new password>`
+
+### `help`
+Access the help system.
+- **Usage:** 
+  - `help` - List help categories
+  - `help <topic>` - Get help on topic
+  - `help <command>` - Get help on command
+
+---
+
+## Important Notes
+
+### Global Search & Alias Support
+
+**Global Character Targeting:**
+- All character-targeting commands search the entire game world by default
+- You can target any character anywhere, not just in your current location
+- Commands work on both **online and offline characters** (except communication commands)
+- No need to be in the same room to use commands like `+finger`, `+stat`, `+sheet`, etc.
+- Communication commands (`page`, `+txt`) require the target to be online to receive messages
+
+**Alias System:**
+- Players can set short aliases with `alias me=<name>`
+- All 71+ character-targeting commands support aliases
+- Aliases work exactly like character names in every command
+- Case-insensitive matching (finds "lys", "Lys", "LYS")
+- Globally unique (no two characters can have the same alias)
 
 **Examples:**
 ```
-+area/list
-+area/add DT=Downtown/The city center
-+area/info DT
+alias me=Lys                    # Set your alias
+page Lys=Hello!                 # Works with alias (if Lys is online)
++finger Lys                     # Works with alias (offline ok, global)
++stat Lys/strength=3            # Staff can use aliases (offline ok, global)
++sheet Lys                      # View sheet (offline ok, global)
++combat/attack Lys              # Works in combat (MUST be same room + online)
++mystery/grant Lys=1/clue0      # Grant clue (offline ok, global)
++note/approve Lys=Title         # Approve note (offline ok, global)
+```
+
+**Commands Requiring Target Online:**
+- `page`, `tell` - Sending messages
+- `+txt` - Text messaging
+- `+sheet/show <player>` - Showing sheet to specific player
+- `+note/show <title>=<player>` - Showing note to specific player
+- **All combat commands** - Combat requires online, same-room targets
+
+**Commands Requiring Same Location:**
+- **All combat commands** - Must be in same room to fight
+- Most roleplay commands (`say`, `pose`, `emote`)
+- Room-specific interactions
+
+**Commands Working Offline (Global Search):**
+- `+finger` - View character info
+- `+stat` - Set/view stats (staff)
+- `+sheet` - View character sheet  
+- `+mystery/grant` - Grant clues
+- `+group/add` - Add to groups
+- `+condition`, `+tilt` - Manage status (staff)
+- `+note/approve` - Approve notes (staff)
+- Most admin and staff commands
+
+### Permission System
+
+- **Player Commands:** Available to all players
+- **Storyteller Commands:** Require storyteller flag (`+storyteller/add`)
+- **Staff Commands:** Require builder/staff permissions
+- **Admin Commands:** Require admin permissions
+- Each command's help text indicates permission requirements
+
+### Legacy Mode
+
+Some features change when Legacy Mode is enabled:
+- **Disabled in Legacy:** Aspirations, modern Conditions system, Tilts
+- **Enabled in Legacy:** Virtue/Vice only, Changing Breeds support
+- **Toggle:** `+legacy/on` or `+legacy/off`
+- **Check Status:** `+legacy`
+
+### Help System
+
+- Use `help` to see all help categories
+- Use `help <command>` for detailed command help
+- Use `+lookup <term>` to search game mechanics
+- All commands have detailed help text with examples
+
+---
+
+## Quick Reference Card
+
+### Essential Commands
+```
++sheet              - View character sheet
++roll <dice>        - Roll dice
+page <char>=<msg>   - Send private message
+say <text>          - Speak in room
+pose <action>       - Perform action
++who               - See who's online
++xp                - View/manage experience
++jobs              - View/create jobs
++bbs               - Access bulletin boards
+look               - Look around
+inventory          - Check inventory
+help <topic>       - Get help
+```
+
+### Combat Quick Reference
+```
++combat/start      - Start combat
++combat/join       - Join combat
++combat/attack <target> - Attack (same room + online only)
++combat/dodge      - Dodge
++combat/next       - Next turn
++combat/status     - Combat status
+```
+
+**Important:** All combat targets must be in the same room and online.
+
+### Social Quick Reference  
+```
+page <char>=<msg>  - Private message
++txt <char>=<msg>  - IC text message
++watch/add <char>  - Watch friend
++finger <char>     - View OOC info
++alts              - View/manage alts
+alias me=<name>    - Set your alias
 ```
 
 ---
 
-### +room - Room Configuration
-Configure room settings and area assignments (Builder).
-
-```
-+room/area <target>=<area_code> - Set room area (auto-assign code)
-+room/code <target>=<code>    - Manual room code override
-+room/coords <target>=<x>,<y> - Set coordinates for mapping
-+room/hierarchy <target>=<loc1>,<loc2>
-+room/places <target>=<on|off> - Enable/disable places system
-```
-
-**Target Options:**
-- `here` - Current room
-- Room name - "The Square"
-- Database reference - "#123"
-
-**Examples:**
-```
-+room/area here=DT
-+room/coords here=10,5
-+room/hierarchy here=The Square,Downtown
-+room/places here=on
-```
-
----
-
-### places - Room Places
-Add special places within rooms (Builder).
-
-```
-places/add <name>=<description> - Add a place
-places/remove <number>        - Remove a place
-places/list                   - List all places
-places/info <number>          - View place details
-```
-
-**Examples:**
-```
-places/add The Bar=A long mahogany bar lines the eastern wall
-places/remove 2
-places/list
-```
-
----
-
-### roominfo - Room Information
-Display comprehensive room information (Builder).
-
-```
-roominfo                      - Show current room details
-```
-
-Shows: area codes, coordinates, places, exits, occupants, tags.
-
----
-
-### +map - Area Mapping
-Display ASCII maps of areas.
-
-```
-+map                          - Show current area map
-+map <area_code>              - Show specific area map
-+map/legend                   - Show map symbols legend
-```
-
----
-
-### +hangout - Hangout Management (Staff)
-Manage group hangout locations.
-
-```
-+hangout/set <group>=<room>   - Set group hangout
-+hangout/remove <group>       - Remove group hangout
-+hangout/view <group>         - View group hangout
-```
-
-**Examples:**
-```
-+hangout/set Ordo Dracul=The Dragon's Lair
-+hangout/remove Ordo Dracul
-+hangout/view Ordo Dracul
-```
-
----
-
-### +config - OOC/IC Configuration (Developer)
-Configure OOC and IC room settings.
-
-```
-+config/list                  - Show current settings
-+config/ooc <room>            - Set OOC room
-+config/ic <room>             - Set IC starting room
-```
-
----
-
-### +group - Group Management (Staff)
-Full group management commands.
-
-```
-+group/create <name>          - Create new group
-+group/destroy <id>           - Destroy group
-+group/type <id>=<type>       - Set group type
-+group/leader <id>=<character> - Set group leader
-+group/desc <id>=<text>       - Set description
-+group/note <id>=<text>       - Set private notes
-+group/title <id>/<char>=<title> - Set member title
-+group/add <id>=<character>   - Add member
-+group/remove <id>=<character> - Remove member
-+group/private <id>           - Set as private
-+group/public <id>            - Set as public
-+group/auto <character>       - Manual auto-assignment
-+group/sync                   - Sync character attributes
-+group/syncchannels           - Fix channel locks
-+group/test <character>       - Test auto-assignment logic
-```
-
----
-
-## Legacy Mode
-
-### +legacy - Toggle Legacy Mode
-Enable/disable legacy mode for 1st Edition Chronicles of Darkness.
-
-```
-+legacy                       - Toggle legacy mode
-+legacy/on                    - Enable legacy mode
-+legacy/off                   - Disable legacy mode
-+legacy/status                - Check legacy mode status
-```
-
-**Legacy Mode Changes:**
-- Removes Aspirations and Integrity systems
-- Uses only Virtue and Vice for character motivation
-- Adjusts beats and experience accordingly
-
----
-
-## Quick Reference Tables
-
-### Common Commands
-| Command | Purpose |
-|---------|---------|
-| `+sheet` | View character sheet |
-| `+stat` | Manage statistics |
-| `+xp` | Experience management |
-| `+pool` | Manage resource pools |
-| `+health` | Track health/damage |
-| `+shift` | Werewolf shapeshifting |
-| `+combat` | Combat system |
-| `+mystery` | Investigation system |
-| `+hangouts` | Travel to gathering places |
-| `+note` | Character notes/journals |
-| `+ooc` / `+ic` | OOC/IC movement |
-
-### Staff Commands
-| Command | Purpose |
-|---------|---------|
-| `+template` | Template management |
-| `+storyteller` | Storyteller permissions |
-| `+area` / `+room` | Building tools |
-| `+group` | Group management |
-| `+jobs` | Job system |
-| `+npc` | NPC management |
-| `+voteadmin` | XP system config |
-
----
-
-*For detailed system documentation, see other docs: GAME_SYSTEMS.md, BUILDING_GUIDE.md, TYPECLASSES.md*
-
+*For detailed help on any command, use: `help <command>`*

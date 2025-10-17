@@ -35,7 +35,7 @@ LEGACY_WEREWOLF_TEMPLATE = {
     "description": ("Legacy Werewolf template for World of Darkness 1st Edition. "
                    "Werewolves are the chosen of Luna, protectors of the boundary between "
                    "the physical and spirit worlds. Uses traditional virtue/vice system."),
-    "bio_fields": ["auspice", "tribe", "pack", "totem"],
+    "bio_fields": ["auspice", "tribe", "pack"],
     "integrity_name": "Harmony",
     "starting_integrity": 7,
     "supernatural_power_stat": "primal_urge",

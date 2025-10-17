@@ -674,12 +674,19 @@ MOTLEY_MERITS = {
     }
 }
 
+# Cabal Merits (Mage groups)
+# Placeholder for future Mage-specific cabal merits
+CABAL_MERITS = {
+    # Add Mage cabal-specific merits here
+}
+
 # Map group types to their specific merits
 GROUP_TYPE_MERITS = {
     'pack': PACK_MERITS,
     'krewe': KREWE_MERITS,
     'cult': CULT_MERITS,
-    'cabal': MYSTERY_CULT_MERITS,
+    'mysterycult': MYSTERY_CULT_MERITS,
+    'cabal': CABAL_MERITS,
     'cell': CELL_MERITS,
     'motley': MOTLEY_MERITS,
 }

@@ -158,6 +158,15 @@ MUX_COLOR_ANSI_XTERM256_BRIGHT_BG_EXTRA_MAP = [
 ]
 
 ######################################################################
+# Account Creation Settings (for testing)
+######################################################################
+
+# Disable account creation throttling for testing purposes
+# Set to None to disable, or increase the limit for more accounts
+CREATION_THROTTLE_LIMIT = None  # Disable limit (default: 2)
+# CREATION_THROTTLE_TIMEOUT = 10 * 60  # 10 minutes (default)
+
+######################################################################
 # Settings given in secret_settings.py override those in this file.
 ######################################################################
 try:

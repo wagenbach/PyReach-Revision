@@ -29,7 +29,7 @@ from .social import CmdSocial
 from .combat import CmdCombat, CmdEquippedGear, CmdCombatHelp
 from .integrity import CmdIntegrity
 from .equipment import CmdEquipment, CmdBuyConfig, CmdBuy
-from .groups import CmdGroups, CmdRoster
+from .groups import CmdGroups, CmdRoster, CmdGroupMerit, CmdTotem
 from .npc import CmdNPC
 from .CmdHealth import CmdHealth
 from .template_admin import CmdTemplate
@@ -111,6 +111,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdMystery())
         self.add(CmdGroups())
         self.add(CmdRoster())
+        self.add(CmdGroupMerit())
+        self.add(CmdTotem())
 
         # Combat
         self.add(CmdCombat())

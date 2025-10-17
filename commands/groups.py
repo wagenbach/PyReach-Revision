@@ -17,6 +17,7 @@ from django.db.models import Q
 from evennia.objects.models import ObjectDB
 from evennia.utils.utils import time_format
 from django.utils import timezone
+from utils.search_helpers import search_character
 
 class CmdGroups(MuxCommand):
     """
@@ -44,11 +45,17 @@ class CmdGroups(MuxCommand):
         +group/synccleanup         - Remove orphaned group attributes (staff only)
         +group/test <character>    - Test group assignment for a character
         
-    Mystery Cult Commands (for cabals):
+    Mystery Cult Commands (for mysterycult type groups):
         +group/set <id>/<level>=<type>:<name>[:<desc>] - Set Mystery Cult benefit (staff/leader)
         +group/clear <id>/<level>  - Clear Mystery Cult benefit (staff/leader)
         +group/check <id>=<char>   - Check what benefits a character should have
         +group/template <name>     - View example mystery cult template
+        
+    Cell Tactics Commands (for cell type groups):
+        +group/tactics <id>        - View all known tactics for a cell
+        +group/tactics/add <id>=<tactic> - Add a tactic to the cell (staff/leader)
+        +group/tactics/rem <id>=<tactic> - Remove a tactic from the cell (staff/leader)
+        +group/tactics/list        - List all available tactics
         
     Group Types:
         coterie - Vampire groups
@@ -56,10 +63,10 @@ class CmdGroups(MuxCommand):
         cabal - Mage groups
         motley - Changeling groups
         krewe - Geist groups
-        cell - local Hunter groups
+        cell - Hunter cells
+        mysterycult - Mystery Cults (Mortal/any template)
         agency - Mortal organizations
         cult - Mummy cults
-        mystery cult - Mystery Cults
         other - Generic groups
     """
     
@@ -164,8 +171,8 @@ class CmdGroups(MuxCommand):
                     output.append(f"  Pack Advantage: {adv.get('type', 'Unknown').title()} - {adv.get('name', 'None')}")
                 output.append("")
         
-        # Mystery Cult benefits (if cabal)
-        if group.group_type == 'cabal':
+        # Mystery Cult benefits (if mysterycult)
+        if group.group_type == 'mysterycult':
             benefits = group.get_all_mystery_benefits()
             has_benefits = any(benefits.get(level, {}).get('name') for level in range(1, 6))
             
@@ -178,6 +185,21 @@ class CmdGroups(MuxCommand):
                         benefit_name = benefit.get('name', '')
                         output.append(f"  Level {level} ({benefit_type}): {benefit_name}")
                 output.append("  Use +mysterycult for full details")
+                output.append("")
+        
+        # Cell Tactics (if cell)
+        if group.group_type == 'cell':
+            tactics = group.get_all_tactics()
+            if tactics:
+                output.append("|wKnown Tactics:|n")
+                tactic_count = len(tactics)
+                # Show first few tactics
+                display_tactics = tactics[:5]
+                for tactic in display_tactics:
+                    output.append(f"  • {tactic}")
+                if tactic_count > 5:
+                    output.append(f"  ... and {tactic_count - 5} more")
+                output.append(f"  Use +group/tactics {group.group_id} for full list")
                 output.append("")
         
         # Private notes (if accessible)
@@ -259,7 +281,7 @@ class CmdGroups(MuxCommand):
             return
         
         # Find character
-        character = self.caller.search(character_name, global_search=True)
+        character = search_character(self.caller, character_name)
         if not character:
             return
         
@@ -321,7 +343,7 @@ class CmdGroups(MuxCommand):
             return
         
         # Find character
-        character = self.caller.search(character_name, global_search=True)
+        character = search_character(self.caller, character_name)
         if not character:
             return
         
@@ -352,7 +374,7 @@ class CmdGroups(MuxCommand):
             return
         
         # Find character
-        character = self.caller.search(character_name, global_search=True)
+        character = search_character(self.caller, character_name)
         if not character:
             return
         
@@ -378,7 +400,7 @@ class CmdGroups(MuxCommand):
             return
         
         # Find character
-        character = self.caller.search(character_name, global_search=True)
+        character = search_character(self.caller, character_name)
         if not character:
             return
         
@@ -428,7 +450,7 @@ class CmdGroups(MuxCommand):
             return
         
         # Find character
-        character = self.caller.search(character_name, global_search=True)
+        character = search_character(self.caller, character_name)
         if not character:
             return
         
@@ -445,7 +467,7 @@ class CmdGroups(MuxCommand):
     def show_character_groups(self, character_name):
         """Show all groups a character belongs to."""
         # Find character
-        character = self.caller.search(character_name, global_search=True)
+        character = search_character(self.caller, character_name)
         if not character:
             return
         
@@ -526,7 +548,7 @@ class CmdGroups(MuxCommand):
             return
         
         # Find character
-        character = self.caller.search(self.args.strip(), global_search=True)
+        character = search_character(self.caller, self.args.strip())
         if not character:
             return
         
@@ -661,7 +683,7 @@ class CmdGroups(MuxCommand):
                 
                 if self.args.strip():
                     # Sync specific character
-                    character = self.caller.search(self.args.strip(), global_search=True)
+                    character = search_character(self.caller, self.args.strip())
                     if not character:
                         return
                     
@@ -698,7 +720,7 @@ class CmdGroups(MuxCommand):
             
             # Mystery Cult template view
             if switch == "template":
-                from world.cofd.group_data import EXAMPLE_MYSTERY_CULTS
+                from world.groups.group_data import EXAMPLE_MYSTERY_CULTS
                 
                 template_name = self.args.strip().lower()
                 
@@ -747,11 +769,11 @@ class CmdGroups(MuxCommand):
                     self.caller.msg(f"Group #{group_id} does not exist.")
                     return
                 
-                if group.group_type != 'cabal':
-                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult (cabal). Use +group/check only for cabals.")
+                if group.group_type != 'mysterycult':
+                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult. Use +group/check only for Mystery Cult type groups.")
                     return
                 
-                character = self.caller.search(character_name.strip(), global_search=True)
+                character = search_character(self.caller, character_name.strip())
                 if not character:
                     return
                 
@@ -801,8 +823,8 @@ class CmdGroups(MuxCommand):
                     self.caller.msg(f"Group #{group_id} does not exist.")
                     return
                 
-                if group.group_type != 'cabal':
-                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult (cabal). Use +group/clear only for cabals.")
+                if group.group_type != 'mysterycult':
+                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult. Use +group/clear only for Mystery Cult type groups.")
                     return
                 
                 is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
@@ -817,6 +839,191 @@ class CmdGroups(MuxCommand):
                 else:
                     self.caller.msg("Failed to clear benefit. Level must be 1-5.")
                 return
+            
+            # Cell Tactics
+            if switch == "tactics":
+                from world.groups.group_data import CELL_TACTICS
+                
+                # List all available tactics
+                if "list" in self.switches:
+                    output = ["|wAvailable Cell Tactics:|n"]
+                    output.append("")
+                    
+                    # Group by type
+                    investigation = []
+                    physical = []
+                    social = []
+                    
+                    for tactic_name, tactic_data in CELL_TACTICS.items():
+                        tactic_type = tactic_data.get('type', 'other')
+                        tactic_entry = f"|y{tactic_name}|n - {tactic_data['description'][:60]}..."
+                        
+                        if tactic_type == 'investigation':
+                            investigation.append(tactic_entry)
+                        elif tactic_type == 'physical':
+                            physical.append(tactic_entry)
+                        elif tactic_type == 'social':
+                            social.append(tactic_entry)
+                    
+                    output.append("|wInvestigation Tactics:|n")
+                    output.extend(investigation)
+                    output.append("")
+                    output.append("|wPhysical Tactics:|n")
+                    output.extend(physical)
+                    output.append("")
+                    output.append("|wSocial Tactics:|n")
+                    output.extend(social)
+                    output.append("")
+                    output.append("Use +group/tactics/add to add tactics to your cell.")
+                    
+                    self.caller.msg("\n".join(output))
+                    return
+                
+                # Add tactic
+                if "add" in self.switches:
+                    if "=" not in self.args:
+                        self.caller.msg("Usage: +group/tactics/add <id>=<tactic>")
+                        return
+                    
+                    group_id, tactic_name = self.args.split("=", 1)
+                    try:
+                        group_id = int(group_id.strip())
+                    except ValueError:
+                        self.caller.msg("Group ID must be a number.")
+                        return
+                    
+                    group = get_group_by_id(group_id)
+                    if not group:
+                        self.caller.msg(f"Group #{group_id} does not exist.")
+                        return
+                    
+                    if group.group_type != 'cell':
+                        self.caller.msg(f"Group '{group.name}' is not a Hunter cell. Use +group/tactics only for cells.")
+                        return
+                    
+                    is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
+                    is_leader = group.leader == self.caller
+                    
+                    if not is_staff and not is_leader:
+                        self.caller.msg("You don't have permission to modify cell tactics.")
+                        return
+                    
+                    tactic_name = tactic_name.strip()
+                    
+                    # Validate it's a real tactic
+                    if tactic_name not in CELL_TACTICS:
+                        self.caller.msg(f"Unknown tactic '{tactic_name}'. Use +group/tactics/list to see available tactics.")
+                        return
+                    
+                    if group.add_tactic(tactic_name):
+                        self.caller.msg(f"Added tactic '{tactic_name}' to cell '{group.name}'.")
+                    else:
+                        self.caller.msg(f"Cell '{group.name}' already knows the '{tactic_name}' tactic.")
+                    return
+                
+                # Remove tactic
+                if "rem" in self.switches:
+                    if "=" not in self.args:
+                        self.caller.msg("Usage: +group/tactics/rem <id>=<tactic>")
+                        return
+                    
+                    group_id, tactic_name = self.args.split("=", 1)
+                    try:
+                        group_id = int(group_id.strip())
+                    except ValueError:
+                        self.caller.msg("Group ID must be a number.")
+                        return
+                    
+                    group = get_group_by_id(group_id)
+                    if not group:
+                        self.caller.msg(f"Group #{group_id} does not exist.")
+                        return
+                    
+                    if group.group_type != 'cell':
+                        self.caller.msg(f"Group '{group.name}' is not a Hunter cell. Use +group/tactics only for cells.")
+                        return
+                    
+                    is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
+                    is_leader = group.leader == self.caller
+                    
+                    if not is_staff and not is_leader:
+                        self.caller.msg("You don't have permission to modify cell tactics.")
+                        return
+                    
+                    tactic_name = tactic_name.strip()
+                    
+                    if group.remove_tactic(tactic_name):
+                        self.caller.msg(f"Removed tactic '{tactic_name}' from cell '{group.name}'.")
+                    else:
+                        self.caller.msg(f"Cell '{group.name}' doesn't know the '{tactic_name}' tactic.")
+                    return
+                
+                # View tactics (no other switches)
+                if not self.switches or self.switches == ['tactics']:
+                    try:
+                        group_id = int(self.args.strip())
+                    except ValueError:
+                        self.caller.msg("Group ID must be a number.")
+                        return
+                    
+                    group = get_group_by_id(group_id)
+                    if not group:
+                        self.caller.msg(f"Group #{group_id} does not exist.")
+                        return
+                    
+                    if group.group_type != 'cell':
+                        self.caller.msg(f"Group '{group.name}' is not a Hunter cell. Use +group/tactics only for cells.")
+                        return
+                    
+                    tactics = group.get_all_tactics()
+                    
+                    if not tactics:
+                        self.caller.msg(f"Cell '{group.name}' has no tactics set.")
+                        self.caller.msg("Use +group/tactics/add to add tactics, or +group/tactics/list to see available tactics.")
+                        return
+                    
+                    output = [f"|wKnown Tactics for {group.name}|n (#{group.group_id})"]
+                    output.append("")
+                    
+                    # Organize by type
+                    investigation_tactics = []
+                    physical_tactics = []
+                    social_tactics = []
+                    
+                    for tactic_name in tactics:
+                        if tactic_name in CELL_TACTICS:
+                            tactic_data = CELL_TACTICS[tactic_name]
+                            tactic_type = tactic_data.get('type', 'other')
+                            
+                            if tactic_type == 'investigation':
+                                investigation_tactics.append(tactic_name)
+                            elif tactic_type == 'physical':
+                                physical_tactics.append(tactic_name)
+                            elif tactic_type == 'social':
+                                social_tactics.append(tactic_name)
+                    
+                    if investigation_tactics:
+                        output.append("|wInvestigation Tactics:|n")
+                        for tactic in investigation_tactics:
+                            output.append(f"  • {tactic}")
+                        output.append("")
+                    
+                    if physical_tactics:
+                        output.append("|wPhysical Tactics:|n")
+                        for tactic in physical_tactics:
+                            output.append(f"  • {tactic}")
+                        output.append("")
+                    
+                    if social_tactics:
+                        output.append("|wSocial Tactics:|n")
+                        for tactic in social_tactics:
+                            output.append(f"  • {tactic}")
+                        output.append("")
+                    
+                    output.append(f"Total: {len(tactics)} tactics")
+                    
+                    self.caller.msg("\n".join(output))
+                    return
             
             # Auto assignment
             if switch == "auto":
@@ -894,8 +1101,8 @@ class CmdGroups(MuxCommand):
                     self.caller.msg(f"Group #{group_id} does not exist.")
                     return
                 
-                if group.group_type != 'cabal':
-                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult (cabal). Use +group/set only for cabals.")
+                if group.group_type != 'mysterycult':
+                    self.caller.msg(f"Group '{group.name}' is not a Mystery Cult. Use +group/set only for Mystery Cult type groups.")
                     return
                 
                 is_staff = self.caller.check_permstring("Admin") or self.caller.check_permstring("Builder")
@@ -1199,9 +1406,10 @@ class CmdGroupMerit(MuxCommand):
     - Packs: Den, Directed Rage, Magnanimous Totem, Moon's Grace, Territorial Advantage
     - Krewes: Krewe Allies, Cenote, Krewe Contacts, Krewe Library, Krewe Resources, etc.
     - Cults: Cult Allies, Devotees, Fanatical, Ritualistic Cult, Secretive, Wayward Cult, etc.
-    - Cabals: Mystery Cult Initiation (with benefits at each level)
+    - Mystery Cults: Mystery Cult Initiation (with benefits at each level)
     - Cells: Safe Place, plus Cell Tactics for combat coordination
     - Motleys: Motley Hollow, Motley Workshop, Motley Token, Stable Trod, etc.
+    - Cabals: (Mage groups - add cabal-specific merits as needed)
     
     Examples:
         +groupmerit 1
@@ -1217,7 +1425,7 @@ class CmdGroupMerit(MuxCommand):
     
     def func(self):
         """Execute the command."""
-        from world.cofd.group_data import GROUP_TYPE_MERITS
+        from world.groups.group_data import GROUP_TYPE_MERITS
         
         if not self.args and not self.switches:
             self.caller.msg("Usage: +groupmerit <group id> or use /list to see available merits")
@@ -1345,13 +1553,28 @@ class CmdGroupMerit(MuxCommand):
                     
                     # Check for merits that might contribute to group
                     for merit_name, merit_value in merits.items():
-                        if isinstance(merit_value, dict):
-                            rating = merit_value.get('rating', 0)
+                        rating = 0
+                        
+                        # Check for dict-like attributes (works with dict and _SaverDict)
+                        if hasattr(merit_value, '__getitem__') and hasattr(merit_value, 'keys'):
+                            # Try 'dots' first, then 'rating'
+                            if 'dots' in merit_value:
+                                rating = merit_value['dots']
+                            elif 'rating' in merit_value:
+                                rating = merit_value['rating']
                         else:
                             rating = merit_value
                         
-                        if rating > 0 and merit_name in ['Totem', 'Den', 'Safe Place', 'Cult']:
-                            relevant_merits.append(f"{merit_name} {rating}")
+                        # Convert to int safely
+                        try:
+                            rating = int(rating)
+                        except (ValueError, TypeError):
+                            continue
+                        
+                        # Check both capitalized and lowercase merit names
+                        merit_lower = merit_name.lower()
+                        if rating > 0 and merit_lower in ['totem', 'den', 'safe place', 'cult']:
+                            relevant_merits.append(f"{merit_name.title()} {rating}")
                     
                     if relevant_merits:
                         output.append(f"{member.name}: {', '.join(relevant_merits)}")
@@ -1380,6 +1603,7 @@ class CmdTotem(MuxCommand):
         +totem/numen/list                       - List available numina
         +totem/advantage <group id>=<type>:<name>:<rating> - Set pack advantage (staff or leader)
         +totem/calc <group id>                  - Calculate totem points from members
+        +totem/calc/debug <group id>            - Calculate with detailed debug output
         +totem/notes <group id>=<text>          - Set totem notes (staff or leader)
         
     The totem is built from the combined Totem merit dots of pack members.
@@ -1400,7 +1624,7 @@ class CmdTotem(MuxCommand):
     
     def func(self):
         """Execute the command."""
-        from world.cofd.group_data import (
+        from world.groups.group_data import (
             SPIRIT_NUMINA, get_advantage_experience, get_numina_count,
             MAX_ESSENCE_BY_RANK, get_rank_from_attributes
         )
@@ -1452,7 +1676,9 @@ class CmdTotem(MuxCommand):
         
         # Calculate totem points
         if "calc" in self.switches:
-            totem_points = group.calculate_totem_points()
+            # Enable debug if requested
+            debug_mode = "debug" in self.switches
+            totem_points = group.calculate_totem_points(debug=debug_mode)
             available_exp = get_advantage_experience(totem_points)
             max_numina = get_numina_count(totem_points)
             
@@ -1463,15 +1689,69 @@ class CmdTotem(MuxCommand):
             output.append(f"Maximum Numina: {max_numina}")
             output.append("")
             output.append("|wMember Contributions:|n")
+            if debug_mode:
+                output.append("(Debug mode enabled - check server logs)")
             
             for member in group.members:
-                if hasattr(member, 'db') and member.db.stats:
-                    merits = member.db.stats.get('merits', {})
-                    totem_merit = merits.get('Totem', 0)
-                    if isinstance(totem_merit, dict):
-                        totem_merit = totem_merit.get('rating', 0)
-                    if totem_merit > 0:
-                        output.append(f"  {member.name}: {totem_merit} dots")
+                if debug_mode:
+                    output.append(f"  Checking {member.name}...")
+                
+                if not hasattr(member, 'db'):
+                    if debug_mode:
+                        output.append(f"    No db attribute")
+                    continue
+                
+                if not member.db.stats:
+                    if debug_mode:
+                        output.append(f"    No stats")
+                    continue
+                
+                merits = member.db.stats.get('merits', {})
+                if debug_mode:
+                    output.append(f"    Merit keys: {list(merits.keys())}")
+                
+                # Try both capitalized and lowercase versions
+                totem_merit = merits.get('Totem')
+                if totem_merit is None:
+                    totem_merit = merits.get('totem')
+                
+                if totem_merit is None:
+                    if debug_mode:
+                        output.append(f"    No totem merit found")
+                    continue
+                
+                if debug_mode:
+                    output.append(f"    Found totem merit: {type(totem_merit)}")
+                    if hasattr(totem_merit, 'keys'):
+                        output.append(f"    Merit dict keys: {list(totem_merit.keys())}")
+                
+                # Extract the numeric value
+                totem_value = 0
+                # Check for dict-like attributes (works with dict and _SaverDict)
+                if hasattr(totem_merit, '__getitem__') and hasattr(totem_merit, 'keys'):
+                    # Try 'dots' first (your system)
+                    if 'dots' in totem_merit:
+                        totem_value = totem_merit['dots']
+                        if debug_mode:
+                            output.append(f"    Using 'dots': {totem_value} (type: {type(totem_value)})")
+                    # Then try 'rating' (fallback)
+                    elif 'rating' in totem_merit:
+                        totem_value = totem_merit['rating']
+                        if debug_mode:
+                            output.append(f"    Using 'rating': {totem_value}")
+                else:
+                    totem_value = totem_merit
+                    if debug_mode:
+                        output.append(f"    Using direct value: {totem_value}")
+                
+                try:
+                    totem_value = int(totem_value)
+                    if totem_value > 0:
+                        output.append(f"  {member.name}: {totem_value} dots")
+                except (ValueError, TypeError) as e:
+                    if debug_mode:
+                        output.append(f"    ERROR converting to int: {e}")
+                    continue
             
             self.caller.msg("\n".join(output))
             return

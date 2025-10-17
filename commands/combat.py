@@ -12,6 +12,40 @@ from world.utils.permission_utils import check_builder_permission
 from world.utils.dice_utils import roll_dice, RollType
 from world.equipment_database import WEAPON_DATABASE as WEAPON_DATA, WeaponData, ArmorData
 import secrets
+from utils.search_helpers import search_character
+
+def search_combat_target(caller, target_name):
+    """
+    Search for a combat target with proper validation.
+    
+    Combat targets must be:
+    1. In the same location as the caller
+    2. Currently online (has active session)
+    3. In combat
+    
+    Args:
+        caller: Character performing the search
+        target_name: Name or alias to search for
+        
+    Returns:
+        Character object or None if not found/invalid
+    """
+    # Use local search only (same room)
+    target = search_character(caller, target_name, global_search=False)
+    if not target:
+        return None
+    
+    # Check if target is in same location
+    if target.location != caller.location:
+        caller.msg(f"{target.name} is not in the same location as you.")
+        return None
+    
+    # Check if target is online
+    if not target.sessions.all():
+        caller.msg(f"{target.name} is not currently online.")
+        return None
+    
+    return target
 
 class CombatTracker:
     """Full combat tracker implementation for Chronicles of Darkness"""
@@ -778,8 +812,8 @@ class CmdCombat(BasePyReachCommand, BuilderMixin):
         target_name = parts[0]
         weapon_name = " ".join(parts[1:]) if len(parts) > 1 else None
         
-        # Find target
-        target = self.caller.search(target_name)
+        # Find target (local search only, must be online)
+        target = search_combat_target(self.caller, target_name)
         if not target:
             return
             
@@ -810,7 +844,7 @@ class CmdCombat(BasePyReachCommand, BuilderMixin):
         if not self._check_turn():
             return
             
-        target = self.caller.search(self.args)
+        target = search_combat_target(self.caller, self.args)
         if not target:
             return
             
@@ -1026,7 +1060,7 @@ class CmdCombat(BasePyReachCommand, BuilderMixin):
         if not self._check_turn():
             return
             
-        target = self.caller.search(self.args) if self.args else None
+        target = search_combat_target(self.caller, self.args) if self.args else None
         
         # Get current aim bonus
         current_aim = self.combat.participants[self.caller].get('aim_bonus', 0)
@@ -1454,7 +1488,7 @@ class CmdCombat(BasePyReachCommand, BuilderMixin):
         if not self._check_turn():
             return
             
-        target = self.caller.search(self.args)
+        target = search_combat_target(self.caller, self.args)
         if not target:
             return
             
@@ -1968,7 +2002,8 @@ class CmdEquippedGear(BasePyReachCommand):
         """Execute the command"""
         target = self.caller
         if self.args:
-            target = self.caller.search(self.args)
+            # Gear viewing can work globally (not combat action)
+            target = search_character(self.caller, self.args)
             if not target:
                 return
             

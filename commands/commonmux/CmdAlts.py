@@ -3,6 +3,7 @@ from evennia.utils.search import search_object
 from evennia.utils import logger
 import uuid
 from time import time
+from utils.search_helpers import search_character
 
 class CmdAlts(default_cmds.MuxCommand):
     """
@@ -90,15 +91,9 @@ class CmdAlts(default_cmds.MuxCommand):
         caller = self.caller
         
         # Find the target character
-        target = search_object(self.args.strip(), typeclass="typeclasses.characters.Character")
+        target = search_character(self.caller, self.args.strip())
         if not target:
-            caller.msg(f"Could not find character '{self.args}'.")
             return
-        if len(target) > 1:
-            caller.msg(f"Multiple matches found for '{self.args}'. Please be more specific.")
-            return
-            
-        target = target[0]
         alts = target.db.public_alts or []
         
         # Build the display
@@ -123,15 +118,9 @@ class CmdAlts(default_cmds.MuxCommand):
             return
         
         # Find the target character
-        target = search_object(self.args.strip(), typeclass="typeclasses.characters.Character")
+        target = search_character(self.caller, self.args.strip())
         if not target:
-            caller.msg(f"Could not find character '{self.args}'.")
             return
-        if len(target) > 1:
-            caller.msg(f"Multiple matches found for '{self.args}'. Please be more specific.")
-            return
-            
-        target = target[0]
         
         # Don't add yourself as an alt
         if target == caller:
@@ -205,15 +194,13 @@ class CmdAlts(default_cmds.MuxCommand):
             return
         
         # Find requester character
-        requester = search_object(requester_name, typeclass="typeclasses.characters.Character")
+        requester = search_character(self.caller, requester_name, quiet=True)
         if not requester:
             caller.msg(f"Error: Could not find character '{requester_name}'.")
             # Clean up the invalid request
             del pending_requests[requester_name]
             caller.db.pending_alt_requests = pending_requests
             return
-        
-        requester = requester[0]
         
         # Add both characters to each other's alt lists
         caller_alts = caller.db.public_alts or []
@@ -288,9 +275,8 @@ class CmdAlts(default_cmds.MuxCommand):
         caller.db.public_alts = alts
         
         # Try to find the target character to remove the two-way relationship
-        target = search_object(self.args, typeclass="typeclasses.characters.Character")
-        if target and len(target) == 1:
-            target = target[0]
+        target = search_character(self.caller, self.args, quiet=True)
+        if target:
             target_alts = target.db.public_alts or []
             
             if caller.name in target_alts:

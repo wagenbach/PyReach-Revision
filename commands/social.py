@@ -1,6 +1,7 @@
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import create
 from world.experience import ExperienceHandler
+from utils.search_helpers import search_character
 
 class CmdSocial(MuxCommand):
     """
@@ -61,7 +62,7 @@ class CmdSocial(MuxCommand):
             self.caller.msg("Usage: +social/impression <target> <level>")
             return
             
-        target = self.caller.search(target_name)
+        target = search_character(self.caller, target_name)
         if not target:
             return
             
@@ -79,7 +80,7 @@ class CmdSocial(MuxCommand):
     
     def check_doors(self):
         """Check doors with a target"""
-        target = self.caller.search(self.args)
+        target = search_character(self.caller, self.args)
         if not target:
             return
             
@@ -114,7 +115,7 @@ class CmdSocial(MuxCommand):
             self.caller.msg("Usage: +social/leverage <target> <type> <description>")
             return
             
-        target = self.caller.search(target_name)
+        target = search_character(self.caller, target_name)
         if not target:
             return
             
@@ -144,7 +145,7 @@ class CmdSocial(MuxCommand):
             self.caller.msg("Usage: +social/roll <target> <goal>")
             return
             
-        target = self.caller.search(target_name)
+        target = search_character(self.caller, target_name)
         if not target:
             return
             

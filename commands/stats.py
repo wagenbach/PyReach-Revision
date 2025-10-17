@@ -4,6 +4,7 @@ from world.cofd.stat_dictionary import (
     attribute_dictionary, skill_dictionary, 
     advantage_dictionary, anchor_dictionary
 )
+from utils.search_helpers import search_character
 
 class CmdStat(MuxCommand):
     """
@@ -23,6 +24,7 @@ class CmdStat(MuxCommand):
         +stat/reset <name>=<template> - Reset character to new template (staff only)
         +stat/geist <stat>=<value> - Set a geist stat (Sin-Eater characters only)
         +stat/mage <stat>=<value> - Set a mage stat (Mage characters only)
+        +stat/demon <stat>=<value> - Set a demon form stat (Demon characters only)
         
         The /reset switch completely wipes ALL character stats and reinitializes
         them for the new template. This is a nuclear option for fixing corrupted
@@ -63,7 +65,7 @@ class CmdStat(MuxCommand):
         Bio: fullname, birthdate, concept, virtue, vice
         Template Bio: path, order, legacy, shadow_name, cabal, mask, dirge, 
                    clan, covenant, bone, blood, auspice, tribe, lodge, pack, 
-                   totem, deed_name, seeming, court, kith, burden, archetype, 
+                   deed_name, seeming, court, kith, burden, archetype, 
                    krewe, lineage, refinement, athanor, creator, pilgrimage, 
                    throng, profession, organization, creed, incarnation, 
                    agenda, agency, hunger, family, inheritance, origin, 
@@ -171,6 +173,15 @@ class CmdStat(MuxCommand):
         +stat/mage praxis=telekinesis
         +stat/mage praxis=create locus
         
+        Demon Form Examples (Demon-specific demonic form sheet):
+        +stat/demon concept=Clockwork Sentinel
+        +stat/demon description=A towering figure of brass gears and crystal lenses
+        +stat/demon modification=Armored_Plating
+        +stat/demon technology=Electromagnetic_Pulse
+        +stat/demon propulsion=Magnetic_Levitation
+        +stat/demon process=Threat_Assessment_Matrix
+        +stat/demon/remove modification=Armored_Plating
+        
         Semantic Power Setting (Individual Abilities):
         Keys (Geist): +stat key=beasts, +stat key=stillness, +stat key=cold_wind
         Ceremonies (Geist): +stat ceremony=pass_on, +stat ceremony=ghost_trap
@@ -184,8 +195,13 @@ class CmdStat(MuxCommand):
         Alembics (Promethean): +stat alembic=purification, +stat alembic=human_flesh
         Bestowments (Promethean): +stat bestowment=spare_parts, +stat bestowment=titans_strength
         Endowments (Hunter): +stat endowment=hellfire, +stat endowment=wrathful sword of st michael
+        Embeds (Demon): +stat embed=authenticate, +stat embed=overclock, +stat embed=teleportation
+        Exploits (Demon): +stat exploit=blowback, +stat exploit=murder_of_crows, +stat exploit=guardian_angel
         Affinities (Mummy): +stat bestial_majesty=known, +stat divine_countenance=known
         Utterances (Mummy): +stat awaken_the_dead_ba_1=known, +stat fury_of_sekhmet_sheut_1=known
+        Adaptations (Deviant): +stat adaptation=stubborn_resolve, +stat adaptation=iron_will
+        
+        Remove adaptations with: +stat/remove adaptation stubborn_resolve
 
         Category Powers (1-5 dots):
         Haunts (Geist): +stat boneyard=3, +stat curse=2
@@ -239,6 +255,8 @@ class CmdStat(MuxCommand):
             self.set_geist_stat()
         elif switch == "mage":
             self.set_mage_stat()
+        elif switch == "demon":
+            self.set_demon_stat()
         else:
             self.caller.msg("Invalid switch. See help for usage.")
     
@@ -326,9 +344,10 @@ class CmdStat(MuxCommand):
                     stat = stat.replace(" ", "_")
                     return None, stat, None  # None value signals removal
                 
-                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, endowment=hellfire, spell=create_locus, gift=shadow_gaze, etc.
+                # Check for semantic power syntax: key=beasts, ceremony=pass_on, contract=hostile_takeover, alembic=purification, endowment=hellfire, spell=create_locus, gift=shadow_gaze, adaptation=stubborn_resolve, etc.
                 semantic_prefixes = ["key", "ceremony", "rite", "ritual", "contract", "alembic", "bestowment", "endowment", "spell",
-                                   "discipline_power", "devotion", "coil", "scale", "theban", "cruac", "gift"]
+                                   "discipline_power", "devotion", "coil", "scale", "theban", "cruac", "gift", "adaptation",
+                                   "embed", "exploit"]
                 if stat in semantic_prefixes:
                     # this is semantic syntax like key=beasts or cruac=pangs_of_proserpina
                     power_type = stat
@@ -364,7 +383,7 @@ class CmdStat(MuxCommand):
         # Determine target
         if target_name:
             # Setting for someone else - requires staff or NPC control permissions
-            target = self.caller.search(target_name, global_search=True)
+            target = search_character(self.caller, target_name)
             if not target:
                 return
                 
@@ -456,6 +475,9 @@ class CmdStat(MuxCommand):
                 return
             
             if isinstance(value, int) and 1 <= value <= 5:
+                # Initialize attributes dict if missing
+                if "attributes" not in target.db.stats:
+                    target.db.stats["attributes"] = {}
                 target.db.stats["attributes"][stat] = value
                 stat_set = True
                 
@@ -487,6 +509,9 @@ class CmdStat(MuxCommand):
                 return
             
             if isinstance(value, int) and 0 <= value <= 5:
+                # Initialize skills dict if missing
+                if "skills" not in target.db.stats:
+                    target.db.stats["skills"] = {}
                 target.db.stats["skills"][stat] = value
                 stat_set = True
             else:
@@ -498,6 +523,9 @@ class CmdStat(MuxCommand):
                       "blood_potency", "gnosis", "primal_urge", "wyrd", "synergy", 
                       "azoth", "primum", "satiety", "deviation", "psyche"]:
             if isinstance(value, int) and value >= 0:
+                # Initialize advantages dict if missing
+                if "advantages" not in target.db.stats:
+                    target.db.stats["advantages"] = {}
                 target.db.stats["advantages"][stat] = value
                 stat_set = True
             else:
@@ -555,7 +583,7 @@ class CmdStat(MuxCommand):
                     return
                 
                 # Get the proper name from the embed data
-                from world.cofd.templates.demon_powers import ALL_EMBEDS
+                from world.cofd.powers.demon_powers import ALL_EMBEDS
                 if value_lower in ALL_EMBEDS:
                     value = ALL_EMBEDS[value_lower]['name']
             
@@ -574,6 +602,7 @@ class CmdStat(MuxCommand):
             
             # Also store virtue/vice in anchors for backward compatibility
             if stat in ["virtue", "vice"]:
+                # Initialize anchors dict if missing
                 if "anchors" not in target.db.stats:
                     target.db.stats["anchors"] = {}
                 target.db.stats["anchors"][stat] = str(value)
@@ -582,10 +611,10 @@ class CmdStat(MuxCommand):
         elif stat in ["path", "order", "mask", "dirge", "clan", "covenant", "bone", "blood", 
                      "auspice", "tribe", "seeming", "court", "kith", "burden", "root", "bloom", 
                      "krewe", "lineage", "refinement", "profession", "organization", "creed", 
-                     "incarnation", "agenda", "agency", "hunger", "family", "inheritance", 
+                     "incarnation", "agenda", "catalyst", "ring", "cover_identity", "agency", "hunger", "family", "inheritance", 
                      "origin", "clade", "divergence", "needle", "thread", "legend", "life",
                      "geist_name", "embrace_date", "legacy", "shadow_name", "cabal", "lodge",
-                     "pack", "totem", "deed_name", "throng", "creator", "pilgrimage", "athanor"]:
+                     "pack", "deed_name", "throng", "creator", "pilgrimage", "athanor"]:
             
             # Get character's template
             character_template = target.db.stats.get("other", {}).get("template", "Mortal")
@@ -752,12 +781,18 @@ class CmdStat(MuxCommand):
                     self.caller.msg("Bio field values cannot exceed 50 characters.")
                     return
                 
+                # Initialize bio dict if missing
+                if "bio" not in target.db.stats:
+                    target.db.stats["bio"] = {}
                 # Store in bio category
                 target.db.stats["bio"][stat] = str(value).title()
                 stat_set = True
         
         # Check anchors (for backward compatibility)
         elif stat in ["virtue", "vice"]:
+            # Initialize anchors dict if missing
+            if "anchors" not in target.db.stats:
+                target.db.stats["anchors"] = {}
             target.db.stats["anchors"][stat] = str(value)
             # Also store in bio for new system
             if "bio" not in target.db.stats:
@@ -911,12 +946,13 @@ class CmdStat(MuxCommand):
             if value.title() == "Werewolf":
                 # Set default form to Hishu
                 target.db.current_form = "hishu"
-                # Store base attributes for shapeshifting
+                # Store base attributes for shapeshifting (safely get with defaults)
+                attributes = target.db.stats.get("attributes", {})
                 target.db.base_attributes = {
-                    "strength": target.db.stats["attributes"]["strength"],
-                    "dexterity": target.db.stats["attributes"]["dexterity"],
-                    "stamina": target.db.stats["attributes"]["stamina"],
-                    "manipulation": target.db.stats["attributes"]["manipulation"]
+                    "strength": attributes.get("strength", 2),
+                    "dexterity": attributes.get("dexterity", 2),
+                    "stamina": attributes.get("stamina", 2),
+                    "manipulation": attributes.get("manipulation", 2)
                 }
                 # Store base size
                 target.db.base_size = target.db.stats.get("other", {}).get("size", 5)
@@ -938,7 +974,7 @@ class CmdStat(MuxCommand):
             
             # Validate breed exists
             try:
-                from world.cofd.changing_breeds_data import get_breed_info, list_all_breeds
+                from world.cofd.powers.changing_breeds_data import get_breed_info, list_all_breeds
                 breed_info = get_breed_info(value)
                 if not breed_info:
                     breeds_list = ", ".join(list_all_breeds())
@@ -951,11 +987,13 @@ class CmdStat(MuxCommand):
                 
                 # Initialize changing breed form data
                 target.db.current_form = "human"
+                # Store base attributes for shapeshifting (safely get with defaults)
+                attributes = target.db.stats.get("attributes", {})
                 target.db.base_attributes = {
-                    "strength": target.db.stats["attributes"]["strength"],
-                    "dexterity": target.db.stats["attributes"]["dexterity"],
-                    "stamina": target.db.stats["attributes"]["stamina"],
-                    "manipulation": target.db.stats["attributes"]["manipulation"]
+                    "strength": attributes.get("strength", 2),
+                    "dexterity": attributes.get("dexterity", 2),
+                    "stamina": attributes.get("stamina", 2),
+                    "manipulation": attributes.get("manipulation", 2)
                 }
                 target.db.base_size = target.db.stats.get("other", {}).get("size", 5)
                 self.caller.msg(f"|gInitialized {target.name} as {breed_info['display_name']} in human form. Ready for shapeshifting.|n")
@@ -1518,7 +1556,7 @@ class CmdStat(MuxCommand):
         
         # Determine target
         if target_name:
-            target = self.caller.search(target_name, global_search=True)
+            target = search_character(self.caller, target_name)
             if not target:
                 return
         else:
@@ -1597,7 +1635,7 @@ class CmdStat(MuxCommand):
         """List all stats for a character"""
         if self.args:
             # Viewing someone else
-            target = self.caller.search(self.args.strip(), global_search=True)
+            target = search_character(self.caller, self.args.strip())
             if not target:
                 return
         else:
@@ -1650,7 +1688,12 @@ class CmdStat(MuxCommand):
             if template_bio_data:
                 output.append(f"  |w{template} Template:|n")
                 for field, value in template_bio_data:
-                    output.append(f"    {field.title()}: {value}")
+                    # Special case for cover_identity to display as "Cover ID"
+                    if field == "cover_identity":
+                        field_label = "Cover ID"
+                    else:
+                        field_label = field.title()
+                    output.append(f"    {field_label}: {value}")
             
             # Show missing required fields for the template
             missing_fields = [field for field in valid_fields if field not in bio]
@@ -1848,7 +1891,7 @@ class CmdStat(MuxCommand):
                 spell_powers = [p for p in powers.keys() if p.startswith("spell:") and powers[p] == "known"]
                 if spell_powers:
                     output.append("|wSpells:|n")
-                    from world.cofd.templates.mage_spells import get_spell
+                    from world.cofd.powers.mage_spells import get_spell
                     
                     spell_displays = []
                     for power_name in sorted(spell_powers):
@@ -1872,7 +1915,7 @@ class CmdStat(MuxCommand):
                 endowment_powers = [p for p in powers.keys() if p.startswith("endowment:") and powers[p] == "known"]
                 if endowment_powers:
                     output.append("|wEndowments:|n")
-                    from world.cofd.templates.hunter_endowments import get_endowment
+                    from world.cofd.powers.hunter_endowments import get_endowment
                     
                     endowment_displays = []
                     for power_name in sorted(endowment_powers):
@@ -1916,7 +1959,7 @@ class CmdStat(MuxCommand):
             self.caller.msg("Usage: +stat/approve <name>")
             return
         
-        target = self.caller.search(self.args.strip(), global_search=True)
+        target = search_character(self.caller, self.args.strip())
         if not target:
             return
         
@@ -1938,7 +1981,7 @@ class CmdStat(MuxCommand):
             self.caller.msg("Usage: +stat/unapprove <name>")
             return
         
-        target = self.caller.search(self.args.strip(), global_search=True)
+        target = search_character(self.caller, self.args.strip())
         if not target:
             return
         
@@ -1965,7 +2008,7 @@ class CmdStat(MuxCommand):
         name = name.strip()
         template = template.strip()
         
-        target = self.caller.search(name, global_search=True)
+        target = search_character(self.caller, name)
         if not target:
             return
         
@@ -2078,6 +2121,83 @@ class CmdStat(MuxCommand):
         from world.cofd.templates.mage import set_mage_stat_value
         
         success, message = set_mage_stat_value(target, stat, value, self.caller)
+        self.caller.msg(message)
+        
+        # Explicit return to ensure no further processing
+        return
+    
+    def set_demon_stat(self):
+        """Set a stat on demon form sheet (Demon characters only)"""
+        # Check for removal request
+        if "remove" in self.switches:
+            # Format: +stat/demon/remove <trait_type>=<trait_name>
+            if not self.args or "=" not in self.args:
+                self.caller.msg("Usage: +stat/demon/remove <trait_type>=<trait_name>")
+                self.caller.msg("Valid trait types: modification, technology, propulsion, process")
+                return
+            
+            # Only the player can remove their own demon form stats (for now)
+            target = self.caller
+            
+            # Check if character is a Demon
+            character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+            if character_template.lower() != "demon":
+                self.caller.msg(f"Only Demon characters can have demon form stats. Your template is currently: {character_template}")
+                self.caller.msg("Use '+stat template=demon' (staff) to change your template first.")
+                return
+            
+            # Check if character is approved (same restrictions as regular stats)
+            is_npc = hasattr(target, 'db') and target.db.is_npc
+            if not is_npc and target.db.approved:
+                if not self.caller.check_permstring("Builder"):
+                    self.caller.msg("Your character is approved. Only staff can modify your demon form stats.")
+                    return
+            
+            # Parse trait type and name
+            trait_type, trait_name = self.args.split("=", 1)
+            trait_type = trait_type.strip().lower()
+            trait_name = trait_name.strip()
+            
+            # Delegate to demon template utilities
+            from world.cofd.templates.demon import remove_demon_form_trait
+            
+            success, message = remove_demon_form_trait(target, trait_type, trait_name, self.caller)
+            self.caller.msg(message)
+            return
+        
+        # Setting demon form stats
+        if not self.args or "=" not in self.args:
+            self.caller.msg("Usage: +stat/demon <stat>=<value>")
+            self.caller.msg("Valid stats: concept, description, modification, technology, propulsion, process")
+            self.caller.msg("Use +stat/demon/remove <trait_type>=<trait_name> to remove traits")
+            return
+        
+        # Only the player can set their own demon form stats (for now)
+        target = self.caller
+        
+        # Check if character is a Demon
+        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() != "demon":
+            self.caller.msg(f"Only Demon characters can have demon form stats. Your template is currently: {character_template}")
+            self.caller.msg("Use '+stat template=demon' (staff) to change your template first.")
+            return
+        
+        # Check if character is approved (same restrictions as regular stats)
+        is_npc = hasattr(target, 'db') and target.db.is_npc
+        if not is_npc and target.db.approved:
+            if not self.caller.check_permstring("Builder"):
+                self.caller.msg("Your character is approved. Only staff can modify your demon form stats.")
+                return
+        
+        # Parse stat and value
+        stat, value = self.args.split("=", 1)
+        stat = stat.strip().lower().replace(" ", "_")
+        value = value.strip()
+        
+        # Delegate to demon template utilities
+        from world.cofd.templates.demon import set_demon_form_stat_value
+        
+        success, message = set_demon_form_stat_value(target, stat, value, self.caller)
         self.caller.msg(message)
         
         # Explicit return to ensure no further processing

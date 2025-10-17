@@ -8,6 +8,7 @@ without needing full staff permissions.
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import evtable, search
 from world.utils.permission_utils import check_admin_permission, check_storyteller_permission
+from utils.search_helpers import search_character
 
 
 class CmdStoryteller(MuxCommand):
@@ -158,7 +159,7 @@ Once you have the Storyteller flag, you can use:
             self.caller.msg("Usage: +storyteller/add <character>")
             return
         
-        target = self.caller.search(self.args.strip(), global_search=True)
+        target = search_character(self.caller, self.args.strip())
         if not target:
             return
         
@@ -213,7 +214,7 @@ Once you have the Storyteller flag, you can use:
             self.caller.msg("Usage: +storyteller/remove <character>")
             return
         
-        target = self.caller.search(self.args.strip(), global_search=True)
+        target = search_character(self.caller, self.args.strip())
         if not target:
             return
         
@@ -259,7 +260,7 @@ Once you have the Storyteller flag, you can use:
     def check_storyteller(self):
         """Check if a character has Storyteller permissions."""
         if self.args:
-            target = self.caller.search(self.args.strip(), global_search=True)
+            target = search_character(self.caller, self.args.strip())
             if not target:
                 return
             

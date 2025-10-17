@@ -23,10 +23,11 @@ class Group(DefaultObject):
     GROUP_TYPES = [
         ('coterie', 'Coterie'),      # Vampire groups
         ('pack', 'Pack'),            # Werewolf groups  
-        ('cabal', 'Cabal'),          # Mage Mystery Cults
+        ('cabal', 'Cabal'),          # Mage groups
         ('motley', 'Motley'),        # Changeling groups
         ('krewe', 'Krewe'),          # Geist groups
         ('cell', 'Cell'),            # Hunter cells
+        ('mysterycult', 'Mystery Cult'), # Mystery Cults (Mortal/any)
         ('agency', 'Agency'),        # Mortal organizations
         ('cult', 'Cult'),            # Mummy cults
         ('other', 'Other'),          # Generic groups
@@ -49,6 +50,7 @@ class Group(DefaultObject):
         # Group merits and stats
         self.db.merits = {}  # Store group-specific merits
         self.db.stats = {}   # Store additional group stats
+        self.db.tactics = []  # Store known tactics (for Hunter cells)
         
         # Totem system (for packs and similar groups)
         self.db.totem = {
@@ -333,19 +335,100 @@ class Group(DefaultObject):
         """Get all group merits."""
         if not self.db.merits:
             return {}
-        return self.db.merits.copy()
+        return dict(self.db.merits)
+    
+    # Tactics Management (for Hunter cells)
+    def add_tactic(self, tactic_name):
+        """Add a tactic to the cell's known tactics."""
+        if not self.db.tactics:
+            self.db.tactics = []
+        
+        if tactic_name not in self.db.tactics:
+            self.db.tactics.append(tactic_name)
+            return True
+        return False
+    
+    def remove_tactic(self, tactic_name):
+        """Remove a tactic from the cell's known tactics."""
+        if not self.db.tactics:
+            return False
+        
+        if tactic_name in self.db.tactics:
+            self.db.tactics.remove(tactic_name)
+            return True
+        return False
+    
+    def get_all_tactics(self):
+        """Get all known tactics."""
+        if not self.db.tactics:
+            return []
+        return list(self.db.tactics)
+    
+    def has_tactic(self, tactic_name):
+        """Check if the cell knows a specific tactic."""
+        if not self.db.tactics:
+            return False
+        return tactic_name in self.db.tactics
     
     # Totem Management
-    def calculate_totem_points(self):
+    def calculate_totem_points(self, debug=False):
         """Calculate total totem points from member contributions."""
         total = 0
         for member in self.members:
-            if hasattr(member, 'db') and member.db.stats:
-                merits = member.db.stats.get('merits', {})
-                totem_merit = merits.get('Totem', 0)
-                if isinstance(totem_merit, dict):
-                    totem_merit = totem_merit.get('rating', 0)
-                total += int(totem_merit)
+            if not hasattr(member, 'db'):
+                if debug:
+                    logger.log_info(f"Member {member} has no db attribute")
+                continue
+                
+            if not member.db.stats:
+                if debug:
+                    logger.log_info(f"Member {member.name} has no stats")
+                continue
+            
+            merits = member.db.stats.get('merits', {})
+            if debug:
+                logger.log_info(f"Member {member.name} merits: {list(merits.keys())}")
+            
+            # Try both capitalized and lowercase versions
+            totem_merit = merits.get('Totem')
+            if totem_merit is None:
+                totem_merit = merits.get('totem')
+            
+            if totem_merit is None:
+                if debug:
+                    logger.log_info(f"Member {member.name} has no totem merit")
+                continue
+            
+            # Extract the numeric value
+            totem_value = 0
+            # Check for dict-like attributes (works with dict and _SaverDict)
+            if hasattr(totem_merit, '__getitem__') and hasattr(totem_merit, 'keys'):
+                # Try 'dots' first (your system)
+                if 'dots' in totem_merit:
+                    totem_value = totem_merit['dots']
+                    if debug:
+                        logger.log_info(f"Member {member.name} totem dots: {totem_value}")
+                # Then try 'rating' (fallback)
+                elif 'rating' in totem_merit:
+                    totem_value = totem_merit['rating']
+                    if debug:
+                        logger.log_info(f"Member {member.name} totem rating: {totem_value}")
+            else:
+                totem_value = totem_merit
+                if debug:
+                    logger.log_info(f"Member {member.name} totem value: {totem_value}")
+            
+            # Convert to int safely
+            try:
+                totem_int = int(totem_value)
+                total += totem_int
+                if debug:
+                    logger.log_info(f"Added {totem_int} from {member.name}, total now {total}")
+            except (ValueError, TypeError) as e:
+                # If conversion fails, skip this member
+                if debug:
+                    logger.log_info(f"Failed to convert {totem_value} to int for {member.name}: {e}")
+                continue
         return total
     
     def set_totem_attribute(self, attribute, value):
@@ -460,7 +543,7 @@ class Group(DefaultObject):
         if not self.db.totem or not self.db.totem.get('name'):
             return None
         
-        return self.db.totem.copy()
+        return dict(self.db.totem)
     
     # Mystery Cult Management
     def set_mystery_benefit(self, level, benefit_type, name, description=''):
@@ -498,7 +581,7 @@ class Group(DefaultObject):
         """Get all mystery cult benefits."""
         if not self.db.mystery_cult_benefits:
             return {}
-        return self.db.mystery_cult_benefits.copy()
+        return dict(self.db.mystery_cult_benefits)
     
     def clear_mystery_benefit(self, level):
         """Clear a mystery cult benefit at a specific level."""
@@ -524,12 +607,35 @@ class Group(DefaultObject):
             return []
         
         merits = character.db.stats.get('merits', {})
-        initiation_merit = merits.get('Mystery Cult Initiation', 0)
         
-        if isinstance(initiation_merit, dict):
-            initiation_level = initiation_merit.get('rating', 0)
+        # Try all possible variations
+        initiation_merit = merits.get('Mystery Cult Initiation')
+        if initiation_merit is None:
+            initiation_merit = merits.get('mystery cult initiation')
+        if initiation_merit is None:
+            initiation_merit = merits.get('mystery_cult_initiation')  # With underscores
+        
+        if initiation_merit is None:
+            return []
+        
+        # Extract the numeric value
+        initiation_level = 0
+        # Check for dict-like attributes (works with dict and _SaverDict)
+        if hasattr(initiation_merit, '__getitem__') and hasattr(initiation_merit, 'keys'):
+            # Try 'dots' first (your system)
+            if 'dots' in initiation_merit:
+                initiation_level = initiation_merit['dots']
+            # Then try 'rating' (fallback)
+            elif 'rating' in initiation_merit:
+                initiation_level = initiation_merit['rating']
         else:
             initiation_level = initiation_merit
+        
+        # Convert to int safely
+        try:
+            initiation_level = int(initiation_level)
+        except (ValueError, TypeError):
+            return []
         
         if initiation_level <= 0:
             return []

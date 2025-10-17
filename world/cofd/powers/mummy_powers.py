@@ -642,9 +642,7 @@ MUMMY_UTTERANCES = {
         "source": "MtC2e p135"
     },
     
-    # Continue with remaining utterances in the same pattern...
-    # I'll include a representative sample of each utterance type
-    
+   
     # DUST BENEATH FEET
     "dust_beneath_feet_ba_1": {
         "name": "Dust Beneath Feet",

@@ -23,54 +23,67 @@ from world.cofd.merits.minor_template_merits import (
     ghoul_merits, dhampir_merits, atariya_merits, psychic_vampire_merits,
     general_supernatural_merits
 )
-from world.cofd.templates.vampire import VAMPIRE_CLANS, VAMPIRE_COVENANTS, VAMPIRE_DISCIPLINES
-from world.cofd.templates.vampire_disciplines import (
+from world.cofd.templates.vampire import VAMPIRE_CLANS, VAMPIRE_BLOODLINES, VAMPIRE_COVENANTS, VAMPIRE_DISCIPLINES
+from world.cofd.powers.vampire_clans import get_all_clans, get_all_bloodlines
+from world.cofd.powers.vampire_covenants import get_all_covenants
+from world.cofd.powers.vampire_disciplines import (
     ALL_DISCIPLINE_POWERS, DISCIPLINE_POWER_CATEGORIES,
     ALL_COILS, COILS_BY_MYSTERY,
     ALL_BLOODLINE_DISCIPLINES, BLOODLINE_DISCIPLINES_BY_BLOODLINE,
     ALL_DEVOTIONS, DEVOTIONS_BY_TYPE
 )
-from world.cofd.templates.vampire_rituals import (
+from world.cofd.powers.vampire_rituals import (
     ALL_SCALES, SCALES_BY_MYSTERY,
     ALL_THEBAN, THEBAN_BY_RANK,
     ALL_CRUAC, CRUAC_BY_RANK,
     ALL_BLOODLINE_DEVOTIONS_EXTENDED, PENUMBRAE_CRUAC
 )
 from world.cofd.templates.mage import MAGE_PATHS, MAGE_ORDERS, MAGE_ARCANA, LEGACIES_BY_PATH, LEGACIES_BY_ORDER, UNLINKED_LEGACIES, ALL_LEGACIES
+from world.cofd.powers.mage_paths import get_all_paths
+from world.cofd.powers.mage_orders_detailed import get_all_orders_detailed
+from world.cofd.powers.mage_legacies_detailed import get_all_legacies as get_all_legacies_detailed
 from world.cofd.templates.demon import DEMON_INCARNATIONS, DEMON_AGENDAS, DEMON_EMBEDS, DEMON_EXPLOITS_LIST
-from world.cofd.templates.demon_form import (
+from world.cofd.powers.demon_form import (
     DEMON_MODIFICATIONS, DEMON_TECHNOLOGIES, DEMON_PROPULSIONS, DEMON_PROCESSES,
     ALL_DEMON_MODIFICATIONS, ALL_DEMON_TECHNOLOGIES, ALL_DEMON_PROPULSIONS, ALL_DEMON_PROCESSES
 )
-from world.cofd.templates.demon_powers import (
+from world.cofd.powers.demon_powers import (
     ALL_EMBEDS, DEMON_EXPLOITS,
     EMBEDS_BY_INCARNATION, EMBEDS_CACOPHONY, EMBEDS_INSTRUMENTAL, EMBEDS_MUNDANE, EMBEDS_VOCAL,
     ALL_EMBED_NAMES, ALL_EXPLOIT_NAMES
 )
 from world.cofd.templates.mortal_plus import ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS
 from world.cofd.templates.werewolf import WEREWOLF_AUSPICES, WEREWOLF_TRIBES, WEREWOLF_LODGES
-from world.cofd.templates.werewolf_gifts import ALL_WEREWOLF_GIFTS
-from world.cofd.templates.changeling_contracts import ALL_CHANGELING_CONTRACTS
+from world.cofd.powers.werewolf_gifts import ALL_WEREWOLF_GIFTS
+from world.cofd.powers.werewolf_auspices import get_all_auspices
+from world.cofd.powers.werewolf_tribes import get_all_tribes, get_all_lodges
+from world.cofd.powers.changeling_contracts import ALL_CHANGELING_CONTRACTS
+from world.cofd.powers.changeling_kiths import ALL_KITHS
+from world.cofd.powers.changeling_seemings import get_all_seemings, get_all_entitlements
 from world.cofd.templates.changeling import CHANGELING_SEEMINGS, CHANGELING_COURTS, CHANGELING_KITHS, CHANGELING_ENTITLEMENTS
-from world.cofd.templates.promethean import (
+from world.cofd.templates.promethean import PROMETHEAN_TEMPLATE
+from world.cofd.powers.promethean_powers import (
     PROMETHEAN_TRANSMUTATIONS, PROMETHEAN_ALEMBICS, 
     PROMETHEAN_BESTOWMENTS, PROMETHEAN_LINEAGES
 )
 from world.cofd.templates.legacy_promethean import ATHANORS_BY_LINEAGE
-from world.cofd.templates.hunter_endowments import ADVANCED_ARMORY, ANIMAL_CONTROL_KIT, BENEDICTION, CASTIGATION, DREAMSCAPE, ELIXIR, ENKOIMESIS, GOETIC_GOSPEL, HORROR_WITHIN, INFUSION, INK, INSPIRATION, LIVES_REMEMBERED, PERISPIRITISM, RELIC, RITES_DU_CHEVAL, RITES_OF_DENIAL, SEITOKUTEN, TELEINFORMATICS, THAUMATECHNOLOGY, XENOTECHNOLOGY
+from world.cofd.powers.hunter_endowments import ADVANCED_ARMORY, ANIMAL_CONTROL_KIT, BENEDICTION, CASTIGATION, DREAMSCAPE, ELIXIR, ENKOIMESIS, GOETIC_GOSPEL, HORROR_WITHIN, INFUSION, INK, INSPIRATION, LIVES_REMEMBERED, PERISPIRITISM, RELIC, RITES_DU_CHEVAL, RITES_OF_DENIAL, SEITOKUTEN, TELEINFORMATICS, THAUMATECHNOLOGY, XENOTECHNOLOGY
 from world.cofd.templates.hunter import HUNTER_CONSPIRACIES, HUNTER_COMPACTS, HUNTER_TACTICS, HUNTER_ENDOWMENTS
+from world.cofd.powers.hunter_tactics import get_all_tactics, MENTAL_TACTICS, PHYSICAL_TACTICS, SOCIAL_TACTICS
+from world.cofd.powers.hunter_organizations import ALL_COMPACTS, ALL_CONSPIRACIES, get_all_organizations
 from world.cofd.templates.mummy import (
     MUMMY_GUILDS, MUMMY_DECREES, MUMMY_JUDGES,
     MUMMY_AFFINITIES_DATA, MUMMY_UTTERANCES_DATA,
     ALL_AFFINITY_NAMES, ALL_UTTERANCE_NAMES
 )
-from world.cofd.templates.geist import GEIST_BURDENS, GEIST_KREWE_TYPES, GEIST_HAUNTS, GEIST_KEYS, GEIST_CEREMONIES, ALL_HAUNTS, GEIST_KEY_DETAILS
+from world.cofd.templates.geist import GEIST_BURDENS, GEIST_KREWE_TYPES, GEIST_HAUNTS, GEIST_KEYS, GEIST_CEREMONIES
+from world.cofd.powers.geist_powers import ALL_HAUNTS, GEIST_KEY_DETAILS
 from world.cofd.templates.deviant import DEVIANT_ORIGINS, DEVIANT_CLADES, DEVIANT_SCARS, DEVIANT_VARIATIONS, DEVIANT_ADAPTATIONS
 from world.cofd.templates.mortal_plus import (
     ALL_MORTAL_PLUS_TYPES, PSYCHIC_POWERS, PROXIMUS_FAMILIES,
     DEMON_BLOODED_LEVELS, GAME_LINE_HERITAGE, WOLF_BLOODED_TELLS
 )
-from world.cofd.templates.changing_breeds_favors import (
+from world.cofd.powers.changing_breeds_favors import (
     CHANGING_BREED_FAVORS, CHANGING_BREED_ASPECTS,
     ALL_FAVOR_NAMES, ALL_ASPECT_NAMES, TRICKSTER_ONLY_ASPECTS
 )
@@ -114,6 +127,7 @@ class LookupData:
         # Template-specific data
         self.vampire_data = {
             'clans': VAMPIRE_CLANS,
+            'bloodlines': VAMPIRE_BLOODLINES,
             'covenants': VAMPIRE_COVENANTS,
             'disciplines': VAMPIRE_DISCIPLINES,
             'discipline_powers': ALL_DISCIPLINE_POWERS,
@@ -131,7 +145,10 @@ class LookupData:
             'cruac': ALL_CRUAC,
             'cruac_by_rank': CRUAC_BY_RANK,
             'bloodline_devotions_extended': ALL_BLOODLINE_DEVOTIONS_EXTENDED,
-            'penumbrae_cruac': PENUMBRAE_CRUAC
+            'penumbrae_cruac': PENUMBRAE_CRUAC,
+            'clans_detailed': get_all_clans(),
+            'bloodlines_detailed': get_all_bloodlines(),
+            'covenants_detailed': get_all_covenants()
         }
         
         self.mage_data = {
@@ -141,7 +158,10 @@ class LookupData:
             'legacies_by_path': LEGACIES_BY_PATH,
             'legacies_by_order': LEGACIES_BY_ORDER,
             'unlinked_legacies': UNLINKED_LEGACIES,
-            'all_legacies': ALL_LEGACIES
+            'all_legacies': ALL_LEGACIES,
+            'paths_detailed': get_all_paths(),
+            'orders_detailed': get_all_orders_detailed(),
+            'legacies_detailed': get_all_legacies_detailed()
         }
         
         self.demon_data = {
@@ -198,12 +218,27 @@ class LookupData:
         }
         
         # Deviant data
+        from world.cofd.templates.deviant import (
+            DEVIANT_ORIGINS, DEVIANT_CLADES, DEVIANT_VARIATIONS, DEVIANT_SCARS
+        )
+        from world.cofd.powers.deviant_data import (
+            ALL_VARIATIONS, ALL_SCARS, DEVIANT_FORMS,
+            DEVIANT_ORIGINS_DETAILED, DEVIANT_CLADES_DETAILED,
+            DEVIANT_ADAPTATIONS, ADAPTATION_CATEGORIES
+        )
+        
         self.deviant_data = {
             'origins': DEVIANT_ORIGINS,
+            'origins_detailed': DEVIANT_ORIGINS_DETAILED,
             'clades': DEVIANT_CLADES,
+            'clades_detailed': DEVIANT_CLADES_DETAILED,
             'scars': DEVIANT_SCARS,
+            'scars_detailed': ALL_SCARS,
             'variations': DEVIANT_VARIATIONS,
-            'adaptations': DEVIANT_ADAPTATIONS
+            'variations_detailed': ALL_VARIATIONS,
+            'adaptations': DEVIANT_ADAPTATIONS,
+            'adaptation_categories': ADAPTATION_CATEGORIES,
+            'forms': DEVIANT_FORMS
         }
         
         self.changing_breeds_data = {
@@ -224,7 +259,10 @@ class LookupData:
             'auspices': WEREWOLF_AUSPICES,
             'tribes': WEREWOLF_TRIBES,
             'lodges': WEREWOLF_LODGES,
-            'gifts': ALL_WEREWOLF_GIFTS
+            'gifts': ALL_WEREWOLF_GIFTS,
+            'auspices_detailed': get_all_auspices(),
+            'tribes_detailed': get_all_tribes(),
+            'lodges_detailed': get_all_lodges()
         }
         
         # Changeling data
@@ -233,7 +271,10 @@ class LookupData:
             'contracts': ALL_CHANGELING_CONTRACTS,
             'courts': CHANGELING_COURTS,
             'kiths': CHANGELING_KITHS,
-            'entitlements': CHANGELING_ENTITLEMENTS
+            'kiths_detailed': ALL_KITHS,
+            'seemings_detailed': get_all_seemings(),
+            'entitlements': CHANGELING_ENTITLEMENTS,
+            'entitlements_detailed': get_all_entitlements()
         }
         
         # Promethean data
@@ -274,7 +315,14 @@ class LookupData:
             'endowments': hunter_endowments,
             'conspiracies': HUNTER_CONSPIRACIES,
             'compacts': HUNTER_COMPACTS,
-            'tactics': HUNTER_TACTICS
+            'tactics': HUNTER_TACTICS,
+            'tactics_detailed': get_all_tactics(),
+            'mental_tactics': MENTAL_TACTICS,
+            'physical_tactics': PHYSICAL_TACTICS,
+            'social_tactics': SOCIAL_TACTICS,
+            'compacts_detailed': ALL_COMPACTS,
+            'conspiracies_detailed': ALL_CONSPIRACIES,
+            'organizations': get_all_organizations()
         }
         
         # Skill specialties

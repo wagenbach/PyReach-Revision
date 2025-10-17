@@ -3,6 +3,7 @@ from evennia.utils import evtable
 from evennia import search_object
 from datetime import datetime
 from utils.text import process_special_characters
+from utils.search_helpers import search_character
 
 
 class CmdNote(MuxCommand):
@@ -224,17 +225,9 @@ class CmdNote(MuxCommand):
             return
         
         # Search for the character
-        character = search_object(player_name)
-        
+        character = search_character(self.caller, player_name)
         if not character:
-            self.caller.msg(f"Could not find character '{player_name}'.")
             return
-        
-        if len(character) > 1:
-            self.caller.msg(f"Multiple matches found for '{player_name}'. Please be more specific.")
-            return
-        
-        character = character[0]
         
         # Check if it's a character object
         if not character.has_account:
@@ -293,17 +286,9 @@ class CmdNote(MuxCommand):
             return
         
         # Search for the character
-        character = search_object(player_name)
-        
+        character = search_character(self.caller, player_name)
         if not character:
-            self.caller.msg(f"Could not find character '{player_name}'.")
             return
-        
-        if len(character) > 1:
-            self.caller.msg(f"Multiple matches found for '{player_name}'. Please be more specific.")
-            return
-        
-        character = character[0]
         
         # Check if it's a character object
         if not character.has_account:
@@ -358,17 +343,9 @@ class CmdNote(MuxCommand):
             return
         
         # Search for the character
-        character = search_object(player_name)
-        
+        character = search_character(self.caller, player_name)
         if not character:
-            self.caller.msg(f"Could not find character '{player_name}'.")
             return
-        
-        if len(character) > 1:
-            self.caller.msg(f"Multiple matches found for '{player_name}'. Please be more specific.")
-            return
-        
-        character = character[0]
         
         # Check if it's a character object
         if not character.has_account:
@@ -505,17 +482,9 @@ class CmdNote(MuxCommand):
             return
         
         # Search for the character
-        character = search_object(character_name)
-        
+        character = search_character(self.caller, character_name)
         if not character:
-            self.caller.msg(f"Could not find character '{character_name}'.")
             return
-        
-        if len(character) > 1:
-            self.caller.msg(f"Multiple matches found for '{character_name}'. Please be more specific.")
-            return
-        
-        character = character[0]
         
         # Check if it's a character object
         if not character.has_account:
@@ -573,17 +542,9 @@ class CmdNote(MuxCommand):
             return
         
         # Search for the character
-        character = search_object(character_name)
-        
+        character = search_character(self.caller, character_name)
         if not character:
-            self.caller.msg(f"Could not find character '{character_name}'.")
             return
-        
-        if len(character) > 1:
-            self.caller.msg(f"Multiple matches found for '{character_name}'. Please be more specific.")
-            return
-        
-        character = character[0]
         
         # Check if it's a character object
         if not character.has_account:
@@ -683,17 +644,9 @@ class CmdNote(MuxCommand):
             self.caller.msg(f"You show '{title}' to the room:\n{note_display}")
         else:
             # Show to a specific player
-            target = search_object(target_name)
-            
+            target = search_character(self.caller, target_name)
             if not target:
-                self.caller.msg(f"Could not find player '{target_name}'.")
                 return
-            
-            if len(target) > 1:
-                self.caller.msg(f"Multiple matches found for '{target_name}'. Please be more specific.")
-                return
-            
-            target = target[0]
             
             # Check if target is online
             if not target.sessions.all():

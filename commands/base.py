@@ -97,9 +97,11 @@ class TargetResolutionMixin:
         """
         Find a target character with standardized error handling.
         
+        Supports both character names and aliases.
+        
         Args:
-            target_name: Name to search for
-            global_search: Whether to search globally
+            target_name: Name or alias to search for
+            global_search: Whether to search globally (default: True)
             
         Returns:
             Character object or None if not found
@@ -107,10 +109,8 @@ class TargetResolutionMixin:
         if not target_name:
             return self.caller
         
-        target = self.caller.search(target_name, global_search=global_search)
-        if not target:
-            self.caller.msg(f"Could not find character '{target_name}'.")
-            return None
+        from utils.search_helpers import search_character
+        target = search_character(self.caller, target_name, global_search=global_search)
         
         return target
 

@@ -7,13 +7,41 @@ from . import register_template
 
 # Valid clans for Vampire characters
 VAMPIRE_CLANS = [
-    "daeva", "gangrel", "mekhet", "nosferatu", "ventrue"
+    # Major Clans
+    "daeva", "gangrel", "mekhet", "nosferatu", "ventrue",
+    # Uncommon and Lost Clans
+    "akhud", "amari", "bekaak", "dukhan", "hypatians", "jiang_shi", "julii",
+    "mekhet_hollow", "mikhaili", "nhang", "pijavica", "twice_cursed"
+]
+
+# Valid bloodlines for Vampire characters
+VAMPIRE_BLOODLINES = [
+    # Cross-Clan Bloodlines
+    "neglatu", "parliamentarians", "penumbrae", "scions_of_the_first_city",
+    # Daeva Bloodlines
+    "jharana", "liderc", "vilseduire",
+    # Gangrel Bloodlines
+    "kerberos", "nosoi",
+    # Mekhet Bloodlines
+    "ankou", "icelus", "khaibit", "morbus",
+    # Ventrue Bloodlines
+    "bron", "vardyvle"
 ]
 
 # Valid covenants for Vampire characters
 VAMPIRE_COVENANTS = [
-    "carthian movement", "circle of the crone", "invictus", 
-    "lancea et sanctum", "ordo dracul", "unaligned"
+    # Major Covenants
+    "carthian_movement", "circle_of_the_crone", "invictus", 
+    "lancea_et_sanctum", "ordo_dracul", "belials_brood", "vii", "unaligned",
+    # Regional Covenants
+    "esoteric_order_of_the_golden_star", "17n", "alecto", "kataraomenon", "ypochtreosi",
+    "bureau_of_childer", "bureau_of_silence", "dragons_path", "way_of_the_dragon",
+    "revolutionary_council", "watchful_eyes",
+    "hototogisu", "maeda_group", "takahashi_family", "ume_house",
+    # Historical Covenants
+    "camarilla", "childrens_crusade", "gallows_post", "legion_of_the_dead", "tenth_choir",
+    "ahl_al_mumit", "al_amin", "firawn", "jaliniyya",
+    "circles_of_mor", "legion_of_the_green", "weihan_cynn"
 ]
 
 # Primary powers (rated 1-5 dots) - Disciplines
@@ -69,7 +97,7 @@ VAMPIRE_TEMPLATE = {
     "description": ("Vampires are the undead, cursed beings that feed on the blood of mortals. "
                    "They are organized into Clans based on their vampiric lineage and Covenants "
                    "based on their political and religious beliefs."),
-    "bio_fields": ["mask", "dirge", "clan", "covenant", "sire", "embrace_date"],
+    "bio_fields": ["mask", "dirge", "clan", "bloodline", "covenant", "sire", "embrace_date"],
     "integrity_name": "Humanity",
     "starting_integrity": 7,
     "supernatural_power_stat": "blood_potency",
@@ -81,6 +109,9 @@ VAMPIRE_TEMPLATE = {
     "field_validations": {
         "clan": {
             "valid_values": VAMPIRE_CLANS
+        },
+        "bloodline": {
+            "valid_values": VAMPIRE_BLOODLINES
         },
         "covenant": {
             "valid_values": VAMPIRE_COVENANTS

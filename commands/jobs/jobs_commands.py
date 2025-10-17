@@ -17,6 +17,7 @@ import json
 import copy
 from evennia.help.models import HelpEntry
 from evennia.accounts.models import AccountDB
+from utils.search_helpers import search_character
 from evennia.comms.models import Msg
 
 class CmdJobs(MuxCommand):
@@ -926,10 +927,7 @@ class CmdJobs(MuxCommand):
                         requester_char = job.requester.puppet
                     else:
                         # Try to find their character by searching for objects owned by them
-                        from evennia.utils.search import search_object
-                        chars = search_object(job.requester.username, typeclass="typeclasses.characters.Character")
-                        if chars:
-                            requester_char = chars[0]
+                        requester_char = search_character(self.caller, job.requester.username, quiet=True)
                     
                     if not requester_char:
                         self.caller.msg(f"Could not find character for {job.requester.username}")
@@ -2181,7 +2179,8 @@ class CmdJobs(MuxCommand):
         except Job.DoesNotExist:
             self.caller.msg(f"Job #{job_id} not found.")
         except Exception as e:
-            self.caller.msg(f"Error transferring job: {str(e)}")
+            logger.log_err(f"Job transfer error for {self.caller.name}, job {job_id}: {str(e)}")
+            self.caller.msg(f"|rAn error occurred while transferring the job. The issue has been logged. Please contact staff.|n")
 
     def list_jobs_from_player(self):
         """List all jobs associated with a player (staff only)."""
@@ -2500,7 +2499,7 @@ class CmdJobs(MuxCommand):
             
         except Exception as e:
             logger.log_err(f"Failed to send job notifications: {str(e)}")
-            self.caller.msg(f"Failed to send notifications: {str(e)}")
+            self.caller.msg(f"|rFailed to send notifications. The issue has been logged.|n")
 
 class JobSystemCmdSet(CmdSet):
     """

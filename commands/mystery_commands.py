@@ -16,6 +16,7 @@ from world.experience import ExperienceHandler
 from typeclasses.mysteries import MysteryManager, Mystery, ClueObject
 from world.utils.permission_utils import check_mystery_permission, format_permission_error
 from django.utils import timezone
+from utils.search_helpers import search_character
 
 
 class CmdMystery(MuxCommand):
@@ -902,10 +903,9 @@ class CmdMystery(MuxCommand):
             
         mystery_id, clue_id = [x.strip() for x in clue_path.split("/", 1)]
         
-        character = self.caller.search(char_name, global_search=True)
+        character = search_character(self.caller, char_name)
         if not character:
             return
-        character = character[0] if isinstance(character, list) else character
         
         mystery = self._get_mystery(mystery_id)
         if not mystery:
@@ -1063,7 +1063,7 @@ class CmdMystery(MuxCommand):
             dice_pool = attr_value + skill_value
         else:
             skill_value = self._get_skill_value(skill, skill_category)
-        dice_pool = attr_value + skill_value
+            dice_pool = attr_value + skill_value
         
         self.caller.msg(f"Rolling {attribute.title()} + {skill.title()}: {dice_pool} dice")
         
@@ -1677,7 +1677,7 @@ class CmdMystery(MuxCommand):
         
         if character_name:
             # Show discoveries for specific character
-            character = self.caller.search(character_name, global_search=True)
+            character = search_character(self.caller, character_name)
             if not character:
                 return
             character = character[0] if isinstance(character, list) else character
@@ -1727,10 +1727,9 @@ class CmdMystery(MuxCommand):
             
         mystery_id, clue_id = [x.strip() for x in clue_path.split("/", 1)]
         
-        character = self.caller.search(char_name, global_search=True)
+        character = search_character(self.caller, char_name)
         if not character:
             return
-        character = character[0] if isinstance(character, list) else character
         
         mystery = self._get_mystery(mystery_id)
         if not mystery:
@@ -1773,10 +1772,9 @@ class CmdMystery(MuxCommand):
         if not mystery:
             return
             
-        character = self.caller.search(char_name, global_search=True)
+        character = search_character(self.caller, char_name)
         if not character:
             return
-        character = character[0] if isinstance(character, list) else character
         
         # Initialize participants list if it doesn't exist
         if not hasattr(mystery.db, 'participants') or mystery.db.participants is None:

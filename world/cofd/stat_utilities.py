@@ -58,6 +58,11 @@ def remove_stat_from_character(character, stat, caller):
     if stat.startswith("specialty/"):
         return _remove_specialty(character, stat, caller)
     
+    # Check if removing an adaptation (format: "adaptation <name>")
+    if stat.startswith("adaptation "):
+        adaptation_name = stat[11:]  # Remove "adaptation " prefix
+        return _remove_adaptation(character, adaptation_name, caller)
+    
     # Check if trying to remove a merit (including instanced merits)
     base_merit_name = stat
     if ":" in stat:
@@ -162,4 +167,68 @@ def _remove_specialty(character, stat, caller):
     else:
         skill_display = skill_name.replace('_', ' ').title()
         return False, f"{character.name} has no specialties for {skill_display}."
+
+
+def _remove_adaptation(character, adaptation_name, caller):
+    """
+    Remove a specific adaptation from a Deviant character.
+    
+    Args:
+        character: The character object
+        adaptation_name (str): The adaptation name to remove
+        caller: The caller object
+        
+    Returns:
+        tuple: (success, message)
+    """
+    from world.cofd.powers.deviant_data import DEVIANT_ADAPTATIONS
+    
+    # Normalize adaptation name
+    adaptation_key = adaptation_name.lower().replace(" ", "_")
+    
+    # Validate it's a real adaptation
+    if adaptation_key not in DEVIANT_ADAPTATIONS:
+        return False, f"'{adaptation_name}' is not a valid adaptation. Use +lookup adaptations to see available adaptations."
+    
+    # Check nested structure first
+    powers = character.db.stats.get("powers", {})
+    adaptations_dict = powers.get("adaptations", {})
+    
+    if adaptation_key in adaptations_dict:
+        # Remove from nested structure
+        del adaptations_dict[adaptation_key]
+        character.db.stats = character.db.stats  # Trigger persistence
+        adaptation_display = DEVIANT_ADAPTATIONS[adaptation_key]['name']
+        return True, f"Removed adaptation: {adaptation_display}"
+    
+    # Check legacy storage in 'other' dict
+    other = character.db.stats.get("other", {})
+    if "adaptation" in other:
+        # Single adaptation stored as string value
+        if other["adaptation"].lower().replace(" ", "_") == adaptation_key:
+            del other["adaptation"]
+            character.db.stats = character.db.stats  # Trigger persistence
+            adaptation_display = DEVIANT_ADAPTATIONS[adaptation_key]['name']
+            return True, f"Removed adaptation: {adaptation_display}"
+    
+    # Check if stored with "adaptations" plural in 'other'
+    if "adaptations" in other:
+        if isinstance(other["adaptations"], list):
+            # List format
+            for i, adapt in enumerate(other["adaptations"]):
+                if adapt.lower().replace(" ", "_") == adaptation_key:
+                    del other["adaptations"][i]
+                    character.db.stats = character.db.stats  # Trigger persistence
+                    adaptation_display = DEVIANT_ADAPTATIONS[adaptation_key]['name']
+                    return True, f"Removed adaptation: {adaptation_display}"
+        elif isinstance(other["adaptations"], dict):
+            # Dict format
+            if adaptation_key in other["adaptations"]:
+                del other["adaptations"][adaptation_key]
+                character.db.stats = character.db.stats  # Trigger persistence
+                adaptation_display = DEVIANT_ADAPTATIONS[adaptation_key]['name']
+                return True, f"Removed adaptation: {adaptation_display}"
+    
+    adaptation_display = DEVIANT_ADAPTATIONS[adaptation_key]['name']
+    return False, f"{character.name} doesn't have the {adaptation_display} adaptation."
 

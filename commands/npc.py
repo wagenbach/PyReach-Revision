@@ -80,6 +80,10 @@ class CmdNPC(MuxCommand):
     
     def list_npcs(self):
         """List all NPCs in current location"""
+        if not self.caller.location:
+            self.caller.msg("You are not in a valid location.")
+            return
+        
         npcs = [obj for obj in self.caller.location.contents 
                 if hasattr(obj, 'db') and obj.db.is_npc]
         

@@ -7,8 +7,13 @@ from . import register_template
 
 # Valid werewolf tribes
 WEREWOLF_TRIBES = [
-    "blood talons", "bone shadows", "hunters in darkness", 
-    "iron masters", "storm lords", "ghost wolves"
+    # Tribes of the Moon (Forsaken)
+    "blood_talons", "bone_shadows", "hunters_in_darkness", 
+    "iron_masters", "storm_lords",
+    # Pure Tribes
+    "fire_touched", "ivory_claws", "predator_kings",
+    # Other
+    "ghost_wolves", "bale_hounds"
 ]
 
 # Valid werewolf auspices
@@ -45,14 +50,18 @@ WEREWOLF_RITES = [
 WEREWOLF_POWERS = WEREWOLF_RITES  # Rites only for backward compatibility
 
 WEREWOLF_LODGES = [
-    "Cull", "Cherufe", "Dream Eaters", "Dreaming", "Eaters of the Dead", "Hollow Rivers",
-    "Jaw Hags", "Arms", "Blue Moon", "Cage", "Chronicle", "Clocktower", "Crows", "Death",
-    "Einherjar", "Embers", "Field", "Firefly", "Gargoyles", "Garm", "Harbingers", "Harmony",
-    "Hook Hand", "Hundred Days", "Irkalla", "Lightning", "Muspell", "Prophecy", "Roman Ritual",
-    "Screaming Moon", "Seasons", "Seven Venoms", "Shield", "Sleepless Earth", "Swords",
-    "Throne", "Thunder", "Unmasked", "Voices", "Wires", "Wrath", "Matagot",
-    "Prince Bishop's Wolves", "Temple of Apollo", "Tenders of the Fang",
-    "Thousand Steel Teeth", "Tindalosi", "Wendigo", "Wily Crows"
+    "cull", "cherufe", "dream_eaters", "dreaming_lodge", "eaters_of_the_dead", "hollow_rivers",
+    "jaw_hags", "lodge_of_arms", "lodge_of_the_blue_moon", "lodge_of_the_cage", "lodge_of_the_chronicle",
+    "lodge_of_the_clocktower", "lodge_of_crows", "lodge_of_death", "lodge_of_the_einherjar",
+    "lodge_of_the_embers", "lodge_of_the_field", "lodge_of_the_firefly", "lodge_of_gargoyles",
+    "lodge_of_garm", "lodge_of_harbingers", "lodge_of_harmony", "lodge_of_the_hook_hand",
+    "lodge_of_the_hundred_days", "lodge_of_irkalla", "lodge_of_lightning", "lodge_of_muspell",
+    "lodge_of_prophecy", "lodge_of_the_roman_ritual", "lodge_of_the_screaming_moon",
+    "lodge_of_the_seasons", "lodge_of_the_seven_venoms", "lodge_of_the_shield",
+    "lodge_of_sleepless_earth", "lodge_of_swords", "lodge_of_the_throne", "lodge_of_thunder",
+    "lodge_of_the_unmasked", "lodge_of_voices", "lodge_of_winter", "lodge_of_wires",
+    "lodge_of_wrath", "matagot", "prince_bishops_wolves", "temple_of_apollo",
+    "tenders_of_the_fang", "thousand_steel_teeth", "tindalosi", "wendigo", "wily_crows"
 ]
 
 # Werewolf template definition
@@ -60,7 +69,7 @@ WEREWOLF_TEMPLATE = {
     "name": "werewolf",
     "display_name": "Werewolf",
     "description": "Werewolves are spirit-touched shapeshifters who hunt in the border between flesh and spirit, driven by Rage and bound by ancient codes.",
-    "bio_fields": ["bone", "blood", "tribe", "auspice", "pack", "totem", "deed_name", "lodge"],
+    "bio_fields": ["bone", "blood", "tribe", "auspice", "pack", "deed_name", "lodge"],
     "integrity_name": "Harmony",
     "starting_integrity": 7,
     "supernatural_power_stat": "primal_urge",

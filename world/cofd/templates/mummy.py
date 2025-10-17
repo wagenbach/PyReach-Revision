@@ -4,7 +4,7 @@ Mummies are ancient immortals bound to serve the Judges of Duat in the modern wo
 """
 
 from . import register_template
-from world.cofd.mummy_powers import (
+from world.cofd.powers.mummy_powers import (
     MUMMY_AFFINITIES, MUMMY_UTTERANCES,
     ALL_AFFINITY_NAMES, ALL_UTTERANCE_NAMES,
     AFFINITIES_BY_PILLAR, UTTERANCES_BY_PILLAR, UTTERANCES_BY_TIER

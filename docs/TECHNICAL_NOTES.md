@@ -4,16 +4,225 @@ Technical documentation for developers working on PyReach systems.
 
 ## Table of Contents
 
-1. [Stat Access Standardization](#stat-access-standardization)
-2. [OOC/IC System Implementation](#oocic-system-implementation)
-3. [Mystery System Integration](#mystery-system-integration)
-4. [Hangout System Implementation](#hangout-system-implementation)
-5. [Storyteller Integration](#storyteller-integration)
-6. [Template System](#template-system)
-7. [Merit Instances](#merit-instances)
-8. [Equipment Combat Integration](#equipment-combat-integration)
-9. [Clue Type System](#clue-type-system)
-10. [Stats Command Refactoring](#stats-command-refactoring)
+1. [Character Search & Alias System](#character-search--alias-system)
+2. [Safe Dictionary Access Patterns](#safe-dictionary-access-patterns)
+3. [Stat Access Standardization](#stat-access-standardization)
+4. [OOC/IC System Implementation](#oocic-system-implementation)
+5. [Mystery System Integration](#mystery-system-integration)
+6. [Hangout System Implementation](#hangout-system-implementation)
+7. [Storyteller Integration](#storyteller-integration)
+8. [Template System](#template-system)
+9. [Merit Instances](#merit-instances)
+10. [Equipment Combat Integration](#equipment-combat-integration)
+11. [Security Best Practices](#security-best-practices)
+
+---
+
+## Character Search & Alias System
+
+### Overview
+Centralized character search system that supports both character names and aliases with global search by default.
+
+**File Location:** `utils/search_helpers.py`
+
+### search_character() Function
+
+```python
+def search_character(searcher, search_string, global_search=True, quiet=False):
+    """
+    Search for a character by name or alias.
+    
+    Finds characters regardless of whether they are currently logged in.
+    
+    Args:
+        searcher: Object performing the search
+        search_string: Name or alias to search for
+        global_search: Whether to search globally (default: True)
+        quiet: Whether to suppress error messages (default: False)
+        
+    Returns:
+        Character object or None if not found
+        
+    Note:
+        Does NOT check if character is online. For sending messages,
+        check target.sessions.all() separately.
+    """
+```
+
+### Search Priority Order
+
+1. **Exact character name match**
+2. **Case-insensitive character name match**
+3. **Exact alias match** (from `alias` attribute)
+4. **Case-insensitive alias match**
+
+### Global vs Local Search
+
+**Global Search (Default):**
+```python
+# Finds characters anywhere in the game world
+target = search_character(self.caller, "Lys")  
+# Finds "Lysander" via alias globally
+```
+
+**Local Search:**
+```python
+# Only searches in current location
+target = search_character(self.caller, "Lys", global_search=False)
+# Only finds if "Lysander" is in same room
+```
+
+### Usage in Commands
+
+**Most commands use global search (default):**
+```python
+from utils.search_helpers import search_character
+
+class CmdMyCommand(MuxCommand):
+    def func(self):
+        # Global search - finds characters anywhere, online or offline
+        target = search_character(self.caller, self.args)
+        if not target:
+            return  # Error message already shown
+        
+        # Use target...
+```
+
+**Combat commands use local search:**
+```python
+def search_combat_target(caller, target_name):
+    """Search for combat target (same room + online)."""
+    # Local search only
+    target = search_character(caller, target_name, global_search=False)
+    if not target:
+        return None
+    
+    # Verify same location
+    if target.location != caller.location:
+        caller.msg(f"{target.name} is not in the same location.")
+        return None
+    
+    # Verify online
+    if not target.sessions.all():
+        caller.msg(f"{target.name} is not currently online.")
+        return None
+    
+    return target
+```
+
+### Benefits
+
+- **Alias support** - All commands automatically support aliases
+- **Global search** - Find characters anywhere by default
+- **Offline character support** - Finds characters whether online or offline
+- **Consistent errors** - Unified "character not found" messages
+- **Type safety** - Only returns Character typeclass objects
+- **Case insensitive** - Finds "lysander", "Lysander", "LYSANDER"
+
+### Alias System
+
+**Setting Aliases:**
+```python
+# Player command
+alias me=Lys  # Sets alias to "Lys"
+
+# Stored as attribute
+character.attributes.add("alias", "Lys")
+```
+
+**Using Aliases:**
+```python
+page Lys=Hello!              # Uses alias (global, requires online)
++finger Lys                  # Uses alias (global, works offline)
++stat Lys/strength=3         # Staff can use alias (global, works offline)
++sheet Lys                   # View sheet (global, works offline)
++combat/attack Lys           # Uses alias (LOCAL ONLY, requires online + same room)
++mystery/grant Lys=1/clue0   # Grant clue (global, works offline)
+```
+
+**Note:** Most commands work on offline characters globally. Combat commands require same room + online. Communication commands (page, +txt) require online.
+
+---
+
+## Safe Dictionary Access Patterns
+
+### Overview
+Best practices for accessing nested dictionaries safely to prevent KeyError crashes.
+
+### The Problem
+
+**Unsafe (Can Crash):**
+```python
+# If "attributes" key doesn't exist, raises KeyError
+strength = character.db.stats["attributes"]["strength"]
+
+# If "stats" is None or empty dict, crashes
+character.db.stats["attributes"][stat] = value
+```
+
+### The Solution
+
+**Safe Read with .get():**
+```python
+# Returns default value if key missing
+attributes = character.db.stats.get("attributes", {})
+strength = attributes.get("strength", 2)  # Defaults to 2
+
+# One-liner
+strength = character.db.stats.get("attributes", {}).get("strength", 2)
+```
+
+**Safe Write with Initialization:**
+```python
+# Initialize nested dicts if missing
+if "attributes" not in character.db.stats:
+    character.db.stats["attributes"] = {}
+character.db.stats["attributes"][stat] = value
+```
+
+**Complete Safety Pattern:**
+```python
+def set_stat_safe(character, category, stat, value):
+    """Safely set a stat value."""
+    # Ensure base stats dict exists
+    if not character.db.stats:
+        character.db.stats = {}
+    
+    # Ensure category dict exists
+    if category not in character.db.stats:
+        character.db.stats[category] = {}
+    
+    # Now safe to set
+    character.db.stats[category][stat] = value
+```
+
+### Applied in Commands
+
+**stats.py uses safe patterns:**
+```python
+# Before setting attributes
+if "attributes" not in target.db.stats:
+    target.db.stats["attributes"] = {}
+target.db.stats["attributes"][stat] = value
+
+# Before reading (for werewolf forms)
+attributes = target.db.stats.get("attributes", {})
+strength = attributes.get("strength", 2)
+```
+
+### When to Use Each Pattern
+
+**Use .get() for reads:**
+- Displaying data
+- Calculating values
+- Checking existence
+- Default fallbacks
+
+**Use initialization for writes:**
+- Setting character stats
+- Creating new data structures
+- Modifying existing data
+- Critical operations
 
 ---
 
@@ -24,14 +233,23 @@ Unified approach to accessing character statistics across the codebase for consi
 
 ### Standard Access Pattern
 
-**Direct Database Access:**
+**Safe Database Access (Recommended):**
 ```python
-# Access stats dictionary
-character.db.stats["attributes"]["mental"]["intelligence"]
-character.db.stats["skills"]["physical"]["athletics"]
+# Use .get() with defaults for safety
+attributes = character.db.stats.get("attributes", {})
+intelligence = attributes.get("intelligence", 2)
+
+# For nested access
+stats = character.db.stats or {}
+health = stats.get("advantages", {}).get("health", 7)
+```
+
+**Direct Access (Only When Sure Structure Exists):**
+```python
+# Use only after initialization or validation
+character.db.stats["attributes"]["intelligence"]
+character.db.stats["skills"]["athletics"]
 character.db.stats["advantages"]["health"]
-character.db.stats["bio"]["fullname"]
-character.db.stats["other"]["template"]
 ```
 
 ### Stat Structure
@@ -86,16 +304,15 @@ db.stats = {
 
 ### Helper Functions
 
-**Get Stat with Default:**
+**Get Stat with Default (Safe Pattern):**
 ```python
-def get_stat(character, category, subcategory, stat_name, default=0):
+def get_stat(character, category, stat_name, default=0):
     """
     Safely get a stat with default value.
     
     Args:
         character: Character object
         category: 'attributes', 'skills', 'advantages', 'bio', 'merits'
-        subcategory: 'mental', 'physical', 'social' (or None for advantages/bio)
         stat_name: Name of specific stat
         default: Default value if stat doesn't exist
         
@@ -104,82 +321,38 @@ def get_stat(character, category, subcategory, stat_name, default=0):
     """
     if not character.db.stats:
         return default
-        
-    if subcategory:
-        return character.db.stats.get(category, {}).get(subcategory, {}).get(stat_name, default)
-    else:
-        return character.db.stats.get(category, {}).get(stat_name, default)
+    
+    # Simple category access
+    category_data = character.db.stats.get(category, {})
+    return category_data.get(stat_name, default)
+
+# For modern flattened structure (recommended)
 ```
 
-**Set Stat:**
+**Set Stat (Safe Pattern):**
 ```python
-def set_stat(character, category, subcategory, stat_name, value):
+def set_stat(character, category, stat_name, value):
     """
-    Set a stat value.
+    Safely set a stat value.
     
     Args:
         character: Character object
         category: 'attributes', 'skills', 'advantages', 'bio', 'merits'
-        subcategory: 'mental', 'physical', 'social' (or None)
         stat_name: Name of specific stat
         value: New value
     """
+    # Initialize base structure
     if not character.db.stats:
         character.db.stats = {}
-        
-    if subcategory:
-        if category not in character.db.stats:
-            character.db.stats[category] = {}
-        if subcategory not in character.db.stats[category]:
-            character.db.stats[category][subcategory] = {}
-        character.db.stats[category][subcategory][stat_name] = value
-    else:
-        if category not in character.db.stats:
-            character.db.stats[category] = {}
-        character.db.stats[category][stat_name] = value
-```
-
----
-
-### Migration Considerations
-
-**From Old System:**
-```python
-# Old way (individual attributes)
-character.db.intelligence = 3
-character.db.wits = 2
-
-# New way (unified dictionary)
-character.db.stats["attributes"]["mental"]["intelligence"] = 3
-character.db.stats["attributes"]["mental"]["wits"] = 2
-```
-
-**Migration Function:**
-```python
-def migrate_character_stats(character):
-    """Migrate character from old individual attributes to new unified stats."""
-    if not hasattr(character.db, 'stats'):
-        character.db.stats = {}
     
-    # Migrate attributes
-    old_attrs = ['intelligence', 'wits', 'resolve', 'strength', 'dexterity', 
-                 'stamina', 'presence', 'manipulation', 'composure']
+    # Initialize category
+    if category not in character.db.stats:
+        character.db.stats[category] = {}
     
-    for attr in old_attrs:
-        if hasattr(character.db, attr):
-            # Determine category
-            if attr in ['intelligence', 'wits', 'resolve']:
-                category = 'mental'
-            elif attr in ['strength', 'dexterity', 'stamina']:
-                category = 'physical'
-            else:
-                category = 'social'
-            
-            # Set in new structure
-            set_stat(character, 'attributes', category, attr, getattr(character.db, attr))
-            
-            # Delete old attribute
-            delattr(character.db, attr)
+    # Safe to set now
+    character.db.stats[category][stat_name] = value
+
+# For modern flattened structure (recommended)
 ```
 
 ---
@@ -187,9 +360,9 @@ def migrate_character_stats(character):
 ## OOC/IC System Implementation
 
 ### Overview
-Location management system preventing desynchronization issues from Dies Irae.
+Location management system with synchronization features.
 
-### Anti-Desynchronization Features
+### Core Features
 
 #### 1. Direct Object Storage
 ```python
@@ -305,15 +478,11 @@ pre_join_location       # Staff location before using +join
 
 ### Unified Command Structure
 
-**Before (Fragmented):**
-- `+investigation` (player commands)
-- `+mystery` (staff commands)
-- Duplicate code in two files
-
-**After (Unified):**
-- `+mystery` (all commands)
-- Role-based access control
-- Single source of truth
+- `+mystery` command handles all investigation functions
+- Role-based access control for player vs staff features
+- Player commands: examine, search, interview, research
+- Staff commands: create, edit, grant clues, manage mysteries
+- Single unified codebase for consistency
 
 ---
 
@@ -1071,6 +1240,95 @@ if template == 'vampire':
     # Do vampire thing
     pass
 ```
+
+---
+
+## Security Best Practices
+
+### Overview
+Security patterns and guidelines for safe command development.
+
+**Full Documentation:** See `commands/SECURITY_GUIDELINES.md`
+
+### Essential Patterns
+
+**1. Permission Checking:**
+```python
+from commands.base import AdminOnlyMixin
+
+class MyCommand(MuxCommand, AdminOnlyMixin):
+    def func(self):
+        if not self.check_admin_access():
+            return  # Error message shown automatically
+        # Admin-only code here
+```
+
+**2. Input Validation:**
+```python
+from commands.base import BasePyReachCommand
+
+class MyCommand(BasePyReachCommand):
+    def func(self):
+        # Validate length
+        if not self.validate_input_length(self.args, self.MAX_MESSAGE_LENGTH):
+            return
+        
+        # Sanitize input
+        clean_input = self.sanitize_input(self.args)
+```
+
+**3. Safe Attribute Access:**
+```python
+# Use whitelisted attributes only
+if attr_name in self.SAFE_DB_ATTRIBUTES:
+    value = self.safe_getattr(target, attr_name, default)
+    success = self.safe_setattr(target, attr_name, value)
+```
+
+**4. Error Handling (No Info Disclosure):**
+```python
+try:
+    dangerous_operation()
+except Exception as e:
+    logger.log_err(f"Operation failed for {self.caller.name}: {str(e)}")
+    self.caller.msg("|rAn error occurred. The issue has been logged.|n")
+    # DON'T show str(e) to user!
+```
+
+**5. Character Search:**
+```python
+# For most commands: use search_character with global search
+from utils.search_helpers import search_character
+
+target = search_character(self.caller, name)  # Global search, works offline
+if not target:
+    return  # Error already shown
+
+# For combat commands: use local search only
+target = search_character(self.caller, name, global_search=False)  # Same room only
+if not target:
+    return
+
+# Combat also needs online check
+if not target.sessions.all():
+    self.caller.msg(f"{target.name} is not currently online.")
+    return
+```
+
+### Security Checklist
+
+Before committing command code:
+
+- [ ] Uses permission mixins for admin/staff functions
+- [ ] Validates all user input lengths
+- [ ] Sanitizes user input before processing
+- [ ] Uses safe dictionary access patterns
+- [ ] No direct setattr/getattr with user-controlled names
+- [ ] Error messages don't leak system details
+- [ ] Uses search_character for character targeting
+- [ ] Logs security-relevant actions
+- [ ] No SQL injection risks (uses ORM only)
+- [ ] No command injection in execute_cmd calls
 
 ---
 

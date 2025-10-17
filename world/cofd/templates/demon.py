@@ -4,11 +4,11 @@ Demons are fallen angels who have escaped from the God-Machine's control.
 """
 
 from . import register_template
-from .demon_form import (
+from world.cofd.powers.demon_form import (
     DEMON_MODIFICATIONS, DEMON_TECHNOLOGIES, DEMON_PROPULSIONS, DEMON_PROCESSES,
     ALL_DEMON_MODIFICATIONS, ALL_DEMON_TECHNOLOGIES, ALL_DEMON_PROPULSIONS, ALL_DEMON_PROCESSES
 )
-from .demon_powers import (
+from world.cofd.powers.demon_powers import (
     ALL_EMBEDS, DEMON_EXPLOITS,
     EMBEDS_BY_INCARNATION, EMBEDS_CACOPHONY, EMBEDS_INSTRUMENTAL, EMBEDS_MUNDANE, EMBEDS_VOCAL,
     ALL_EMBED_NAMES, ALL_EXPLOIT_NAMES
@@ -71,6 +71,19 @@ DEMON_TEMPLATE = {
 
 # Register the template
 register_template(DEMON_TEMPLATE)
+
+
+# Power list helper functions
+def get_primary_powers():
+    """Get list of primary demon powers (embeds - known/unknown)."""
+    # Return embed names with semantic prefix for storage
+    return [f"embed:{embed}" for embed in DEMON_EMBEDS]
+
+
+def get_secondary_powers():
+    """Get list of secondary demon powers (exploits - known/unknown)."""
+    # Return exploit names with semantic prefix for storage
+    return [f"exploit:{exploit}" for exploit in DEMON_EXPLOITS_LIST]
 
 
 # Sheet Rendering Functions

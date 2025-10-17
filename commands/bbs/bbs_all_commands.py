@@ -17,6 +17,7 @@ from world.utils.bbs_utils import get_or_create_bbs_controller
 from typeclasses.groups import Group, get_group_by_name, get_character_groups
 import pytz
 from world.utils.time_utils import TIME_MANAGER
+from utils.search_helpers import search_character
 
 class CmdBBS(default_cmds.MuxCommand):
     """
@@ -210,14 +211,9 @@ class CmdBBS(default_cmds.MuxCommand):
             player_name = parts[1].strip()
             
             # Find the player
-            from evennia.utils import search
-            players = search.search_object_by_keyclass(player_name, "typeclasses.characters.Character")
-            
-            if not players:
-                self.caller.msg(f"No player found with the name '{player_name}'.")
+            as_player = search_character(self.caller, player_name)
+            if not as_player:
                 return
-                
-            as_player = players[0]
             
             # Only admins and builders can use this option
             if not (self.check_admin_access() or self.check_builder_access()):
@@ -897,14 +893,9 @@ class CmdBBS(default_cmds.MuxCommand):
         board_ref, player_name = [arg.strip() for arg in self.args.split("=", 1)]
         
         # Find the player
-        from evennia.utils import search
-        players = search.search_object_by_keyclass(player_name, "typeclasses.characters.Character")
-        
-        if not players:
-            self.caller.msg(f"No player found with the name '{player_name}'.")
+        target_player = search_character(self.caller, player_name)
+        if not target_player:
             return
-            
-        target_player = players[0]
         
         # Get the board
         controller = get_or_create_bbs_controller()

@@ -12,8 +12,16 @@ MAGE_PATHS = [
 
 # Valid orders for Mage characters
 MAGE_ORDERS = [
-    "adamantine arrow", "guardians of the veil", "mysterium", 
-    "silver ladder", "free council", "seers of the throne", "tremere", "abyssal", "unaligned"
+    # Contemporary Orders
+    "adamantine_arrow", "guardians_of_the_veil", "mysterium", 
+    "silver_ladder", "council_of_free_assemblies", "seers_of_the_throne", "tremere", "unaligned",
+    # Ministry (Seers)
+    "hegemony", "horologian", "panopticon", "paternoster", "praetorian", "geryon",
+    # Historical Orders
+    "jnanashakti", "mahanizrayani", "samashti", "vajrastra", "ajivaki",
+    "bay_city_marshals", "company_of_the_codex",
+    # Legacy compatibility
+    "abyssal"
 ]
 
 # Valid arcana for Mage characters (prefix conflicting names only)
@@ -92,11 +100,15 @@ UNLINKED_LEGACIES = [
     "wind-singers"
 ]
 
-# All valid legacies (for validation)
+# Import detailed legacy names for validation
+from world.cofd.powers.mage_legacies_detailed import ALL_LEGACIES as DETAILED_LEGACY_DICT
+
+# All valid legacies (for validation) - combine old list format with new detailed keys
 ALL_LEGACIES = list(set(
     [legacy for legacies in LEGACIES_BY_PATH.values() for legacy in legacies] +
     [legacy for legacies in LEGACIES_BY_ORDER.values() for legacy in legacies] +
-    UNLINKED_LEGACIES
+    UNLINKED_LEGACIES +
+    list(DETAILED_LEGACY_DICT.keys())  # Add all keys from detailed legacies
 ))
 
 # Mage template definition
@@ -300,7 +312,7 @@ def render_mage_sheet(character, caller, force_ascii=False):
     praxes = mage_stats.get("praxes", [])
     if praxes:
         # Import spell data for display
-        from world.cofd.templates.mage_spells import get_spell
+        from world.cofd.powers.mage_spells import get_spell
         
         for praxis_key in sorted(praxes):
             spell_data = get_spell(praxis_key)
@@ -390,7 +402,7 @@ def set_mage_stat_value(character, stat, value, caller):
         
     elif stat == "praxis":
         # Add a praxis (validate it's a real spell)
-        from world.cofd.templates.mage_spells import get_spell
+        from world.cofd.powers.mage_spells import get_spell
         
         spell_key = value.lower().replace(" ", "_")
         spell_data = get_spell(spell_key)

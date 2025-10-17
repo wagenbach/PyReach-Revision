@@ -66,15 +66,18 @@ Complete documentation for PyReach, a Chronicles of Darkness 2nd Edition MUD bui
 PyReach is a comprehensive MUD (Multi-User Dungeon) implementation for Chronicles of Darkness 2nd Edition, built on the Evennia MUD framework. It provides:
 
 - **Complete Character System:** Full character sheets with all CoD 2e stats
+- **Global Search & Aliases:** Find any character anywhere using name or alias (online or offline)
+- **Offline Character Access:** View and modify character data even when players are not logged in
 - **Combat System:** Automated combat with initiative, attacks, and damage tracking
-- **Investigation System:** Mystery and clue-based investigation mechanics
-- **Social Systems:** Social maneuvering and influence
+- **Investigation System:** Mystery and clue-based investigation mechanics with automated rolls
+- **Social Systems:** Social maneuvering and influence mechanics
 - **Template Support:** All major CoD 2e supernatural templates
-- **Experience System:** Beats, XP, and character advancement
-- **Merit System:** Full merit database with prerequisites
-- **Group System:** TypeClass-based groups and organizations
-- **Building Tools:** Comprehensive world-building commands
-- **Storyteller Tools:** Special permissions and NPC management
+- **Experience System:** Beats, XP, and character advancement (including arcane XP for Mages)
+- **Merit System:** Full merit database with prerequisite validation
+- **Group System:** TypeClass-based groups and organizations with auto-channels
+- **Building Tools:** Comprehensive world-building commands with area management
+- **Storyteller Tools:** Special permissions and NPC management system
+- **Security:** Input validation, permission checking, safe error handling
 
 ---
 
@@ -86,25 +89,30 @@ PyReach is a comprehensive MUD (Multi-User Dungeon) implementation for Chronicle
    - Use `+stat` to set your character's attributes and skills
    - Set biographical information with `+stat fullname=`, `+stat concept=`, etc.
    - Choose your template (staff-set): Mortal, Vampire, Werewolf, Mage, Changeling, etc.
+   - Set an alias with `alias me=<shortname>` (optional but recommended)
    - View your sheet with `+sheet`
 
 2. **Learning the Basics**
-   - Read [COMMANDS.md](COMMANDS.md) for command syntax
-   - Check [GAME_SYSTEMS.md](GAME_SYSTEMS.md) for game rules
+   - Read [COMMANDS.md](COMMANDS.md) for complete command syntax
+   - Check [GAME_SYSTEMS.md](GAME_SYSTEMS.md) for game rules and mechanics
    - Use `help <command>` in-game for detailed help
-   - Use `+lookup <term>` to search game mechanics
+   - Use `+lookup <term>` to search game mechanics database
+   - **Remember:** You can target any character anywhere using their name or alias
 
 3. **Earning Experience**
    - Gain beats through roleplay and story participation
-   - Use `+xp/beat <source>` to record beats
-   - Spend XP with `+xp/spend` and `+xp/buy`
+   - Use `+xp/beat <source>` to record beats (5 beats = 1 XP)
+   - Spend XP with `+xp/spend <stat>=<dots>` and `+xp/buy <merit>=[dots]`
+   - Mages also track Arcane XP separately with `+xp/arcane`
    - See [Experience & Advancement](GAME_SYSTEMS.md#experience--advancement)
 
 4. **Finding Roleplay**
-   - Use `+hangouts` to see gathering locations
-   - Join groups with `+groups`
-   - Check `+jobs` for open plots
-   - Use channels to coordinate scenes
+   - Use `+hangouts` to see and travel to gathering locations
+   - Use `+who` to see who's online
+   - Join groups with `+group/join` to meet other characters
+   - Check `+jobs` for open plots and requests
+   - Use `+watch` to track when friends log in
+   - Use `page <character>=<message>` to communicate (supports aliases!)
 
 ### For Storytellers
 
@@ -184,7 +192,9 @@ PyReach is a comprehensive MUD (Multi-User Dungeon) implementation for Chronicle
 
 ### Character Management
 - **Character Sheets:** Full CoD 2e character sheets with UTF-8 support
-- **Stats System:** Unified stats dictionary for all character data
+- **Stats System:** Unified stats dictionary for all character data with safe access patterns
+- **Alias System:** Short names for all character-targeting commands (global search, works offline)
+- **Offline Access:** View and modify character data even when players are offline
 - **Bio Fields:** Template-specific biographical information
 - **Pools:** Willpower and supernatural resource pool management
 - **Health:** Damage tracking with bashing/lethal/aggravated types
@@ -334,19 +344,24 @@ This documentation is organized into focused files:
 
 ## Version History
 
-**Current Version:** 2.0 (Consolidated Documentation)
+**Current Version:** 2.1 (Enhanced Systems & Security)
 
-### Major Changes in 2.0
-- Consolidated 33 documentation files into 6 organized files
+### Version 2.1 Features (October 2025)
+- **Alias System:** All 71 character-targeting commands support aliases
+- **Global Search:** All commands search globally by default
+- **Safe Dictionary Access:** Robust error prevention in stats system
+- **Security Improvements:** Sanitized error messages, no information disclosure
+- **Bug Fixes:** Corrected mystery investigation dice pool calculations
+- **Enhanced Documentation:** Comprehensive command reference and technical notes
+- **Quality Improvements:** Code review completed, all priority issues resolved
+
+### Version 2.0 Features
+- Consolidated documentation into 6 organized files
 - Improved navigation with clear categorization
-- Added comprehensive index (this file)
-- Enhanced cross-referencing between files
-- Updated all content to reflect current implementation
-- Added quick reference sections
-
-### Previous Versions
-- 1.x: Individual documentation files per feature
-- Legacy: Scattered documentation and comments
+- Comprehensive index and cross-referencing
+- Quick reference sections throughout
+- Complete command reference
+- Detailed technical documentation
 
 ---
 
@@ -397,10 +412,18 @@ The system is designed to handle the mechanical aspects of CoD gameplay while pr
 
 ---
 
-**Last Updated:** October 2025  
-**System Version:** PyReach 2.0  
+**Last Updated:** October 17, 2025  
+**System Version:** PyReach 2.1  
 **Evennia Version:** Compatible with Evennia 1.0+  
 **Chronicles of Darkness:** 2nd Edition
+
+### Recent Improvements (v2.1)
+- Complete alias support across all character-targeting commands
+- Global character search by default in all commands
+- Enhanced security with safe dictionary access patterns
+- Improved error handling with proper logging
+- Bug fixes in mystery investigation system
+- Comprehensive documentation updates
 
 *For the most current information, always check in-game help and these documentation files.*
 

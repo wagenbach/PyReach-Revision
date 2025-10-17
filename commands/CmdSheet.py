@@ -4,6 +4,7 @@ from evennia import search_object
 from world.utils.health_utils import get_health_track, set_health_track, compact_track
 from world.cofd.templates import get_template_definition
 from world.legacy_virtues_vices import LEGACY_VIRTUES, LEGACY_VICES, get_virtue_info, get_vice_info
+from utils.search_helpers import search_character
 
 class CmdSheet(MuxCommand):
     """
@@ -18,17 +19,21 @@ class CmdSheet(MuxCommand):
         +sheet/mage/ascii [character] - Display mage sheet in ASCII mode
         +sheet/demon [character] - Display demonic form sheet (Demon only)
         +sheet/demon/ascii [character] - Display demon form sheet in ASCII mode
+        +sheet/deviant [character] - Display deviant powers sheet (Deviant only)
+        +sheet/deviant/ascii [character] - Display deviant sheet in ASCII mode
         +sheet/show - Show your sheet to everyone in the room
         +sheet/show [player] - Show your sheet to a specific player
         +sheet/show/geist [player] - Show your geist sheet to the room or a player
         +sheet/show/mage [player] - Show your mage sheet to the room or a player
         +sheet/show/demon [player] - Show your demon form sheet to the room or a player
+        +sheet/show/deviant [player] - Show your deviant sheet to the room or a player
         +sheet/show/ascii [player] - Show your sheet in ASCII mode
         
     Shows all character statistics in an organized format.
     The /geist switch displays the secondary character sheet for a Sin-Eater's bound geist.
     The /mage switch displays mage-specific details like Nimbus, Obsessions, Praxes, and Dedicated Tool.
     The /demon switch displays the demonic form sheet showing Modifications, Technologies, Propulsion, and Process.
+    The /deviant switch displays the Deviant powers sheet showing Variations and Scars with their entanglements.
     The /show switch allows you to share your character sheet with others in the room or privately.
     """
     
@@ -143,7 +148,7 @@ class CmdSheet(MuxCommand):
         # Fallback for legacy templates if registry lookup fails
         legacy_bio_fields = {
             "legacy_vampire": ["clan", "covenant", "sire", "embrace_date", "virtue", "vice"],
-            "legacy_werewolf": ["auspice", "tribe", "pack", "totem", "virtue", "vice"],
+            "legacy_werewolf": ["auspice", "tribe", "pack", "virtue", "vice"],
             "legacy_mage": ["path", "order", "cabal", "shadow_name", "virtue", "vice"],
             "legacy_changeling": ["seeming", "kith", "court", "motley", "keeper", "virtue", "vice"],
             "legacy_geist": ["archetype", "threshold", "krewe", "geist_name", "virtue", "vice"],
@@ -211,7 +216,7 @@ class CmdSheet(MuxCommand):
         Proximus have access to 1-3 dot spells from their bloodline arcana.
         """
         try:
-            from world.cofd.templates.mage_spells import SLEEPWALKER_SPELLS, PROXIMUS_SPELLS, ALL_MAGE_SPELLS
+            from world.cofd.powers.mage_spells import SLEEPWALKER_SPELLS, PROXIMUS_SPELLS, ALL_MAGE_SPELLS
             # Return all spell keys for checking
             return list(ALL_MAGE_SPELLS.keys())
         except ImportError:
@@ -229,8 +234,13 @@ class CmdSheet(MuxCommand):
         displayed_powers = []
         for power_name in template_powers:
             power_value = powers.get(power_name, 0)
-            if power_value > 0:  # Only show powers they actually have
-                dots = self._format_dots(power_value, 5, force_ascii)
+            # Handle both numeric (1-5) and semantic ("known") power values
+            if power_value == "known" or (isinstance(power_value, int) and power_value > 0):
+                # For semantic powers (embeds, exploits, etc.), just show the name
+                if power_value == "known":
+                    dots = ""  # No dots for known/unknown powers
+                else:
+                    dots = self._format_dots(power_value, 5, force_ascii)
                 # Clean up display name - remove prefixes and format properly
                 display_name = power_name
                 if power_name.startswith('discipline_'):
@@ -243,8 +253,16 @@ class CmdSheet(MuxCommand):
                     display_name = power_name[9:]   # Remove 'contract_'
                 elif power_name.startswith('rite_'):
                     display_name = power_name[5:]   # Remove 'rite_'
+                elif power_name.startswith('embed:'):
+                    display_name = power_name[6:]   # Remove 'embed:'
+                elif power_name.startswith('exploit:'):
+                    display_name = power_name[8:]   # Remove 'exploit:'
                 
-                power_display = f"{display_name.replace('_', ' ').title():<20} {dots}"
+                # Format display with or without dots
+                if dots:
+                    power_display = f"{display_name.replace('_', ' ').title():<20} {dots}"
+                else:
+                    power_display = f"{display_name.replace('_', ' ').title()}"
                 displayed_powers.append(power_display)
         
         if not displayed_powers:
@@ -272,9 +290,13 @@ class CmdSheet(MuxCommand):
         displayed_powers = []
         for power_name in template_secondary_powers:
             power_value = powers.get(power_name, 0)
-            if power_value > 0:  # Only show powers they actually have
-                # For secondary powers, show dots
-                display_marker = self._format_dots(power_value, 5, force_ascii)
+            # Handle both numeric (1-5) and semantic ("known") power values
+            if power_value == "known" or (isinstance(power_value, int) and power_value > 0):
+                # For secondary powers, show dots if numeric, nothing if "known"
+                if power_value == "known":
+                    display_marker = ""  # No dots for known/unknown powers
+                else:
+                    display_marker = self._format_dots(power_value, 5, force_ascii)
                 
                 # Clean up display name - remove prefixes and format properly
                 display_name = power_name
@@ -288,8 +310,16 @@ class CmdSheet(MuxCommand):
                     display_name = power_name[9:]   # Remove 'contract_'
                 elif power_name.startswith('rite_'):
                     display_name = power_name[5:]   # Remove 'rite_'
+                elif power_name.startswith('embed:'):
+                    display_name = power_name[6:]   # Remove 'embed:'
+                elif power_name.startswith('exploit:'):
+                    display_name = power_name[8:]   # Remove 'exploit:'
                 
-                power_display = f"{display_name.replace('_', ' ').title():<20} {display_marker}"
+                # Format display with or without dots
+                if display_marker:
+                    power_display = f"{display_name.replace('_', ' ').title():<20} {display_marker}"
+                else:
+                    power_display = f"{display_name.replace('_', ' ').title()}"
                 displayed_powers.append(power_display)
         
         if not displayed_powers:
@@ -327,10 +357,15 @@ class CmdSheet(MuxCommand):
         if "demon" in self.switches:
             self.show_demon_form_sheet()
             return
+        
+        # Check if this is a deviant powers sheet request
+        if "deviant" in self.switches:
+            self.show_deviant_sheet()
+            return
             
         # Determine target
         if self.args:
-            target = self.caller.search(self.args.strip(), global_search=True)
+            target = search_character(self.caller, self.args.strip())
             if not target:
                 return
         else:
@@ -410,7 +445,12 @@ class CmdSheet(MuxCommand):
         for field in template_fields:
             if field not in ["virtue", "vice"]:  # virtue/vice already added above if valid
                 field_value = bio.get(field, "<not set>")
-                bio_items.append((field.replace("_", " ").title(), field_value))
+                # Special case for cover_identity to display as "Cover ID"
+                if field == "cover_identity":
+                    field_label = "Cover ID"
+                else:
+                    field_label = field.replace("_", " ").title()
+                bio_items.append((field_label, field_value))
         
         # Add current form for Werewolves
         if template.lower() == "werewolf":
@@ -890,7 +930,7 @@ class CmdSheet(MuxCommand):
             output.append(self._format_section_header("|wSPELLS|n"))
             
             # Get all spell powers
-            from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
+            from world.cofd.powers.mage_spells import ALL_MAGE_SPELLS, get_spell
             
             spell_list = []
             for power_name, value in powers.items():
@@ -928,7 +968,7 @@ class CmdSheet(MuxCommand):
             output.append(self._format_section_header("|wENDOWMENTS|n"))
             
             # Get all endowment powers
-            from world.cofd.templates.hunter_endowments import get_endowment
+            from world.cofd.powers.hunter_endowments import get_endowment
             
             endowment_list = []
             for power_name, value in powers.items():
@@ -973,7 +1013,7 @@ class CmdSheet(MuxCommand):
         if template.lower() == "werewolf":
             output.append(self._format_section_header("|wGIFTS (FACETS)|n"))
             
-            from world.cofd.templates.werewolf_gifts import get_gift
+            from world.cofd.powers.werewolf_gifts import get_gift
             
             gift_list = []
             for power_name, value in powers.items():
@@ -1005,8 +1045,8 @@ class CmdSheet(MuxCommand):
         
         # Vampire Discipline Powers/Devotions/Ritual sections
         if template.lower() == "vampire":
-            from world.cofd.templates.vampire_disciplines import get_discipline_power, ALL_DEVOTIONS
-            from world.cofd.templates.vampire_rituals import get_ritual_power
+            from world.cofd.powers.vampire_disciplines import get_discipline_power, ALL_DEVOTIONS
+            from world.cofd.powers.vampire_rituals import get_ritual_power
             
             # Collect all vampire semantic powers by category
             vamp_powers = {}
@@ -1067,7 +1107,7 @@ class CmdSheet(MuxCommand):
         
         # Mummy Affinity and Utterance sections
         if template.lower() == "mummy":
-            from world.cofd.mummy_powers import MUMMY_AFFINITIES, MUMMY_UTTERANCES
+            from world.cofd.powers.mummy_powers import MUMMY_AFFINITIES, MUMMY_UTTERANCES
             
             # Collect all mummy powers by category
             mummy_powers = {
@@ -1175,7 +1215,7 @@ class CmdSheet(MuxCommand):
                 output.append(self._format_section_header("|wSPELLS|n"))
                 
                 # Import spell data
-                from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
+                from world.cofd.powers.mage_spells import ALL_MAGE_SPELLS, get_spell
                 
                 # Get spell powers
                 spell_list = []
@@ -1341,7 +1381,7 @@ class CmdSheet(MuxCommand):
         """Display the geist character sheet for Sin-Eaters"""
         # Determine target
         if self.args:
-            target = self.caller.search(self.args.strip(), global_search=True)
+            target = search_character(self.caller, self.args.strip())
             if not target:
                 return
         else:
@@ -1389,7 +1429,7 @@ class CmdSheet(MuxCommand):
         """Display the mage-specific character sheet"""
         # Determine target
         if self.args:
-            target = self.caller.search(self.args.strip(), global_search=True)
+            target = search_character(self.caller, self.args.strip())
             if not target:
                 return
         else:
@@ -1431,7 +1471,7 @@ class CmdSheet(MuxCommand):
         """Display the demonic form character sheet for Demons"""
         # Determine target
         if self.args:
-            target = self.caller.search(self.args.strip(), global_search=True)
+            target = search_character(self.caller, self.args.strip())
             if not target:
                 return
         else:
@@ -1467,6 +1507,48 @@ class CmdSheet(MuxCommand):
         if output is None:
             self.caller.msg(f"{target.name} has no demonic form character sheet set up yet.")
             self.caller.msg("Use +stat/demon <stat>=<value> to set demonic form traits.")
+            return
+        
+        # Add encoding warning if needed
+        if not supports_utf8 and not force_ascii:
+            output.append("|y(ASCII mode due to encoding - see note above for UTF-8)|n")
+        
+        self.caller.msg("\n".join(output))
+    
+    def show_deviant_sheet(self):
+        """Display the Deviant-specific character sheet showing Variations and Scars"""
+        # Determine target
+        if self.args:
+            target = search_character(self.caller, self.args.strip())
+            if not target:
+                return
+        else:
+            target = self.caller
+        
+        # Check if character is a Deviant
+        character_template = target.db.stats.get("other", {}).get("template", "Mortal")
+        if character_template.lower() != "deviant":
+            self.caller.msg(f"{target.name} is not a Deviant. Current template: {character_template}")
+            self.caller.msg("Only Deviant characters have Variations and Scars to display.")
+            return
+        
+        # Get dot style and check UTF-8 support
+        force_ascii = "ascii" in self.switches
+        filled_char, empty_char, supports_utf8 = self._get_dots_style(force_ascii)
+        
+        # Show encoding warning if needed (only for self, not when viewing others)
+        if target == self.caller and not supports_utf8 and "ascii" not in self.switches:
+            self._show_encoding_warning(supports_utf8)
+        
+        # Import the template-specific render function
+        from world.cofd.templates.deviant import render_deviant_sheet
+        
+        # Render the deviant sheet
+        output = render_deviant_sheet(target, self.caller, force_ascii)
+        
+        if output is None:
+            self.caller.msg(f"{target.name} has no Deviant powers set up yet.")
+            self.caller.msg("Use +stat to set variations and scars.")
             return
         
         # Add encoding warning if needed
@@ -1547,6 +1629,8 @@ class CmdSheet(MuxCommand):
                 self.show_mage_sheet()
             elif "demon" in display_switches:
                 self.show_demon_form_sheet()
+            elif "deviant" in display_switches:
+                self.show_deviant_sheet()
             else:
                 # Call the main sheet display logic
                 # We need to manually call the sheet building code
@@ -1672,7 +1756,12 @@ class CmdSheet(MuxCommand):
         for field in template_fields:
             if field not in ["virtue", "vice"]:  # virtue/vice already added above if valid
                 field_value = bio.get(field, "<not set>")
-                bio_items.append((field.replace("_", " ").title(), field_value))
+                # Special case for cover_identity to display as "Cover ID"
+                if field == "cover_identity":
+                    field_label = "Cover ID"
+                else:
+                    field_label = field.replace("_", " ").title()
+                bio_items.append((field_label, field_value))
         
         # Add current form for Werewolves
         if template.lower() == "werewolf":
@@ -2148,7 +2237,7 @@ class CmdSheet(MuxCommand):
             output.append(self._format_section_header("|wSPELLS|n"))
             
             # Get all spell powers
-            from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
+            from world.cofd.powers.mage_spells import ALL_MAGE_SPELLS, get_spell
             
             spell_list = []
             for power_name, value in powers.items():
@@ -2186,7 +2275,7 @@ class CmdSheet(MuxCommand):
             output.append(self._format_section_header("|wENDOWMENTS|n"))
             
             # Get all endowment powers
-            from world.cofd.templates.hunter_endowments import get_endowment
+            from world.cofd.powers.hunter_endowments import get_endowment
             
             endowment_list = []
             for power_name, value in powers.items():
@@ -2231,7 +2320,7 @@ class CmdSheet(MuxCommand):
         if template.lower() == "werewolf":
             output.append(self._format_section_header("|wGIFTS (FACETS)|n"))
             
-            from world.cofd.templates.werewolf_gifts import get_gift
+            from world.cofd.powers.werewolf_gifts import get_gift
             
             gift_list = []
             for power_name, value in powers.items():
@@ -2263,8 +2352,8 @@ class CmdSheet(MuxCommand):
         
         # Vampire Discipline Powers/Devotions/Ritual sections
         if template.lower() == "vampire":
-            from world.cofd.templates.vampire_disciplines import get_discipline_power, ALL_DEVOTIONS
-            from world.cofd.templates.vampire_rituals import get_ritual_power
+            from world.cofd.powers.vampire_disciplines import get_discipline_power, ALL_DEVOTIONS
+            from world.cofd.powers.vampire_rituals import get_ritual_power
             
             # Collect all vampire semantic powers by category
             vamp_powers = {}
@@ -2325,7 +2414,7 @@ class CmdSheet(MuxCommand):
         
         # Mummy Affinity and Utterance sections
         if template.lower() == "mummy":
-            from world.cofd.mummy_powers import MUMMY_AFFINITIES, MUMMY_UTTERANCES
+            from world.cofd.powers.mummy_powers import MUMMY_AFFINITIES, MUMMY_UTTERANCES
             
             # Collect all mummy powers by category
             mummy_powers = {
@@ -2433,7 +2522,7 @@ class CmdSheet(MuxCommand):
                 output.append(self._format_section_header("|wSPELLS|n"))
                 
                 # Import spell data
-                from world.cofd.templates.mage_spells import ALL_MAGE_SPELLS, get_spell
+                from world.cofd.powers.mage_spells import ALL_MAGE_SPELLS, get_spell
                 
                 # Get spell powers
                 spell_list = []

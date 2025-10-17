@@ -1,6 +1,7 @@
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils import create
 from world.tilts import Tilt, STANDARD_TILTS
+from utils.search_helpers import search_character
 
 class CmdTilt(MuxCommand):
     """
@@ -125,7 +126,7 @@ class CmdTilt(MuxCommand):
             tilt_name = self.args.strip()
         
         # Find the target
-        target = self.caller.search(target_name)
+        target = search_character(self.caller, target_name)
         if not target:
             return
             
@@ -177,7 +178,7 @@ class CmdTilt(MuxCommand):
             tilt_name = self.args.strip()
         
         # Find the target
-        target = self.caller.search(target_name)
+        target = search_character(self.caller, target_name)
         if not target:
             return
             
@@ -197,7 +198,7 @@ class CmdTilt(MuxCommand):
         if not self.args:
             target = self.caller
         else:
-            target = self.caller.search(self.args)
+            target = search_character(self.caller, self.args)
             if not target:
                 return
                 
@@ -317,7 +318,7 @@ class CmdTilt(MuxCommand):
         if not self.args:
             target = self.caller
         else:
-            target = self.caller.search(self.args)
+            target = search_character(self.caller, self.args)
             if not target:
                 return
                 

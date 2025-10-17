@@ -110,7 +110,7 @@ GAME_LINE_HERITAGE = [
 
 # Get mage spells for Sleepwalkers/Proximus
 try:
-    from world.cofd.templates.mage_spells import SLEEPWALKER_SPELLS, PROXIMUS_SPELLS
+    from world.cofd.powers.mage_spells import SLEEPWALKER_SPELLS, PROXIMUS_SPELLS
     MORTAL_PLUS_SPELL_ACCESS = PROXIMUS_SPELLS  # Use Proximus list (1-3 dot) for validation
 except ImportError:
     MORTAL_PLUS_SPELL_ACCESS = []

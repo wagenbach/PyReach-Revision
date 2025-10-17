@@ -26,9 +26,11 @@ Comprehensive Chronicles of Darkness 2nd Edition combat system with automated me
 1. `+combat/join [team]` - Join combat
 2. `+combat/init` - Roll initiative
 3. `+combat/status` - Check status
-4. `+combat/attack <target>` - Attack
+4. `+combat/attack <target>` - Attack (target must be in same room and online)
 5. `+combat/next` - Advance turns
 6. `+combat/surrender` or `+combat/leave` - Exit
+
+**Important:** All combat actions require targets to be in the same room and currently online.
 
 ---
 
@@ -55,17 +57,24 @@ Comprehensive Chronicles of Darkness 2nd Edition combat system with automated me
 ### Attack Resolution
 
 **Attack Roll Steps:**
-1. Calculate Attack Pool: Attribute + Skill (varies by weapon)
-2. Apply Modifiers: Multiple action penalties, situational modifiers
-3. Subtract Defense: Target's Defense rating (min 1 die remains)
-4. Roll Dice: Count successes (8+ on d10, 10s count as 2)
-5. Calculate Damage: Successes + weapon damage rating
-6. Apply Armor: Subtract armor rating from damage
-7. Apply to Health: Use health system for damage tracking
+1. **Validate Target:** Must be in same room, online, and in combat
+2. Calculate Attack Pool: Attribute + Skill (varies by weapon)
+3. Apply Modifiers: Multiple action penalties, situational modifiers
+4. Subtract Defense: Target's Defense rating (min 1 die remains)
+5. Roll Dice: Count successes (8+ on d10, 10s count as 2)
+6. Calculate Damage: Successes + weapon damage rating
+7. Apply Armor: Subtract armor rating from damage
+8. Apply to Health: Use health system for damage tracking
 
 **Defense Calculation:**
 - Formula: min(Wits, Dexterity) + Athletics
 - Modifiers: Status effects, cover, prone, etc.
+
+**Target Requirements:**
+- Must be in the same room as attacker
+- Must be currently online (active session)
+- Must have joined combat with `+combat/join`
+- Can be targeted by name or alias
 
 ---
 
@@ -580,6 +589,8 @@ Clue objects can be examined and interact with investigation system.
 +mystery/revoke <character>=<id>/<clue> - Revoke clue from character
 ```
 
+**Note:** Character names and aliases both supported. Global search enabled - no need for character to be in same location.
+
 ---
 
 ### Clue Types
@@ -701,42 +712,41 @@ Environmental and personal effects that provide mechanical modifiers.
 ### Overview
 Social influence system for diplomatic interactions and manipulation.
 
-### Opening Social Maneuvers
-```
-+social/open <target>=<goal> - Start social interaction
-```
+### Social Maneuvering Commands
 
-**Goal Types:**
-- Persuade target to take action
-- Change target's opinion
-- Gain information
-- Establish relationship
-
----
-
-### Making Impressions
 ```
-+social/roll <target>        - Make impression roll
++social/impression <target> <level>        - Set impression level
++social/doors <target>                     - Check doors with target
++social/leverage <target> <type> <desc>    - Add leverage against target
++social/roll <target> <goal>               - Make social maneuvering roll
 ```
 
-- Uses appropriate social skills (Manipulation + Persuasion, etc.)
-- Accumulate impressions toward goal
-- Target's Resolve + Composure determines doors (resistance)
+**Impression Levels:**
+- **Perfect:** Target completely receptive (1 minute between rolls)
+- **Excellent:** Target very receptive (5 minutes between rolls)
+- **Good:** Target somewhat receptive (15 minutes between rolls)
+- **Average:** Target neutral (30 minutes between rolls)
+- **Hostile:** Target resistant (1 hour between rolls)
 
-### Resolution
-```
-+social/close                - Close social maneuver
-```
+**Leverage Types:**
+- **Soft:** Bribes, favors, promises (+1 to social pool)
+- **Hard:** Threats, blackmail, coercion (+2 to social pool)
 
-- Compare impressions to doors
-- Determine success level
-- Apply results
+### Social Mechanics
 
-### Social Doors
-- **Doors:** Target's Resolve + Composure
-- Each impression opens one door
-- Must open all doors to achieve goal
-- Modified by relationship, evidence, leverage
+**Doors Calculation:**
+- Doors = lower of (Resolve, Composure)
+- Each successful impression roll opens one door
+- Must open all doors to achieve social goal
+- Time between rolls based on impression level
+
+**Social Roll:**
+- Base Pool: Manipulation + Persuasion (or appropriate skill)
+- Add impression modifier: Perfect (+3), Excellent (+2), Good (+1), Average (0), Hostile (-1)
+- Add leverage bonuses if applicable
+- Roll against target's doors
+
+**Note:** All social commands support character aliases and global search
 
 ---
 
@@ -886,6 +896,8 @@ Enable 1st Edition Chronicles of Darkness rules instead of 2nd Edition.
 | Aim | `+combat/aim <target>` | Instant |
 | Grapple | `+combat/grapple <target>` | Instant |
 | Reload | `+combat/reload` | Instant |
+
+**Note:** All combat commands require targets to be in the same room and online.
 
 ### Damage Types
 | Type | Symbol | Color | Examples |

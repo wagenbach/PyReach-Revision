@@ -16,26 +16,26 @@ Documentation for custom TypeClasses used in PyReach Chronicles of Darkness.
 ## Overview
 
 ### What are TypeClasses?
-TypeClasses are Evennia's object-oriented database models that combine Django models with Python classes. They provide:
+TypeClasses are Evennia's object-oriented approach to game objects, combining database persistence with Python class functionality. They provide:
 - Automatic attribute persistence
 - Built-in event hooks
 - Consistent architecture
 - Easy customization
-- Integration with Evennia's systems
+- Full integration with Evennia's systems
 
 ### TypeClass Benefits
-- Better than pure Django models for game objects
-- Automatic database synchronization
-- Event-driven programming
-- Inheritance and composition
+- Automatic database synchronization via Evennia
+- Event-driven programming with hooks
+- Inheritance and composition support
 - Persistent attributes without schema changes
+- Built-in access control and locks system
 
 ---
 
 ## Groups System
 
 ### Overview
-Groups in PyReach are TypeClass objects, not Django models. This provides better integration with Evennia's systems and easier extensibility.
+Groups in PyReach are TypeClass objects providing full integration with Evennia's systems and easy extensibility.
 
 **File Location:** `typeclasses/groups.py`
 
@@ -133,30 +133,6 @@ if template == "vampire":
     - Add to "All Vampires" group
     - Add to clan group if clan set
     - Add to covenant group if covenant set
-```
-
----
-
-### Migration from Django Models
-
-If you have existing Django model groups, use the migration script:
-
-```python
-# In Evennia shell (@py command)
-exec(open('world/groups/migrate_to_typeclass.py').read())
-migrate_groups_to_typeclass()
-```
-
-**Migration Process:**
-1. Converts all Django Group objects to TypeClass Groups
-2. Migrates all memberships and member data
-3. Preserves leaders, titles, descriptions, etc.
-4. Creates channels for all groups
-
-**After Verification:**
-```python
-# DANGEROUS - only after verifying migration worked
-cleanup_old_django_groups()
 ```
 
 ---
