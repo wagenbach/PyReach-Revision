@@ -61,5 +61,5 @@ class Merit:
     merit_type: str = ""  # Merit type (e.g., "physical", "social", "mental", "style", "fighting", "supernatural")
     cost: int = 0  # Cost in experience points
     prerequisite: str = ""  # Prerequisite (e.g., "strength:2", "brawl:1", "[brawl:1,weaponry:1]", etc.)
-    
+    book: str = "" #Book page references (e.g., MtA2e 102)
 
