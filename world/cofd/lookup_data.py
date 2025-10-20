@@ -7,7 +7,7 @@ from world.cofd.stat_dictionary import (
     attribute_dictionary, skill_dictionary, 
     advantage_dictionary, anchor_dictionary
 )
-from world.cofd.merits.general_merits import all_merits as general_merits
+from world.cofd.merits.atariya_merits import atariya_merits
 from world.cofd.merits.vampire_merits import vampire_merits
 from world.cofd.merits.mage_merits import mage_merits
 from world.cofd.merits.werewolf_merits import werewolf_merits
@@ -18,11 +18,18 @@ from world.cofd.merits.deviant_merits import deviant_merits
 from world.cofd.merits.hunter_merits import hunter_merits
 from world.cofd.merits.mummy_merits import mummy_merits
 from world.cofd.merits.promethean_merits import promethean_merits
-from world.cofd.merits.minor_template_merits import (
-    minor_template_merits, PSYCHIC_MERIT_NAMES,
-    ghoul_merits, dhampir_merits, atariya_merits, psychic_vampire_merits,
-    general_supernatural_merits
-)
+from world.cofd.merits.ghost_merits import ghost_merits
+from world.cofd.merits.immortal_merits import immortal_merits
+from world.cofd.merits.infected_merits import infected_merits
+from world.cofd.merits.location_merits import location_merits
+from world.cofd.merits.lostboys_merits import lostboys_merits
+from world.cofd.merits.mortal_merits import mortal_merits
+from world.cofd.merits.plain_merits import plain_merits
+from world.cofd.merits.psychic_vampire_merits import psychic_vampire_merits
+from world.cofd.merits.restricted_merits import restricted_merits
+from world.cofd.merits.skinchanger_merits import skinchanger_merits
+from world.cofd.merits.style_merits import style_merits
+from world.cofd.merits.universal_merits import universal_merits
 from world.cofd.templates.vampire import VAMPIRE_CLANS, VAMPIRE_BLOODLINES, VAMPIRE_COVENANTS, VAMPIRE_DISCIPLINES
 from world.cofd.powers.vampire_clans import get_all_clans, get_all_bloodlines
 from world.cofd.powers.vampire_covenants import get_all_covenants
@@ -102,7 +109,7 @@ class LookupData:
         self.skills = skill_dictionary
         self.advantages = advantage_dictionary
         self.anchors = anchor_dictionary
-        self.general_merits = general_merits
+        self.universal_merits = universal_merits
         self.vampire_merits = vampire_merits
         self.mage_merits = mage_merits
         self.werewolf_merits = werewolf_merits
@@ -113,16 +120,17 @@ class LookupData:
         self.hunter_merits = hunter_merits
         self.mummy_merits = mummy_merits
         self.promethean_merits = promethean_merits
-        self.minor_template_merits = minor_template_merits
-        self.ghoul_merits = ghoul_merits
-        self.dhampir_merits = dhampir_merits
-        self.atariya_merits = atariya_merits
+        self.ghost_merits = ghost_merits\
+        self.immortal_merits = immortal_merits
+        self.infected_merits = infected_merits
+        self.location_merits = location_merits
+        self.lostboys_merits = lostboys_merits
+        self.mortal_merits = mortal_merits
+        self.plain_merits = plain_merits
         self.psychic_vampire_merits = psychic_vampire_merits
-        self.general_supernatural_merits = general_supernatural_merits
-        self.psychic_merit_names = PSYCHIC_MERIT_NAMES
-        self.all_merits = (general_merits + vampire_merits + mage_merits + werewolf_merits + 
-                          changeling_merits + geist_merits + demon_merits + deviant_merits +
-                          hunter_merits + mummy_merits + promethean_merits + minor_template_merits)
+        self.restricted_merits = restricted_merits
+        self.skinchanger_merits = skinchanger_merits
+        self.style_merits = style_merits
         
         # Template-specific data
         self.vampire_data = {
